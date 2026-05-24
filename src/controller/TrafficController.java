@@ -1,15 +1,15 @@
 package controller;
 
-import model.trafficlight.LightColor;
-import model.trafficlight.TrafficLight;
-import model.vehicle.Vehicle;
-import model.vehicle.Ambulance;
-import model.vehicle.FireTruck;
-import util.Direction;
 import java.util.List;
 import manager.LaneManager;
-import util.DirectionHelper;
 import model.intersection.IntersectionType;
+import model.trafficlight.LightColor;
+import model.trafficlight.TrafficLight;
+import model.vehicle.Ambulance;
+import model.vehicle.FireTruck;
+import model.vehicle.Vehicle;
+import util.Direction;
+import util.DirectionHelper;
 
 public class TrafficController {
 
