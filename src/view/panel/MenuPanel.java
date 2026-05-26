@@ -17,6 +17,7 @@ public class MenuPanel extends JPanel {
     private JSlider vehicleSlider;
 
     private JButton startButton;
+    private JComboBox<String> densityBox;
 
     public MenuPanel(Runnable onStart) {
 
@@ -114,12 +115,32 @@ public class MenuPanel extends JPanel {
         vehicleSlider.setPaintLabels(true);
 
         add(vehicleSlider);
+        // traffic density
+
+        JLabel densityLabel =
+        new JLabel("Traffic Density:");
+
+        densityLabel.setForeground(Color.WHITE);
+
+        densityLabel.setBounds(350, 430, 150, 30);
+
+        add(densityLabel);
+
+        densityBox = new JComboBox<>(new String[] {
+            "LOW",
+            "MEDIUM",
+            "HIGH"
+        });
+
+        densityBox.setBounds(500, 430, 200, 30);
+
+        add(densityBox);
 
         // start button
 
         startButton = new JButton("START SIMULATION");
 
-        startButton.setBounds(450, 500, 250, 50);
+        startButton.setBounds(450, 540, 250, 50);
 
         add(startButton);
 
@@ -151,6 +172,25 @@ public class MenuPanel extends JPanel {
             type = IntersectionType.FOUR_WAY;
     }
 
+    util.TrafficDensity density;
+
+    switch ((String) densityBox.getSelectedItem()) {
+
+        case "LOW":
+
+            density = util.TrafficDensity.LOW;
+            break;
+
+        case "HIGH":
+
+            density = util.TrafficDensity.HIGH;
+            break;
+
+        default:
+
+            density = util.TrafficDensity.MEDIUM;
+    }
+
     return new SimulationConfig(
 
             type,
@@ -159,7 +199,9 @@ public class MenuPanel extends JPanel {
 
             (String) lightBox.getSelectedItem(),
 
-            vehicleSlider.getValue()
+            vehicleSlider.getValue(),
+
+            density
     );
 }
 }

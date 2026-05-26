@@ -12,6 +12,7 @@ import javax.swing.Timer;
 import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.Font;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -57,9 +58,15 @@ public class SimulationPanel extends JPanel {
     
     private boolean manualMode;
     
-   
+    
     private VehicleSpawnManager vehicleSpawnManager;
+    private int spawnCounter = 0;
+    private int fps = 0;
 
+    private long lastFpsTime = System.currentTimeMillis();
+
+    private int frameCount = 0;
+    private String jamLevel = "LOW";
    public SimulationPanel(SimulationConfig config) {
 
     this.config = config;
@@ -155,9 +162,11 @@ private void updateSimulation() {
     if (!manualMode) {
 
         verticalLight.update();
+        syncLights();
     }
 
-    syncLights();
+    
+    updateSmartLights();
 
     vehicleSpawnManager
             .removeOutsideVehicles();
@@ -169,8 +178,11 @@ private void updateSimulation() {
                             vehicle.getDirection()
                     )
     );
-}
 
+    handleAutoSpawn();
+    updateTrafficJam();
+    updateFPS();
+}
     @Override
     protected void paintComponent(Graphics g) {
 
@@ -183,6 +195,7 @@ private void updateSimulation() {
         drawVehicles(g2d);
         
         drawTrafficLights(g2d);
+        drawStatistics(g2d);
 
     }
 
@@ -251,21 +264,23 @@ private void updateSimulation() {
     private void drawTrafficLights(Graphics2D g2d) {
 
     trafficLightRenderer.render(
-            g2d,
-            verticalLight,
-            520,
-            250
-    );
+        g2d,
+        verticalLight,
+        520,
+        250,
+        config.getLightType()
+);
 
     if (config.getIntersectionType()
             != model.intersection.IntersectionType.THREE_WAY) {
 
         trafficLightRenderer.render(
-                g2d,
-                horizontalLight,
-                250,
-                520
-        );
+        g2d,
+        horizontalLight,
+        250,
+        520,
+        config.getLightType()
+);
     }
 }
     private void handleTrafficLightClick(int mouseX, int mouseY) {
@@ -311,7 +326,277 @@ private void updateSimulation() {
 
     horizontalLight.setTimer(300);
 }
-    
-    
+    private void handleAutoSpawn() {
+
+    spawnCounter++;
+
+    if (spawnCounter >= getSpawnInterval()) {
+
+        spawnCounter = 0;
+
+        if (vehicles.size() < 20) {
+
+            vehicleSpawnManager
+                    .spawnRandomVehicle(
+                            config.getIntersectionType()
+                                    .getDirections()
+                    );
+        }
+    }
+}
+    private int getSpawnInterval() {
+
+    switch (
+            config.getTrafficDensity()
+    ) {
+
+        case LOW:
+
+            return 180;
+
+        case MEDIUM:
+
+            return 120;
+
+        case HIGH:
+
+            return 60;
+
+        default:
+
+            return 120;
+    }
+}
+    private void updateSmartLights() {
+
+    int verticalCount =
+            trafficController
+                    .countVehiclesByDirection(
+                            vehicles,
+                            util.Direction.NORTH,
+                            util.Direction.SOUTH
+                    );
+
+    int horizontalCount =
+            trafficController
+                    .countVehiclesByDirection(
+                            vehicles,
+                            util.Direction.EAST,
+                            util.Direction.WEST
+                    );
+
+    // vertical đông hơn
+
+    if (verticalCount > horizontalCount + 3) {
+
+        if (verticalLight.getColor()
+                == LightColor.GREEN) {
+
+            verticalLight.setTimer(
+                    Math.max(
+                            verticalLight.getTimer(),
+                            400
+                    )
+            );
+        }
+    }
+
+    // horizontal đông hơn
+
+    if (horizontalCount > verticalCount + 3) {
+
+        if (horizontalLight.getColor()
+                == LightColor.GREEN) {
+
+            horizontalLight.setTimer(
+                    Math.max(
+                            horizontalLight.getTimer(),
+                            400
+                    )
+            );
+        }
+    }
+    for (Vehicle vehicle : vehicles) {
+
+    boolean emergency =
+
+            vehicle instanceof model.vehicle.Ambulance
+            ||
+            vehicle instanceof model.vehicle.FireTruck;
+
+    if (!emergency) {
+        continue;
+    }
+
+    switch (vehicle.getDirection()) {
+
+        case NORTH:
+        case SOUTH:
+
+            if (verticalLight.getColor()
+                    == LightColor.RED) {
+
+                forceVerticalGreen();
+
+                verticalLight.setTimer(400);
+            }
+
+            break;
+
+        case EAST:
+        case WEST:
+
+            if (horizontalLight.getColor()
+                    == LightColor.RED) {
+
+                forceHorizontalGreen();
+
+                horizontalLight.setTimer(400);
+            }
+
+            break;
+    }
+}
+}
+   private void updateFPS() {
+
+    frameCount++;
+
+    long current =
+            System.currentTimeMillis();
+
+    if (current - lastFpsTime >= 1000) {
+
+        fps = frameCount;
+
+        frameCount = 0;
+
+        lastFpsTime = current;
+    }
+} 
+    private void drawStatistics(
+        Graphics2D g2d
+) {
+
+    g2d.setColor(
+            new Color(0, 0, 0, 180)
+    );
+
+    g2d.fillRoundRect(
+            20,
+            20,
+            260,
+            180,
+            20,
+            20
+    );
+
+    g2d.setColor(Color.WHITE);
+
+    g2d.setFont(
+            new Font(
+                    "Arial",
+                    Font.BOLD,
+                    16
+            )
+    );
+
+    int y = 50;
+
+    g2d.drawString(
+            "Vehicle Count: "
+                    + vehicles.size(),
+            40,
+            y
+    );
+
+    y += 30;
+
+    g2d.drawString(
+            "FPS: " + fps,
+            40,
+            y
+    );
+
+    y += 30;
+
+    g2d.drawString(
+            "Density: "
+                    + config.getTrafficDensity(),
+            40,
+            y
+    );
+
+    y += 30;
+
+    g2d.drawString(
+            "Vertical Light: "
+                    + verticalLight.getColor(),
+            40,
+            y
+    );
+
+    y += 30;
+
+    g2d.drawString(
+            "Horizontal Light: "
+                    + horizontalLight.getColor(),
+            40,
+            y
+    );
+    y += 30;
+
+    g2d.drawString(
+        "Traffic Jam: " + jamLevel,
+        40,
+        y
+    );
+}
+    private void updateTrafficJam() {
+
+    int stopped =
+            trafficController
+                    .countStoppedVehicles(
+                            vehicles
+                    );
+
+    if (stopped > 15) {
+
+        jamLevel = "HIGH";
+
+    } else if (stopped > 7) {
+
+        jamLevel = "MEDIUM";
+
+    } else {
+
+        jamLevel = "LOW";
+    }
+}
+    private void forceVerticalGreen() {
+
+    verticalLight.setColor(
+            LightColor.GREEN
+    );
+
+    horizontalLight.setColor(
+            LightColor.RED
+    );
+
+    verticalLight.setTimer(400);
+}
+
+private void forceHorizontalGreen() {
+
+    horizontalLight.setColor(
+            LightColor.GREEN
+    );
+
+    verticalLight.setColor(
+            LightColor.RED
+    );
+
+    horizontalLight.setTimer(400);
+}
     
 }

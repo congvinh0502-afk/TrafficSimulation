@@ -10,11 +10,12 @@ import java.awt.Graphics2D;
 public class TrafficLightRenderer {
 
     public void render(
-            Graphics2D g2d,
-            TrafficLight light,
-            int x,
-            int y
-    ) {
+        Graphics2D g2d,
+        TrafficLight light,
+        int x,
+        int y,
+        String lightType
+) {
 
         // cột đèn
 
@@ -54,14 +55,47 @@ public class TrafficLightRenderer {
 
         // TIMER
 
-        g2d.setColor(Color.WHITE);
+        boolean showTimer = false;
 
-        g2d.setFont(new Font("Arial", Font.BOLD, 18));
+switch (lightType) {
 
-        g2d.drawString(
-                String.valueOf(light.getTimer() / 60),
-                x,
-                y - 10
-        );
+    case "ALWAYS COUNTDOWN":
+
+        showTimer = true;
+        break;
+
+    case "COUNT <= 10":
+
+        showTimer =
+                light.getTimer() / 60 <= 10;
+
+        break;
+
+    case "NO COUNTDOWN":
+
+        showTimer = false;
+        break;
+}
+
+if (showTimer) {
+
+    g2d.setColor(Color.WHITE);
+
+    g2d.setFont(
+            new Font(
+                    "Arial",
+                    Font.BOLD,
+                    18
+            )
+    );
+
+    g2d.drawString(
+            String.valueOf(
+                    light.getTimer() / 60
+            ),
+            x,
+            y - 10
+    );
+}
     }
 }

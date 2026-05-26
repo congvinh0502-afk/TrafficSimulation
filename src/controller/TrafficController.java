@@ -29,39 +29,46 @@ public class TrafficController {
             vehicle.getLaneChangeCooldown() - 1
     );
 }
-
-    checkTrafficLight(
-            vehicle,
-            verticalLight,
-            horizontalLight
-    );
-
-    maintainDistance(vehicle, vehicles);
-
+     // xử lý rẽ TRƯỚC
     handleTurning(vehicle, type);
-
+    // đang rẽ thì bỏ toàn bộ logic đèn + khoảng cách
     if (vehicle.isTurning()) {
 
         smoothTurning(vehicle);
-        updateVehicleAngle(vehicle);
+
+        
+
         continue;
     }
 
+    checkTrafficLight(
+        vehicle,
+        verticalLight,
+        horizontalLight,
+        vehicles
+);
+
+    maintainDistance(vehicle, vehicles);
+    if (vehicle.isStopped()) {
+    continue;
+}
     updateLaneChanging(vehicle);
-
     alignToLane(vehicle);
-
     alignVehicle(vehicle);
-
+    recoverAfterIntersection(vehicle);
+    if (!vehicle.isStopped()) {
     vehicle.move();
 }
-        
+    
     }
+        
+}
 
     private void checkTrafficLight(
         Vehicle vehicle,
         TrafficLight verticalLight,
-        TrafficLight horizontalLight
+        TrafficLight horizontalLight,
+        List<Vehicle> vehicles
 ) {
     if (vehicle.isTurning()) {
     return;
@@ -71,149 +78,207 @@ public class TrafficController {
 
     Direction direction = vehicle.getDirection();
 
-    switch (direction) {
+   
+switch (direction) {
 
-        case SOUTH:
+    case SOUTH:
 
-            mustStop =
-                    vehicle.getY() + 60 >= 250
-                    && verticalLight.getColor() == LightColor.RED;
+        mustStop =
+                vehicle.getY() + 60 >= 360
+                && verticalLight.getColor()
+                == LightColor.RED;
 
-            break;
+        break;
 
-        case NORTH:
+    case NORTH:
 
-            mustStop =
-                    vehicle.getY() <= 500
-                    && verticalLight.getColor() == LightColor.RED;
+        mustStop =
+                vehicle.getY() <= 640
+                && verticalLight.getColor()
+                == LightColor.RED;
 
-            break;
+        break;
 
-        case EAST:
+    case EAST:
 
-            mustStop =
-                    vehicle.getX() + 60 >= 250
-                    && horizontalLight.getColor() == LightColor.RED;
+        mustStop =
+                vehicle.getX() + 60 >= 360
+                && horizontalLight.getColor()
+                == LightColor.RED;
 
-            break;
+        break;
 
-        case WEST:
+    case WEST:
 
-            mustStop =
-                    vehicle.getX() <= 500
-                    && horizontalLight.getColor() == LightColor.RED;
+        mustStop =
+                vehicle.getX() <= 640
+                && horizontalLight.getColor()
+                == LightColor.RED;
 
-            break;
-    }
-
-    if (mustStop) {
-
-        vehicle.setStopped(true);
-    }
+        break;
 }
-    private void maintainDistance(
+
+    boolean blocked =
+        !canEnterIntersection(
+                vehicle,
+                vehicles
+        );
+
+        if (mustStop || blocked) {
+
+            vehicle.setStopped(true);
+        }
+}
+   
+private void maintainDistance(
         Vehicle current,
         List<Vehicle> vehicles
 ) {
-        
-        if (current.isTurning()) {
-    return;
-}
+
+    if (current.isTurning()
+            || current.isChangingLane()) {
+
+        return;
+    }
+
     for (Vehicle other : vehicles) {
 
         if (current == other) {
             continue;
         }
 
-        // 🚑 nhường đường xe ưu tiên
-
-        if (other instanceof Ambulance
-                || other instanceof FireTruck) {
-
-            if (distance(current, other) < 120) {
-
-                current.setStopped(true);
-
-                return;
-            }
+        if (other.isTurning()) {
+            continue;
         }
+
+        // chỉ check cùng hướng
+
+        if (current.getDirection()
+                != other.getDirection()) {
+
+            continue;
+        }
+
+        double safeDistance = 120;
 
         switch (current.getDirection()) {
 
             case SOUTH:
 
-                if (Math.abs(current.getX() - other.getX()) < 20
+                if (Math.abs(
+                        current.getX()
+                        - other.getX()
+                ) < 25
+
                         && other.getY() > current.getY()
-                        && other.getY() - current.getY() < 80) {
+
+                        && other.getY()
+                        - current.getY() < safeDistance) {
 
                     boolean changedLane =
-        tryChangeLane(current, vehicles);
+                            tryChangeLane(
+                                    current,
+                                    vehicles
+                            );
 
-if (!changedLane) {
+                    if (!changedLane) {
 
-    current.setStopped(true);
-}
+                        current.setStopped(true);
+                    }
 
+                    return;
                 }
 
                 break;
 
             case NORTH:
 
-                if (Math.abs(current.getX() - other.getX()) < 20
-                        && current.getY() > other.getY()
-                        && current.getY() - other.getY() < 80) {
+                if (Math.abs(
+                        current.getX()
+                        - other.getX()
+                ) < 25
+
+                        && other.getY() < current.getY()
+
+                        && current.getY()
+                        - other.getY() < safeDistance) {
 
                     boolean changedLane =
-        tryChangeLane(current, vehicles);
+                            tryChangeLane(
+                                    current,
+                                    vehicles
+                            );
 
-if (!changedLane) {
+                    if (!changedLane) {
 
-    current.setStopped(true);
-}
+                        current.setStopped(true);
+                    }
 
+                    return;
                 }
 
                 break;
 
             case EAST:
 
-                if (Math.abs(current.getY() - other.getY()) < 20
+                if (Math.abs(
+                        current.getY()
+                        - other.getY()
+                ) < 25
+
                         && other.getX() > current.getX()
-                        && other.getX() - current.getX() < 80) {
+
+                        && other.getX()
+                        - current.getX() < safeDistance) {
 
                     boolean changedLane =
-        tryChangeLane(current, vehicles);
+                            tryChangeLane(
+                                    current,
+                                    vehicles
+                            );
 
-if (!changedLane) {
+                    if (!changedLane) {
 
-    current.setStopped(true);
-}
+                        current.setStopped(true);
+                    }
 
+                    return;
                 }
 
                 break;
 
             case WEST:
 
-                if (Math.abs(current.getY() - other.getY()) < 20
-                        && current.getX() > other.getX()
-                        && current.getX() - other.getX() < 80) {
+                if (Math.abs(
+                        current.getY()
+                        - other.getY()
+                ) < 25
+
+                        && other.getX() < current.getX()
+
+                        && current.getX()
+                        - other.getX() < safeDistance) {
 
                     boolean changedLane =
-        tryChangeLane(current, vehicles);
+                            tryChangeLane(
+                                    current,
+                                    vehicles
+                            );
 
-if (!changedLane) {
+                    if (!changedLane) {
 
-    current.setStopped(true);
-}
+                        current.setStopped(true);
+                    }
 
+                    return;
                 }
 
                 break;
         }
     }
 }
+
+
     private boolean tryChangeLane(
         Vehicle current,
         List<Vehicle> vehicles
@@ -489,10 +554,13 @@ if (current.getLaneChangeCooldown() > 0) {
     private void alignToLane(
         Vehicle vehicle
 ) {
-    if (vehicle.isChangingLane()) {
+    if (vehicle.isChangingLane()
+            || vehicle.isTurning()
+            || vehicle.isStopped()) {
+
         return;
     }
-    double smooth = 2;
+    double smooth = 0.5;
 
     switch (vehicle.getDirection()) {
 
@@ -553,7 +621,7 @@ if (current.getLaneChangeCooldown() > 0) {
         return;
     }
 
-    double speed = 2;
+    double speed = 1.8;
 
     double angle =
             Math.toRadians(
@@ -574,9 +642,9 @@ if (current.getLaneChangeCooldown() > 0) {
             vehicle.getY() + dy
     );
 
-    updateVehicleAngle(vehicle);
-
     finishTurning(vehicle);
+
+    updateVehicleAngle(vehicle);
 }
     private void finishTurning(
         Vehicle vehicle
@@ -645,9 +713,11 @@ if (current.getLaneChangeCooldown() > 0) {
 }
     private void alignVehicle(Vehicle vehicle) {
        
-    if (vehicle.isChangingLane()) {
-        return;
-    }
+    if (vehicle.isChangingLane()
+        || vehicle.isTurning()) {
+
+    return;
+}
     double smooth = 2;
 
     switch (vehicle.getDirection()) {
@@ -750,7 +820,7 @@ if (current.getLaneChangeCooldown() > 0) {
         return;
     }
 
-    double smooth = 1;
+    double smooth = 0.6;
 
     switch (vehicle.getDirection()) {
 
@@ -833,4 +903,161 @@ if (current.getLaneChangeCooldown() > 0) {
             break;
     }
 }
+    private boolean canEnterIntersection(
+        Vehicle vehicle,
+        List<Vehicle> vehicles
+) {
+
+    switch (vehicle.getDirection()) {
+
+        case SOUTH:
+
+            for (Vehicle other : vehicles) {
+
+                if (other == vehicle) {
+                    continue;
+                }
+
+                // phía sau giao lộ đang kẹt
+                if (Math.abs(
+                        other.getX() - vehicle.getX()
+                ) < 50
+                        &&
+                        other.getY() > 520
+                        &&
+                        other.getY() - vehicle.getY() < 120) {
+
+                    return false;
+                }
+            }
+
+            break;
+
+        case NORTH:
+
+            for (Vehicle other : vehicles) {
+
+                if (other == vehicle) {
+                    continue;
+                }
+
+                if (Math.abs(
+                        other.getX() - vehicle.getX()
+                ) < 50
+                        &&
+                        other.getY() < 430
+                        &&
+                        vehicle.getY() - other.getY() < 120) {
+
+                    return false;
+                }
+            }
+
+            break;
+
+        case EAST:
+
+            for (Vehicle other : vehicles) {
+
+                if (other == vehicle) {
+                    continue;
+                }
+
+                if (Math.abs(
+                        other.getY() - vehicle.getY()
+                ) < 50
+                        &&
+                        other.getX() > 520
+                        &&
+                        other.getX() - vehicle.getX() < 120) {
+
+                    return false;
+                }
+            }
+
+            break;
+
+        case WEST:
+
+            for (Vehicle other : vehicles) {
+
+                if (other == vehicle) {
+                    continue;
+                }
+
+                if (Math.abs(
+                        other.getY() - vehicle.getY()
+                ) < 50
+                        &&
+                        other.getX() < 430
+                        &&
+                        vehicle.getX() - other.getX() < 120) {
+
+                    return false;
+                }
+            }
+
+            break;
+    }
+
+    return true;
+}
+    public int countVehiclesByDirection(
+        List<Vehicle> vehicles,
+        Direction d1,
+        Direction d2
+) {
+
+    int count = 0;
+
+    for (Vehicle vehicle : vehicles) {
+
+        if (vehicle.getDirection() == d1
+                ||
+                vehicle.getDirection() == d2) {
+
+            count++;
+        }
+    }
+
+    return count;
+}
+    private void recoverAfterIntersection(
+        Vehicle vehicle
+) {
+
+    boolean outside =
+
+            vehicle.getX() < 380
+            || vehicle.getX() > 570
+            || vehicle.getY() < 380
+            || vehicle.getY() > 570;
+
+    if (!outside) {
+        return;
+    }
+
+    vehicle.setStopped(false);
+
+    vehicle.setChangingLane(false);
+
+    vehicle.setTurning(false);
+}
+    public int countStoppedVehicles(
+        List<Vehicle> vehicles
+) {
+
+    int count = 0;
+
+    for (Vehicle vehicle : vehicles) {
+
+        if (vehicle.isStopped()) {
+
+            count++;
+        }
+    }
+
+    return count;
+}
+    
 }

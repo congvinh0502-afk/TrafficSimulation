@@ -3,35 +3,9 @@
     <editor-bookmarks xmlns="http://www.netbeans.org/ns/editor-bookmarks/2" lastBookmarkId="0"/>
     <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/2">
         <group>
-            <file>file:/D:/New%20Folder/TrafficSimulation.VN/src/app/Main.java</file>
-            <file>file:/D:/New%20Folder/TrafficSimulation.VN/src/controller/TrafficController.java</file>
-            <file>file:/D:/New%20Folder/TrafficSimulation.VN/src/model/vehicle/Vehicle.java</file>
-            <file>file:/D:/New%20Folder/TrafficSimulation.VN/src/util/Direction.java</file>
-            <file>file:/D:/New%20Folder/TrafficSimulation.VN/src/model/vehicle/Car.java</file>
-            <file>file:/D:/New%20Folder/TrafficSimulation.VN/src/model/vehicle/Motorbike.java</file>
-            <file>file:/D:/New%20Folder/TrafficSimulation.VN/src/model/vehicle/Bicycle.java</file>
-            <file>file:/D:/New%20Folder/TrafficSimulation.VN/src/model/vehicle/Ambulance.java</file>
-            <file>file:/D:/New%20Folder/TrafficSimulation.VN/src/model/vehicle/FireTruck.java</file>
-            <file>file:/D:/New%20Folder/TrafficSimulation.VN/src/view/frame/MainFrame.java</file>
-            <file>file:/D:/New%20Folder/TrafficSimulation.VN/src/view/panel/SimulationPanel.java</file>
-            <file>file:/D:/New%20Folder/TrafficSimulation.VN/src/view/renderer/VehicleRenderer.java</file>
-            <file>file:/D:/New%20Folder/TrafficSimulation.VN/src/model/road/Lane.java</file>
-            <file>file:/D:/New%20Folder/TrafficSimulation.VN/src/model/road/Road.java</file>
-            <file>file:/D:/New%20Folder/TrafficSimulation.VN/src/view/renderer/RoadRenderer.java</file>
-            <file>file:/D:/New%20Folder/TrafficSimulation.VN/src/model/trafficlight/LightColor.java</file>
-            <file>file:/D:/New%20Folder/TrafficSimulation.VN/src/model/trafficlight/TrafficLight.java</file>
-            <file>file:/D:/New%20Folder/TrafficSimulation.VN/src/view/renderer/TrafficLightRenderer.java</file>
-            <file>file:/D:/New%20Folder/TrafficSimulation.VN/src/view/panel/MenuPanel.java</file>
-            <file>file:/D:/New%20Folder/TrafficSimulation.VN/src/model/SimulationConfig.java</file>
-            <file>file:/D:/New%20Folder/TrafficSimulation.VN/src/model/intersection/IntersectionType.java</file>
-            <file>file:/D:/New%20Folder/TrafficSimulation.VN/src/strategy/driver/DriverBehavior.java</file>
-            <file>file:/D:/New%20Folder/TrafficSimulation.VN/src/strategy/driver/NormalDriver.java</file>
-            <file>file:/D:/New%20Folder/TrafficSimulation.VN/src/strategy/driver/AggressiveDriver.java</file>
-            <file>file:/D:/New%20Folder/TrafficSimulation.VN/src/strategy/driver/EmergencyDriver.java</file>
-            <file>file:/D:/New%20Folder/TrafficSimulation.VN/src/util/TurnType.java</file>
-            <file>file:/D:/New%20Folder/TrafficSimulation.VN/src/util/Lane.java</file>
-            <file>file:/D:/New%20Folder/TrafficSimulation.VN/src/manager/LaneManager.java</file>
-            <file>file:/D:/New%20Folder/TrafficSimulation.VN/src/util/DirectionHelper.java</file>
+            <file>file:/D:/TrafficSimulation.VN/TrafficSimulation.VN/src/model/SimulationConfig.java</file>
+            <file>file:/D:/TrafficSimulation.VN/TrafficSimulation.VN/src/view/panel/SimulationPanel.java</file>
+            <file>file:/D:/TrafficSimulation.VN/TrafficSimulation.VN/src/controller/TrafficController.java</file>
         </group>
     </open-files>
 </project-private>
