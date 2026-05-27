@@ -14,8 +14,8 @@ public class Motorbike extends Vehicle {
 
         this.speed = 3.5;
 
-        this.width = 25;
-        this.height = 45;
+        this.width = 32;
+        this.height = 16;
     }
 
     @Override

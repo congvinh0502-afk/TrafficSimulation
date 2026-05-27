@@ -13,8 +13,8 @@ public class Ambulance extends Vehicle {
 
         super(x, y, direction);
 
-        width = 60;
-        height = 30;
+        width = 65;
+        height = 36;
 
         behavior = new EmergencyDriver();
 

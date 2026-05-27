@@ -9,8 +9,8 @@ public class Car extends Vehicle {
 
     super(x, y, direction);
 
-    width = 60;
-    height = 30;
+    width = 50;
+    height = 28;
 
     speed = 2;
 

@@ -6,6 +6,17 @@
             <file>file:/D:/TrafficSimulation.VN/TrafficSimulation.VN/src/model/SimulationConfig.java</file>
             <file>file:/D:/TrafficSimulation.VN/TrafficSimulation.VN/src/view/panel/SimulationPanel.java</file>
             <file>file:/D:/TrafficSimulation.VN/TrafficSimulation.VN/src/controller/TrafficController.java</file>
+            <file>file:/D:/TrafficSimulation.VN/TrafficSimulation.VN/src/view/renderer/VehicleRenderer.java</file>
+            <file>file:/D:/TrafficSimulation.VN/TrafficSimulation.VN/src/model/vehicle/Vehicle.java</file>
+            <file>file:/D:/TrafficSimulation.VN/TrafficSimulation.VN/src/image/Bicycle.png</file>
+            <file>file:/D:/TrafficSimulation.VN/TrafficSimulation.VN/src/image/Motorbike.png</file>
+            <file>file:/D:/TrafficSimulation.VN/TrafficSimulation.VN/src/model/vehicle/Motorbike.java</file>
+            <file>file:/D:/TrafficSimulation.VN/TrafficSimulation.VN/src/model/vehicle/Car.java</file>
+            <file>file:/D:/TrafficSimulation.VN/TrafficSimulation.VN/src/model/vehicle/Ambulance.java</file>
+            <file>file:/D:/TrafficSimulation.VN/TrafficSimulation.VN/src/model/vehicle/FireTruck.java</file>
+            <file>file:/D:/TrafficSimulation.VN/TrafficSimulation.VN/src/image/Ambulance.png</file>
+            <file>file:/D:/TrafficSimulation.VN/TrafficSimulation.VN/src/image/Car.png</file>
+            <file>file:/D:/TrafficSimulation.VN/TrafficSimulation.VN/src/image/FireTruck.png</file>
         </group>
     </open-files>
 </project-private>

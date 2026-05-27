@@ -1,0 +1,3947 @@
+// FILE: d:\TrafficSimulation.VN\TrafficSimulation.VN\src\app\Main.java
+
+package app;
+
+import view.frame.MainFrame;
+
+public class Main {
+
+    public static void main(String[] args) {
+
+        new MainFrame();
+
+    }
+}
+
+// FILE: d:\TrafficSimulation.VN\TrafficSimulation.VN\src\controller\TrafficController.java
+
+package controller;
+
+import java.util.List;
+import manager.LaneManager;
+import model.intersection.IntersectionType;
+import model.trafficlight.LightColor;
+import model.trafficlight.TrafficLight;
+import model.vehicle.Ambulance;
+import model.vehicle.FireTruck;
+import model.vehicle.Vehicle;
+import util.Direction;
+import util.DirectionHelper;
+
+public class TrafficController {
+
+    public void updateVehicles(
+        List<Vehicle> vehicles,
+        TrafficLight verticalLight,
+        TrafficLight horizontalLight,
+        IntersectionType type
+){
+        
+
+        for (Vehicle vehicle : vehicles) {
+            vehicle.setStopped(false);
+            if (vehicle.getLaneChangeCooldown() > 0) {
+
+    vehicle.setLaneChangeCooldown(
+            vehicle.getLaneChangeCooldown() - 1
+    );
+}
+     // xử lý rẽ TRƯỚC
+    handleTurning(vehicle, type);
+    // đang rẽ thì bỏ toàn bộ logic đèn + khoảng cách
+    if (vehicle.isTurning()) {
+
+        smoothTurning(vehicle);
+
+        
+
+        continue;
+    }
+
+    checkTrafficLight(
+        vehicle,
+        verticalLight,
+        horizontalLight,
+        vehicles
+);
+
+    maintainDistance(vehicle, vehicles);
+    if (vehicle.isStopped()) {
+    continue;
+}
+    updateLaneChanging(vehicle);
+    alignToLane(vehicle);
+    alignVehicle(vehicle);
+    recoverAfterIntersection(vehicle);
+    if (!vehicle.isStopped()) {
+    vehicle.move();
+}
+    
+    }
+        
+}
+
+    private void checkTrafficLight(
+        Vehicle vehicle,
+        TrafficLight verticalLight,
+        TrafficLight horizontalLight,
+        List<Vehicle> vehicles
+) {
+    if (vehicle.isTurning()) {
+    return;
+}
+
+    boolean mustStop = false;
+
+    Direction direction = vehicle.getDirection();
+
+   
+switch (direction) {
+
+    case SOUTH:
+
+        mustStop =
+                vehicle.getY() + 60 >= 360
+                && verticalLight.getColor()
+                == LightColor.RED;
+
+        break;
+
+    case NORTH:
+
+        mustStop =
+                vehicle.getY() <= 640
+                && verticalLight.getColor()
+                == LightColor.RED;
+
+        break;
+
+    case EAST:
+
+        mustStop =
+                vehicle.getX() + 60 >= 360
+                && horizontalLight.getColor()
+                == LightColor.RED;
+
+        break;
+
+    case WEST:
+
+        mustStop =
+                vehicle.getX() <= 640
+                && horizontalLight.getColor()
+                == LightColor.RED;
+
+        break;
+}
+
+    boolean blocked =
+        !canEnterIntersection(
+                vehicle,
+                vehicles
+        );
+
+        if (mustStop || blocked) {
+
+            vehicle.setStopped(true);
+        }
+}
+   
+private void maintainDistance(
+        Vehicle current,
+        List<Vehicle> vehicles
+) {
+
+    if (current.isTurning()
+            || current.isChangingLane()) {
+
+        return;
+    }
+
+    for (Vehicle other : vehicles) {
+
+        if (current == other) {
+            continue;
+        }
+
+        if (other.isTurning()) {
+            continue;
+        }
+
+        // chỉ check cùng hướng
+
+        if (current.getDirection()
+                != other.getDirection()) {
+
+            continue;
+        }
+
+        double safeDistance = 120;
+
+        switch (current.getDirection()) {
+
+            case SOUTH:
+
+                if (Math.abs(
+                        current.getX()
+                        - other.getX()
+                ) < 25
+
+                        && other.getY() > current.getY()
+
+                        && other.getY()
+                        - current.getY() < safeDistance) {
+
+                    boolean changedLane =
+                            tryChangeLane(
+                                    current,
+                                    vehicles
+                            );
+
+                    if (!changedLane) {
+
+                        current.setStopped(true);
+                    }
+
+                    return;
+                }
+
+                break;
+
+            case NORTH:
+
+                if (Math.abs(
+                        current.getX()
+                        - other.getX()
+                ) < 25
+
+                        && other.getY() < current.getY()
+
+                        && current.getY()
+                        - other.getY() < safeDistance) {
+
+                    boolean changedLane =
+                            tryChangeLane(
+                                    current,
+                                    vehicles
+                            );
+
+                    if (!changedLane) {
+
+                        current.setStopped(true);
+                    }
+
+                    return;
+                }
+
+                break;
+
+            case EAST:
+
+                if (Math.abs(
+                        current.getY()
+                        - other.getY()
+                ) < 25
+
+                        && other.getX() > current.getX()
+
+                        && other.getX()
+                        - current.getX() < safeDistance) {
+
+                    boolean changedLane =
+                            tryChangeLane(
+                                    current,
+                                    vehicles
+                            );
+
+                    if (!changedLane) {
+
+                        current.setStopped(true);
+                    }
+
+                    return;
+                }
+
+                break;
+
+            case WEST:
+
+                if (Math.abs(
+                        current.getY()
+                        - other.getY()
+                ) < 25
+
+                        && other.getX() < current.getX()
+
+                        && current.getX()
+                        - other.getX() < safeDistance) {
+
+                    boolean changedLane =
+                            tryChangeLane(
+                                    current,
+                                    vehicles
+                            );
+
+                    if (!changedLane) {
+
+                        current.setStopped(true);
+                    }
+
+                    return;
+                }
+
+                break;
+        }
+    }
+}
+
+
+    private boolean tryChangeLane(
+        Vehicle current,
+        List<Vehicle> vehicles
+){
+    if (current.isChangingLane()) {
+    return false;
+}
+    if (current.isTurning()) {
+    return false;
+}
+
+if (current.getLaneChangeCooldown() > 0) {
+    return false;
+}
+    
+    util.Lane targetLane;
+
+    if (current.getLane() == util.Lane.LEFT) {
+
+        targetLane = util.Lane.RIGHT;
+
+    } else {
+
+        targetLane = util.Lane.LEFT;
+    }
+
+    // kiểm tra lane mới có trống không
+
+    for (Vehicle other : vehicles) {
+
+        if (current == other) {
+            continue;
+        }
+
+        if (other.getDirection()
+                != current.getDirection()) {
+
+            continue;
+        }
+
+        if (other.getLane() == targetLane) {
+
+            // khoảng cách quá gần
+
+            if (distance(current, other) < 120) {
+
+                return false;
+            }
+        }
+    }
+
+    current.setTargetLane(targetLane);
+
+    current.setChangingLane(true);
+
+    current.setLaneChangeCooldown(60);
+
+    return true;
+}
+    private void shiftVehiclePosition(
+        Vehicle vehicle
+) {
+
+    int offset = 40;
+
+    switch (vehicle.getDirection()) {
+
+        case NORTH:
+        case SOUTH:
+
+            if (vehicle.getLane()
+                    == util.Lane.LEFT) {
+
+                vehicle.setX(vehicle.getX() - offset);
+
+            } else {
+
+                vehicle.setX(vehicle.getX() + offset);
+            }
+
+            break;
+
+        case EAST:
+        case WEST:
+
+            if (vehicle.getLane()
+                    == util.Lane.LEFT) {
+
+                vehicle.setY(vehicle.getY() - offset);
+
+            } else {
+
+                vehicle.setY(vehicle.getY() + offset);
+            }
+
+            break;
+    }
+}
+    
+    private double distance(
+        Vehicle a,
+        Vehicle b
+) {
+
+    double dx = a.getX() - b.getX();
+    double dy = a.getY() - b.getY();
+
+    return Math.sqrt(dx * dx + dy * dy);
+}
+    private void turnLeft(
+        Vehicle vehicle
+) {
+
+    switch (vehicle.getDirection()) {
+
+        case NORTH:
+
+            vehicle.setTargetDirection(
+                    Direction.WEST
+            );
+
+            vehicle.setTargetAngle(180);
+
+            break;
+
+        case SOUTH:
+
+            vehicle.setTargetDirection(
+                    Direction.EAST
+            );
+
+            vehicle.setTargetAngle(0);
+
+            break;
+
+        case EAST:
+
+            vehicle.setTargetDirection(
+                    Direction.NORTH
+            );
+
+            vehicle.setTargetAngle(-90);
+
+            break;
+
+        case WEST:
+
+            vehicle.setTargetDirection(
+                    Direction.SOUTH
+            );
+
+            vehicle.setTargetAngle(90);
+
+            break;
+    }
+
+    vehicle.setTurning(true);
+}
+    private void turnRight(
+        Vehicle vehicle
+) {
+
+    switch (vehicle.getDirection()) {
+
+        case NORTH:
+
+            vehicle.setTargetDirection(
+                    Direction.EAST
+            );
+
+            vehicle.setTargetAngle(0);
+
+            break;
+
+        case SOUTH:
+
+            vehicle.setTargetDirection(
+                    Direction.WEST
+            );
+
+            vehicle.setTargetAngle(180);
+
+            break;
+
+        case EAST:
+
+            vehicle.setTargetDirection(
+                    Direction.SOUTH
+            );
+
+            vehicle.setTargetAngle(90);
+
+            break;
+
+        case WEST:
+
+            vehicle.setTargetDirection(
+                    Direction.NORTH
+            );
+
+            vehicle.setTargetAngle(-90);
+
+            break;
+    }
+
+    vehicle.setTurning(true);
+}
+    private void handleTurning(
+        Vehicle vehicle,
+        IntersectionType type
+) {
+
+    if (vehicle.hasTurned()) {
+        return;
+    }
+
+    boolean insideIntersection =
+
+            vehicle.getX() > 430
+            && vehicle.getX() < 520
+            && vehicle.getY() > 430
+            && vehicle.getY() < 520;
+
+    if (!insideIntersection) {
+        return;
+    }
+
+    Direction targetDirection;
+
+    switch (vehicle.getTurnType()) {
+
+        case LEFT:
+
+            targetDirection =
+                    DirectionHelper.getLeftDirection(
+                            vehicle.getDirection()
+                    );
+
+            if (!type.getDirections()
+                    .contains(targetDirection)) {
+
+                return;
+            }
+
+            turnLeft(vehicle);
+
+            break;
+
+        case RIGHT:
+
+            targetDirection =
+                    DirectionHelper.getRightDirection(
+                            vehicle.getDirection()
+                    );
+
+            if (!type.getDirections()
+                    .contains(targetDirection)) {
+
+                return;
+            }
+
+            turnRight(vehicle);
+
+            break;
+
+        default:
+            return;
+    }
+
+    vehicle.setTurned(true);
+}
+    
+    private void alignToLane(
+        Vehicle vehicle
+) {
+    if (vehicle.isChangingLane()
+            || vehicle.isTurning()
+            || vehicle.isStopped()) {
+
+        return;
+    }
+    double smooth = 0.5;
+
+    switch (vehicle.getDirection()) {
+
+        case NORTH:
+        case SOUTH:
+
+            int targetX =
+                    LaneManager.getLaneCenterX(
+                            vehicle.getDirection(),
+                            vehicle.getLane()
+                    );
+
+            if (vehicle.getX() < targetX) {
+
+                vehicle.setX(
+                        vehicle.getX() + smooth
+                );
+
+            } else if (vehicle.getX() > targetX) {
+
+                vehicle.setX(
+                        vehicle.getX() - smooth
+                );
+            }
+
+            break;
+
+        case EAST:
+        case WEST:
+
+            int targetY =
+                    LaneManager.getLaneCenterY(
+                            vehicle.getDirection(),
+                            vehicle.getLane()
+                    );
+
+            if (vehicle.getY() < targetY) {
+
+                vehicle.setY(
+                        vehicle.getY() + smooth
+                );
+
+            } else if (vehicle.getY() > targetY) {
+
+                vehicle.setY(
+                        vehicle.getY() - smooth
+                );
+            }
+
+            break;
+    }
+}
+    private void smoothTurning(
+        Vehicle vehicle
+) {
+
+    if (!vehicle.isTurning()) {
+        return;
+    }
+
+    double speed = 1.8;
+
+    double angle =
+            Math.toRadians(
+                    vehicle.getAngle()
+            );
+
+    double dx =
+            Math.cos(angle) * speed;
+
+    double dy =
+            Math.sin(angle) * speed;
+
+    vehicle.setX(
+            vehicle.getX() + dx
+    );
+
+    vehicle.setY(
+            vehicle.getY() + dy
+    );
+
+    finishTurning(vehicle);
+
+    updateVehicleAngle(vehicle);
+}
+    private void finishTurning(
+        Vehicle vehicle
+) {
+
+    boolean finished =
+            Math.abs(
+                    vehicle.getAngle()
+                    - vehicle.getTargetAngle()
+            ) < 5;
+
+    if (!finished) {
+        return;
+    }
+
+    vehicle.setDirection(
+            vehicle.getTargetDirection()
+    );
+
+    assignLaneAfterTurn(vehicle);
+
+    recoverLane(vehicle);
+
+    vehicle.setTurning(false);
+}
+    private void recoverLane(
+        Vehicle vehicle
+) {
+
+    switch (vehicle.getDirection()) {
+
+        case NORTH:
+        case SOUTH:
+
+            vehicle.setX(
+                    LaneManager.getLaneCenterX(
+                            vehicle.getDirection(),
+                            vehicle.getLane()
+                    )
+            );
+
+            break;
+
+        case EAST:
+        case WEST:
+
+            vehicle.setY(
+                    LaneManager.getLaneCenterY(
+                            vehicle.getDirection(),
+                            vehicle.getLane()
+                    )
+            );
+
+            break;
+    }
+}
+    private void assignLaneAfterTurn(
+        Vehicle vehicle
+) {
+
+    // mặc định luôn chạy lane phải
+
+    vehicle.setLane(
+            util.Lane.RIGHT
+    );
+}
+    private void alignVehicle(Vehicle vehicle) {
+       
+    if (vehicle.isChangingLane()
+        || vehicle.isTurning()) {
+
+    return;
+}
+    double smooth = 2;
+
+    switch (vehicle.getDirection()) {
+
+        case NORTH:
+        case SOUTH:
+
+            if (vehicle.getTargetX() != 0) {
+
+                if (vehicle.getX() < vehicle.getTargetX()) {
+
+                    vehicle.setX(
+                            vehicle.getX() + smooth
+                    );
+
+                } else if (vehicle.getX() > vehicle.getTargetX()) {
+
+                    vehicle.setX(
+                            vehicle.getX() - smooth
+                    );
+                }
+            }
+
+            break;
+
+        case EAST:
+        case WEST:
+
+            if (vehicle.getTargetY() != 0) {
+
+                if (vehicle.getY() < vehicle.getTargetY()) {
+
+                    vehicle.setY(
+                            vehicle.getY() + smooth
+                    );
+
+                } else if (vehicle.getY() > vehicle.getTargetY()) {
+
+                    vehicle.setY(
+                            vehicle.getY() - smooth
+                    );
+                }
+            }
+
+            break;
+    }
+}
+    private void updateVehicleAngle(
+        Vehicle vehicle
+) {
+
+    double rotateSpeed = 2;
+
+    double current =
+            vehicle.getAngle();
+
+    double target =
+            vehicle.getTargetAngle();
+
+    double diff =
+            target - current;
+
+    // normalize
+
+    while (diff > 180) {
+
+        diff -= 360;
+    }
+
+    while (diff < -180) {
+
+        diff += 360;
+    }
+
+    if (Math.abs(diff) < rotateSpeed) {
+
+        vehicle.setAngle(target);
+
+        return;
+    }
+
+    if (diff > 0) {
+
+        vehicle.setAngle(
+                current + rotateSpeed
+        );
+
+    } else {
+
+        vehicle.setAngle(
+                current - rotateSpeed
+        );
+    }
+}
+    private void updateLaneChanging(
+        Vehicle vehicle
+) {
+
+    if (!vehicle.isChangingLane()) {
+        return;
+    }
+
+    double smooth = 0.6;
+
+    switch (vehicle.getDirection()) {
+
+        case NORTH:
+        case SOUTH:
+
+            int targetX =
+                    LaneManager.getLaneCenterX(
+                            vehicle.getDirection(),
+                            vehicle.getTargetLane()
+                    );
+
+            if (Math.abs(
+                    vehicle.getX() - targetX
+            ) < 3) {
+
+                vehicle.setX(targetX);
+
+                vehicle.setLane(
+                        vehicle.getTargetLane()
+                );
+
+                vehicle.setChangingLane(false);
+
+                return;
+            }
+
+            if (vehicle.getX() < targetX) {
+
+                vehicle.setX(
+                        vehicle.getX() + smooth
+                );
+
+            } else {
+
+                vehicle.setX(
+                        vehicle.getX() - smooth
+                );
+            }
+
+            break;
+
+        case EAST:
+        case WEST:
+
+            int targetY =
+                    LaneManager.getLaneCenterY(
+                            vehicle.getDirection(),
+                            vehicle.getTargetLane()
+                    );
+
+            if (Math.abs(
+                    vehicle.getY() - targetY
+            ) < 3) {
+
+                vehicle.setY(targetY);
+
+                vehicle.setLane(
+                        vehicle.getTargetLane()
+                );
+
+                vehicle.setChangingLane(false);
+
+                return;
+            }
+
+            if (vehicle.getY() < targetY) {
+
+                vehicle.setY(
+                        vehicle.getY() + smooth
+                );
+
+            } else {
+
+                vehicle.setY(
+                        vehicle.getY() - smooth
+                );
+            }
+
+            break;
+    }
+}
+    private boolean canEnterIntersection(
+        Vehicle vehicle,
+        List<Vehicle> vehicles
+) {
+
+    switch (vehicle.getDirection()) {
+
+        case SOUTH:
+
+            for (Vehicle other : vehicles) {
+
+                if (other == vehicle) {
+                    continue;
+                }
+
+                // phía sau giao lộ đang kẹt
+                if (Math.abs(
+                        other.getX() - vehicle.getX()
+                ) < 50
+                        &&
+                        other.getY() > 520
+                        &&
+                        other.getY() - vehicle.getY() < 120) {
+
+                    return false;
+                }
+            }
+
+            break;
+
+        case NORTH:
+
+            for (Vehicle other : vehicles) {
+
+                if (other == vehicle) {
+                    continue;
+                }
+
+                if (Math.abs(
+                        other.getX() - vehicle.getX()
+                ) < 50
+                        &&
+                        other.getY() < 430
+                        &&
+                        vehicle.getY() - other.getY() < 120) {
+
+                    return false;
+                }
+            }
+
+            break;
+
+        case EAST:
+
+            for (Vehicle other : vehicles) {
+
+                if (other == vehicle) {
+                    continue;
+                }
+
+                if (Math.abs(
+                        other.getY() - vehicle.getY()
+                ) < 50
+                        &&
+                        other.getX() > 520
+                        &&
+                        other.getX() - vehicle.getX() < 120) {
+
+                    return false;
+                }
+            }
+
+            break;
+
+        case WEST:
+
+            for (Vehicle other : vehicles) {
+
+                if (other == vehicle) {
+                    continue;
+                }
+
+                if (Math.abs(
+                        other.getY() - vehicle.getY()
+                ) < 50
+                        &&
+                        other.getX() < 430
+                        &&
+                        vehicle.getX() - other.getX() < 120) {
+
+                    return false;
+                }
+            }
+
+            break;
+    }
+
+    return true;
+}
+    public int countVehiclesByDirection(
+        List<Vehicle> vehicles,
+        Direction d1,
+        Direction d2
+) {
+
+    int count = 0;
+
+    for (Vehicle vehicle : vehicles) {
+
+        if (vehicle.getDirection() == d1
+                ||
+                vehicle.getDirection() == d2) {
+
+            count++;
+        }
+    }
+
+    return count;
+}
+    private void recoverAfterIntersection(
+        Vehicle vehicle
+) {
+
+    boolean outside =
+
+            vehicle.getX() < 380
+            || vehicle.getX() > 570
+            || vehicle.getY() < 380
+            || vehicle.getY() > 570;
+
+    if (!outside) {
+        return;
+    }
+
+    vehicle.setStopped(false);
+
+    vehicle.setChangingLane(false);
+
+    vehicle.setTurning(false);
+}
+    public int countStoppedVehicles(
+        List<Vehicle> vehicles
+) {
+
+    int count = 0;
+
+    for (Vehicle vehicle : vehicles) {
+
+        if (vehicle.isStopped()) {
+
+            count++;
+        }
+    }
+
+    return count;
+}
+    
+}
+
+// FILE: d:\TrafficSimulation.VN\TrafficSimulation.VN\src\manager\LaneManager.java
+
+package manager;
+
+import util.Direction;
+import util.Lane;
+
+public class LaneManager {
+
+    public static int getLaneCenterX(
+            Direction direction,
+            Lane lane
+    ) {
+
+        switch (direction) {
+
+            case NORTH:
+
+                return lane == Lane.LEFT
+                        ? 430
+                        : 470;
+
+            case SOUTH:
+
+                return lane == Lane.LEFT
+                        ? 330
+                        : 370;
+
+            default:
+
+                return 0;
+        }
+    }
+
+    public static int getLaneCenterY(
+            Direction direction,
+            Lane lane
+    ) {
+
+        switch (direction) {
+
+            case EAST:
+
+                return lane == Lane.LEFT
+                        ? 330
+                        : 370;
+
+            case WEST:
+
+                return lane == Lane.LEFT
+                        ? 430
+                        : 470;
+
+            default:
+
+                return 0;
+        }
+    }
+}
+
+// FILE: d:\TrafficSimulation.VN\TrafficSimulation.VN\src\manager\VehicleSpawnManager.java
+
+package manager;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import model.vehicle.Ambulance;
+import model.vehicle.Bicycle;
+import model.vehicle.Car;
+import model.vehicle.FireTruck;
+import model.vehicle.Motorbike;
+import model.vehicle.Vehicle;
+
+import strategy.driver.AggressiveDriver;
+import strategy.driver.EmergencyDriver;
+import strategy.driver.NormalDriver;
+
+import util.Direction;
+import util.Lane;
+import util.TurnType;
+
+public class VehicleSpawnManager {
+
+    private final List<Vehicle> vehicles;
+
+    public VehicleSpawnManager(
+            List<Vehicle> vehicles
+    ) {
+
+        this.vehicles = vehicles;
+    }
+
+    // =========================
+    // SPAWN RANDOM VEHICLE
+    // =========================
+
+    public void spawnRandomVehicle(List<Direction> directions) {
+
+    int randomType =
+            (int) (Math.random() * 5);
+
+    Direction direction =
+        directions.get(
+                (int)(
+                        Math.random()
+                        * directions.size()
+                )
+        );
+
+    double x = getSpawnX(direction);
+    double y = getSpawnY(direction);
+
+    if (!canSpawn(x, y)) {
+        return;
+    }
+
+    Vehicle vehicle;
+
+    switch (randomType) {
+
+        case 0:
+
+            vehicle =
+                    createCar(direction);
+
+            break;
+
+        case 1:
+
+            vehicle =
+                    createMotorbike(direction);
+
+            break;
+
+        case 2:
+
+            vehicle =
+                    createBicycle(direction);
+
+            break;
+
+        case 3:
+
+            vehicle =
+                    createAmbulance(direction);
+
+            break;
+
+        default:
+
+            vehicle =
+                    createFireTruck(direction);
+
+            break;
+    }
+
+    setupVehicle(vehicle);
+
+    vehicles.add(vehicle);
+}
+
+    // =========================
+    // CREATE VEHICLES
+    // =========================
+
+    private Vehicle createCar(
+            Direction direction
+    ) {
+
+        return new Car(
+                getSpawnX(direction),
+                getSpawnY(direction),
+                direction
+        );
+    }
+
+    private Vehicle createMotorbike(
+            Direction direction
+    ) {
+
+        return new Motorbike(
+                getSpawnX(direction),
+                getSpawnY(direction),
+                direction
+        );
+    }
+
+    private Vehicle createBicycle(
+            Direction direction
+    ) {
+
+        return new Bicycle(
+                getSpawnX(direction),
+                getSpawnY(direction),
+                direction
+        );
+    }
+
+    private Vehicle createAmbulance(
+            Direction direction
+    ) {
+
+        return new Ambulance(
+                getSpawnX(direction),
+                getSpawnY(direction),
+                direction
+        );
+    }
+
+    private Vehicle createFireTruck(
+            Direction direction
+    ) {
+
+        return new FireTruck(
+                getSpawnX(direction),
+                getSpawnY(direction),
+                direction
+        );
+    }
+
+    // =========================
+    // SETUP VEHICLE
+    // =========================
+
+    private void setupVehicle(
+            Vehicle vehicle
+    ) {
+
+        setupLane(vehicle);
+
+        setupTurnType(vehicle);
+
+        setupDriverBehavior(vehicle);
+    }
+
+    // =========================
+    // SETUP LANE
+    // =========================
+
+    private void setupLane(
+        Vehicle vehicle
+) {
+
+    Lane lane;
+
+    if (Math.random() < 0.5) {
+
+        lane = Lane.LEFT;
+
+    } else {
+
+        lane = Lane.RIGHT;
+    }
+
+    vehicle.setLane(lane);
+
+    // FIX POSITION THEO LANE
+
+    switch (vehicle.getDirection()) {
+
+        case NORTH:
+        case SOUTH:
+
+            vehicle.setX(
+                    LaneManager.getLaneCenterX(
+                            vehicle.getDirection(),
+                            lane
+                    )
+            );
+
+            break;
+
+        case EAST:
+        case WEST:
+
+            vehicle.setY(
+                    LaneManager.getLaneCenterY(
+                            vehicle.getDirection(),
+                            lane
+                    )
+            );
+
+            break;
+    }
+}
+
+    // =========================
+    // SETUP TURN TYPE
+    // =========================
+
+    private void setupTurnType(
+            Vehicle vehicle
+    ) {
+
+        double random =
+                Math.random();
+
+        if (random < 0.33) {
+
+            vehicle.setTurnType(
+                    TurnType.LEFT
+            );
+
+        } else if (random < 0.66) {
+
+            vehicle.setTurnType(
+                    TurnType.RIGHT
+            );
+
+        } else {
+
+            vehicle.setTurnType(
+                    TurnType.STRAIGHT
+            );
+        }
+    }
+
+    // =========================
+    // SETUP DRIVER
+    // =========================
+
+    private void setupDriverBehavior(
+            Vehicle vehicle
+    ) {
+
+        if (vehicle instanceof Ambulance
+                || vehicle instanceof FireTruck) {
+
+            vehicle.setBehavior(
+                    new EmergencyDriver()
+            );
+
+            return;
+        }
+
+        if (Math.random() < 0.3) {
+
+            vehicle.setBehavior(
+                    new AggressiveDriver()
+            );
+
+        } else {
+
+            vehicle.setBehavior(
+                    new NormalDriver()
+            );
+        }
+    }
+
+    // =========================
+    // DIRECTION
+    // =========================
+
+    private Direction getDirection(
+            int value
+    ) {
+
+        switch (value) {
+
+            case 0:
+                return Direction.NORTH;
+
+            case 1:
+                return Direction.SOUTH;
+
+            case 2:
+                return Direction.EAST;
+
+            default:
+                return Direction.WEST;
+        }
+    }
+
+    // =========================
+    // SPAWN POSITION X
+    // =========================
+
+    private double getSpawnX(
+            Direction direction
+    ) {
+
+        switch (direction) {
+
+            case NORTH:
+
+                return 470;
+
+            case SOUTH:
+
+                return 530;
+
+            case EAST:
+
+                return -100;
+
+            case WEST:
+
+                return 1100;
+
+            default:
+
+                return 0;
+        }
+    }
+
+    // =========================
+    // SPAWN POSITION Y
+    // =========================
+
+    private double getSpawnY(
+            Direction direction
+    ) {
+
+        switch (direction) {
+
+            case NORTH:
+
+                return 1100;
+
+            case SOUTH:
+
+                return -100;
+
+            case EAST:
+
+                return 470;
+
+            case WEST:
+
+                return 530;
+
+            default:
+
+                return 0;
+        }
+    }
+
+    // =========================
+    // REMOVE OUTSIDE VEHICLE
+    // =========================
+
+    public void removeOutsideVehicles() {
+
+        List<Vehicle> removeList =
+                new ArrayList<>();
+
+        for (Vehicle vehicle : vehicles) {
+
+            if (vehicle.getX() < -200
+                    || vehicle.getX() > 1400
+                    || vehicle.getY() < -200
+                    || vehicle.getY() > 1400) {
+
+                removeList.add(vehicle);
+            }
+        }
+
+        vehicles.removeAll(removeList);
+    }
+    private boolean canSpawn(
+        double x,
+        double y
+) {
+
+    for (Vehicle vehicle : vehicles) {
+
+        double dx = vehicle.getX() - x;
+        double dy = vehicle.getY() - y;
+
+        double distance =
+                Math.sqrt(dx * dx + dy * dy);
+
+        if (distance < 120) {
+
+            return false;
+        }
+    }
+
+    return true;
+}
+}
+
+// FILE: d:\TrafficSimulation.VN\TrafficSimulation.VN\src\model\intersection\IntersectionType.java
+
+package model.intersection;
+
+import util.Direction;
+
+import java.util.ArrayList;
+import java.util.List;
+
+public enum IntersectionType {
+
+    THREE_WAY,
+    FOUR_WAY,
+    FIVE_WAY;
+
+    public List<Direction> getDirections() {
+
+        List<Direction> directions =
+                new ArrayList<>();
+
+        switch (this) {
+
+            case THREE_WAY:
+
+                directions.add(Direction.NORTH);
+                directions.add(Direction.EAST);
+                directions.add(Direction.WEST);
+
+                break;
+
+            case FIVE_WAY:
+
+                directions.add(Direction.NORTH);
+                directions.add(Direction.SOUTH);
+                directions.add(Direction.EAST);
+                directions.add(Direction.WEST);
+
+                break;
+
+            default:
+
+                directions.add(Direction.NORTH);
+                directions.add(Direction.SOUTH);
+                directions.add(Direction.EAST);
+                directions.add(Direction.WEST);
+        }
+
+        return directions;
+    }
+}
+
+// FILE: d:\TrafficSimulation.VN\TrafficSimulation.VN\src\model\road\Lane.java
+
+package model.road;
+
+import util.Direction;
+
+public class Lane {
+
+    private int x;
+    private int y;
+
+    private int width;
+    private int height;
+
+    private Direction direction;
+
+    public Lane(int x, int y, int width, int height, Direction direction) {
+
+        this.x = x;
+        this.y = y;
+
+        this.width = width;
+        this.height = height;
+
+        this.direction = direction;
+    }
+
+    public int getX() {
+        return x;
+    }
+
+    public int getY() {
+        return y;
+    }
+
+    public int getWidth() {
+        return width;
+    }
+
+    public int getHeight() {
+        return height;
+    }
+
+    public Direction getDirection() {
+        return direction;
+    }
+}
+
+// FILE: d:\TrafficSimulation.VN\TrafficSimulation.VN\src\model\road\Road.java
+
+package model.road;
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class Road {
+
+    private List<Lane> lanes;
+
+    public Road() {
+
+        lanes = new ArrayList<>();
+    }
+
+    public void addLane(Lane lane) {
+
+        lanes.add(lane);
+    }
+
+    public List<Lane> getLanes() {
+
+        return lanes;
+    }
+}
+
+// FILE: d:\TrafficSimulation.VN\TrafficSimulation.VN\src\model\SimulationConfig.java
+
+package model;
+import model.intersection.IntersectionType;
+import util.TrafficDensity;
+
+public class SimulationConfig {
+
+    private IntersectionType intersectionType;
+
+    private String trafficMode;
+
+    private String lightType;
+
+    private int vehicleCount;
+    private TrafficDensity trafficDensity;
+
+    public SimulationConfig(
+        IntersectionType intersectionType,
+        String trafficMode,
+        String lightType,
+        int vehicleCount,
+        TrafficDensity trafficDensity
+) {
+
+        this.intersectionType = intersectionType;
+        this.trafficMode = trafficMode;
+        this.lightType = lightType;
+        this.vehicleCount = vehicleCount;
+        this.trafficDensity = trafficDensity;
+    }
+
+    public IntersectionType getIntersectionType() {
+    return intersectionType;
+}
+
+    public String getTrafficMode() {
+        return trafficMode;
+    }
+
+    public String getLightType() {
+        return lightType;
+    }
+
+    public int getVehicleCount() {
+        return vehicleCount;
+    }
+    public TrafficDensity getTrafficDensity() {
+
+    return trafficDensity;
+}
+}
+
+// FILE: d:\TrafficSimulation.VN\TrafficSimulation.VN\src\model\trafficlight\LightColor.java
+
+package model.trafficlight;
+
+public enum LightColor {
+
+    RED,
+    YELLOW,
+    GREEN
+
+}
+
+// FILE: d:\TrafficSimulation.VN\TrafficSimulation.VN\src\model\trafficlight\TrafficLight.java
+
+package model.trafficlight;
+
+public class TrafficLight {
+
+    private LightColor color;
+
+    private int timer;
+
+    public TrafficLight(LightColor color, int timer) {
+
+        this.color = color;
+        this.timer = timer;
+    }
+    
+
+    public void update() {
+
+        timer--;
+
+        if (timer <= 0) {
+
+            switchLight();
+        }
+    }
+
+    private void switchLight() {
+
+        switch (color) {
+
+            case GREEN:
+
+                color = LightColor.YELLOW;
+                timer = 120;
+                break;
+
+            case YELLOW:
+
+                color = LightColor.RED;
+                timer = 300;
+                break;
+
+            case RED:
+
+                color = LightColor.GREEN;
+                timer = 300;
+                break;
+        }
+    }
+
+    public LightColor getColor() {
+        return color;
+    }
+
+    public int getTimer() {
+        return timer;
+    }
+    public void setColor(
+        LightColor color
+) {
+
+    this.color = color;
+}
+
+public void setTimer(
+        int timer
+) {
+
+    this.timer = timer;
+}
+}
+
+// FILE: d:\TrafficSimulation.VN\TrafficSimulation.VN\src\model\vehicle\Ambulance.java
+
+package model.vehicle;
+
+import strategy.driver.EmergencyDriver;
+import util.Direction;
+
+public class Ambulance extends Vehicle {
+
+    public Ambulance(
+            double x,
+            double y,
+            Direction direction
+    ) {
+
+        super(x, y, direction);
+
+        width = 65;
+        height = 36;
+
+        behavior = new EmergencyDriver();
+
+        speed = behavior.getSpeed();
+    }
+
+    @Override
+    public void move() {
+
+        if (stopped) {
+            return;
+        }
+
+        switch (direction) {
+
+            case NORTH:
+                y -= speed;
+                break;
+
+            case SOUTH:
+                y += speed;
+                break;
+
+            case EAST:
+                x += speed;
+                break;
+
+            case WEST:
+                x -= speed;
+                break;
+        }
+    }
+}
+
+// FILE: d:\TrafficSimulation.VN\TrafficSimulation.VN\src\model\vehicle\Bicycle.java
+
+package model.vehicle;
+
+import util.Direction;
+
+public class Bicycle extends Vehicle {
+
+    public Bicycle(
+            double x,
+            double y,
+            Direction direction
+    ) {
+
+        super(x, y, direction);
+
+        this.speed = 2;
+
+        this.width = 20;
+        this.height = 40;
+    }
+
+    @Override
+    public void move() {
+
+        if (stopped) {
+            return;
+        }
+
+        switch (direction) {
+
+            case NORTH:
+
+                y -= speed;
+                break;
+
+            case SOUTH:
+
+                y += speed;
+                break;
+
+            case EAST:
+
+                x += speed;
+                break;
+
+            case WEST:
+
+                x -= speed;
+                break;
+        }
+    }
+}
+
+// FILE: d:\TrafficSimulation.VN\TrafficSimulation.VN\src\model\vehicle\Car.java
+
+package model.vehicle;
+
+import util.Direction;
+import strategy.driver.NormalDriver;
+
+public class Car extends Vehicle {
+
+    public Car(double x, double y, Direction direction) {
+
+    super(x, y, direction);
+
+    width = 50;
+    height = 28;
+
+    speed = 2;
+
+    this.direction = direction;
+    
+    behavior = new NormalDriver();
+
+    speed = behavior.getSpeed();
+}
+
+@Override
+public void move() {
+
+    if (stopped) {
+        return;
+    }
+
+    switch (direction) {
+
+        case SOUTH:
+            y += speed;
+            break;
+
+        case NORTH:
+            y -= speed;
+            break;
+
+        case EAST:
+            x += speed;
+            break;
+
+        case WEST:
+            x -= speed;
+            break;
+    }
+}
+}
+
+// FILE: d:\TrafficSimulation.VN\TrafficSimulation.VN\src\model\vehicle\FireTruck.java
+
+package model.vehicle;
+
+import strategy.driver.EmergencyDriver;
+import util.Direction;
+
+public class FireTruck extends Vehicle {
+
+    public FireTruck(
+            double x,
+            double y,
+            Direction direction
+    ) {
+
+        super(x, y, direction);
+
+        width = 80;
+        height = 42;
+
+        behavior = new EmergencyDriver();
+
+        speed = behavior.getSpeed();
+    }
+
+    @Override
+    public void move() {
+
+        if (stopped) {
+            return;
+        }
+
+        switch (direction) {
+
+            case NORTH:
+                y -= speed;
+                break;
+
+            case SOUTH:
+                y += speed;
+                break;
+
+            case EAST:
+                x += speed;
+                break;
+
+            case WEST:
+                x -= speed;
+                break;
+        }
+    }
+}
+
+// FILE: d:\TrafficSimulation.VN\TrafficSimulation.VN\src\model\vehicle\Motorbike.java
+
+package model.vehicle;
+
+import util.Direction;
+
+public class Motorbike extends Vehicle {
+
+    public Motorbike(
+            double x,
+            double y,
+            Direction direction
+    ) {
+
+        super(x, y, direction);
+
+        this.speed = 3.5;
+
+        this.width = 32;
+        this.height = 16;
+    }
+
+    @Override
+    public void move() {
+
+        if (stopped) {
+            return;
+        }
+
+        switch (direction) {
+
+            case NORTH:
+
+                y -= speed;
+                break;
+
+            case SOUTH:
+
+                y += speed;
+                break;
+
+            case EAST:
+
+                x += speed;
+                break;
+
+            case WEST:
+
+                x -= speed;
+                break;
+        }
+    }
+}
+
+// FILE: d:\TrafficSimulation.VN\TrafficSimulation.VN\src\model\vehicle\Vehicle.java
+
+package model.vehicle;
+
+import util.Direction;
+import strategy.driver.DriverBehavior;
+import util.TurnType;
+import util.Lane;
+public abstract class Vehicle {
+
+    protected double x;
+    protected double y;
+
+    protected double speed;
+
+    protected double width;
+    protected double height;
+
+    protected Direction direction;
+    
+    protected boolean stopped;
+    
+    protected DriverBehavior behavior;
+    
+    protected TurnType turnType;
+    
+    protected boolean turned;
+    
+    protected Lane lane;
+    protected boolean turning;
+    protected Direction targetDirection;
+    protected double targetX;
+    protected double targetY;
+    protected double angle;
+    protected double targetAngle;
+    protected boolean changingLane;
+    protected Lane targetLane;
+    private int laneChangeCooldown = 0;
+    public Vehicle(
+        double x,
+        double y,
+        Direction direction
+) {
+
+    this.x = x;
+    this.y = y;
+
+    this.direction = direction;
+    this.lane = Lane.RIGHT;
+    switch (direction) {
+
+    case EAST:
+
+        angle = 0;
+        break;
+
+    case SOUTH:
+
+        angle = 90;
+        break;
+
+    case WEST:
+
+        angle = 180;
+        break;
+
+    case NORTH:
+
+        angle = -90;
+        break;
+}
+}
+
+    public abstract void move();
+
+    // GETTER
+
+    public double getX() {
+        return x;
+    }
+
+    public double getY() {
+        return y;
+    }
+
+    public double getWidth() {
+        return width;
+    }
+
+    public double getHeight() {
+        return height;
+    }
+    public Direction getDirection() {
+        return direction;
+    }
+    public boolean isStopped() {
+        return stopped;
+    }
+
+    public void setStopped(boolean stopped) {
+        this.stopped = stopped;
+    }
+    public DriverBehavior getBehavior() {
+    return behavior;
+    }
+
+    public void setBehavior(
+        DriverBehavior behavior
+    ) {
+            this.behavior = behavior;
+      }
+    public TurnType getTurnType() {
+    return turnType;
+    }
+
+    public void setTurnType(
+        TurnType turnType
+) {
+    this.turnType = turnType;
+    }
+    public void setDirection(
+        Direction direction
+) {
+
+    this.direction = direction;
+}
+    public boolean hasTurned() {
+    return turned;
+}
+
+public void setTurned(boolean turned) {
+    this.turned = turned;
+}
+public Lane getLane() {
+    return lane;
+}
+
+public void setLane(Lane lane) {
+    this.lane = lane;
+}
+public void setX(double x) {
+    this.x = x;
+}
+
+public void setY(double y) {
+    this.y = y;
+}
+public boolean isTurning() {
+    return turning;
+}
+
+public void setTurning(boolean turning) {
+    this.turning = turning;
+}
+public Direction getTargetDirection() {
+    return targetDirection;
+}
+
+public void setTargetDirection(
+        Direction targetDirection
+) {
+    this.targetDirection = targetDirection;
+}
+public double getTargetX() {
+    return targetX;
+}
+
+public void setTargetX(double targetX) {
+    this.targetX = targetX;
+}
+
+public double getTargetY() {
+    return targetY;
+}
+
+public void setTargetY(double targetY) {
+    this.targetY = targetY;
+}
+public double getAngle() {
+    return angle;
+}
+
+public void setAngle(double angle) {
+    this.angle = angle;
+}
+
+public double getTargetAngle() {
+    return targetAngle;
+}
+
+public void setTargetAngle(double targetAngle) {
+    this.targetAngle = targetAngle;
+}
+public boolean isChangingLane() {
+    return changingLane;
+}
+
+public void setChangingLane(
+        boolean changingLane
+) {
+    this.changingLane = changingLane;
+}
+
+public Lane getTargetLane() {
+    return targetLane;
+}
+
+public void setTargetLane(
+        Lane targetLane
+) {
+    this.targetLane = targetLane;
+}
+public int getLaneChangeCooldown() {
+    return laneChangeCooldown;
+}
+
+public void setLaneChangeCooldown(
+        int laneChangeCooldown
+) {
+    this.laneChangeCooldown = laneChangeCooldown;
+}
+}
+
+// FILE: d:\TrafficSimulation.VN\TrafficSimulation.VN\src\strategy\driver\AggressiveDriver.java
+
+package strategy.driver;
+
+import model.trafficlight.LightColor;
+import model.trafficlight.TrafficLight;
+import model.vehicle.Vehicle;
+
+import java.util.List;
+
+public class AggressiveDriver
+        implements DriverBehavior {
+
+    @Override
+    public boolean shouldStop(
+            Vehicle self,
+            List<Vehicle> vehicles,
+            TrafficLight relevantLight
+    ) {
+
+        // chỉ dừng nếu rất gần giao lộ
+
+        if (relevantLight.getColor()
+                == LightColor.RED) {
+
+            return Math.random() > 0.4;
+        }
+
+        return false;
+    }
+
+    @Override
+    public int getSpeed() {
+
+        return 7;
+    }
+}
+
+// FILE: d:\TrafficSimulation.VN\TrafficSimulation.VN\src\strategy\driver\DriverBehavior.java
+
+package strategy.driver;
+
+import model.vehicle.Vehicle;
+import model.trafficlight.TrafficLight;
+
+import java.util.List;
+
+public interface DriverBehavior {
+
+    boolean shouldStop(
+            Vehicle self,
+            List<Vehicle> vehicles,
+            TrafficLight relevantLight
+    );
+
+    int getSpeed();
+}
+
+// FILE: d:\TrafficSimulation.VN\TrafficSimulation.VN\src\strategy\driver\EmergencyDriver.java
+
+package strategy.driver;
+
+import model.trafficlight.TrafficLight;
+import model.vehicle.Vehicle;
+
+import java.util.List;
+
+public class EmergencyDriver
+        implements DriverBehavior {
+
+    @Override
+    public boolean shouldStop(
+            Vehicle self,
+            List<Vehicle> vehicles,
+            TrafficLight relevantLight
+    ) {
+
+        return false;
+    }
+
+    @Override
+    public int getSpeed() {
+
+        return 9;
+    }
+}
+
+// FILE: d:\TrafficSimulation.VN\TrafficSimulation.VN\src\strategy\driver\NormalDriver.java
+
+package strategy.driver;
+
+import model.trafficlight.LightColor;
+import model.trafficlight.TrafficLight;
+import model.vehicle.Vehicle;
+
+import java.util.List;
+
+public class NormalDriver implements DriverBehavior {
+
+    @Override
+    public boolean shouldStop(
+            Vehicle self,
+            List<Vehicle> vehicles,
+            TrafficLight relevantLight
+    ) {
+
+        return relevantLight.getColor()
+                == LightColor.RED;
+    }
+
+    @Override
+    public int getSpeed() {
+
+        return 4;
+    }
+}
+
+// FILE: d:\TrafficSimulation.VN\TrafficSimulation.VN\src\util\Direction.java
+
+package util;
+
+public enum Direction {
+
+    NORTH,
+    SOUTH,
+    EAST,
+    WEST
+
+}
+
+// FILE: d:\TrafficSimulation.VN\TrafficSimulation.VN\src\util\DirectionHelper.java
+
+package util;
+
+public class DirectionHelper {
+
+    public static Direction getLeftDirection(
+            Direction direction
+    ) {
+
+        switch (direction) {
+
+            case NORTH:
+                return Direction.WEST;
+
+            case SOUTH:
+                return Direction.EAST;
+
+            case EAST:
+                return Direction.NORTH;
+
+            case WEST:
+                return Direction.SOUTH;
+        }
+
+        return direction;
+    }
+
+    public static Direction getRightDirection(
+            Direction direction
+    ) {
+
+        switch (direction) {
+
+            case NORTH:
+                return Direction.EAST;
+
+            case SOUTH:
+                return Direction.WEST;
+
+            case EAST:
+                return Direction.SOUTH;
+
+            case WEST:
+                return Direction.NORTH;
+        }
+
+        return direction;
+    }
+}
+
+// FILE: d:\TrafficSimulation.VN\TrafficSimulation.VN\src\util\Lane.java
+
+package util;
+
+public enum Lane {
+
+    LEFT,
+    RIGHT
+}
+
+// FILE: d:\TrafficSimulation.VN\TrafficSimulation.VN\src\util\TrafficDensity.java
+
+package util;
+
+public enum TrafficDensity {
+
+    LOW,
+    MEDIUM,
+    HIGH
+}
+
+// FILE: d:\TrafficSimulation.VN\TrafficSimulation.VN\src\util\TurnType.java
+
+package util;
+
+public enum TurnType {
+
+    STRAIGHT,
+    LEFT,
+    RIGHT
+}
+
+// FILE: d:\TrafficSimulation.VN\TrafficSimulation.VN\src\view\frame\MainFrame.java
+
+package view.frame;
+
+import model.SimulationConfig;
+import view.panel.MenuPanel;
+import view.panel.SimulationPanel;
+
+import javax.swing.JFrame;
+
+public class MainFrame extends JFrame {
+
+    public MainFrame() {
+
+        setTitle("Smart City Traffic Simulation");
+
+        setSize(1200, 800);
+
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+
+        setLocationRelativeTo(null);
+
+        setResizable(false);
+
+        showMenu();
+
+        setVisible(true);
+    }
+
+  private void showMenu() {
+
+    final MenuPanel[] menuPanelRef = new MenuPanel[1];
+
+    menuPanelRef[0] = new MenuPanel(() -> {
+
+        SimulationConfig config =
+                menuPanelRef[0].getConfig();
+
+        startSimulation(config);
+    });
+
+    setContentPane(menuPanelRef[0]);
+
+    revalidate();
+}
+
+    private void startSimulation(SimulationConfig config) {
+
+        SimulationPanel simulationPanel =
+                new SimulationPanel(config);
+
+        setContentPane(simulationPanel);
+
+        revalidate();
+    }
+}
+
+// FILE: d:\TrafficSimulation.VN\TrafficSimulation.VN\src\view\panel\MenuPanel.java
+
+package view.panel;
+
+import model.SimulationConfig;
+
+import javax.swing.*;
+import java.awt.*;
+import model.intersection.IntersectionType;
+
+public class MenuPanel extends JPanel {
+
+    private JComboBox<String> intersectionBox;
+
+    private JComboBox<String> modeBox;
+
+    private JComboBox<String> lightBox;
+
+    private JSlider vehicleSlider;
+
+    private JButton startButton;
+    private JComboBox<String> densityBox;
+
+    public MenuPanel(Runnable onStart) {
+
+        setLayout(null);
+
+        setBackground(new Color(30, 30, 30));
+
+        JLabel title = new JLabel("SMART TRAFFIC SIMULATION");
+
+        title.setForeground(Color.WHITE);
+
+        title.setFont(new Font("Arial", Font.BOLD, 28));
+
+        title.setBounds(350, 50, 500, 40);
+
+        add(title);
+
+        // intersection
+
+        JLabel intersectionLabel = new JLabel("Intersection:");
+
+        intersectionLabel.setForeground(Color.WHITE);
+
+        intersectionLabel.setBounds(350, 150, 150, 30);
+
+        add(intersectionLabel);
+
+        intersectionBox = new JComboBox<>(new String[] {
+                "Three Way",
+                "Four Way",
+                "Five Way"
+        });
+
+        intersectionBox.setBounds(500, 150, 200, 30);
+
+        add(intersectionBox);
+
+        // mode
+
+        JLabel modeLabel = new JLabel("Traffic Mode:");
+
+        modeLabel.setForeground(Color.WHITE);
+
+        modeLabel.setBounds(350, 220, 150, 30);
+
+        add(modeLabel);
+
+        modeBox = new JComboBox<>(new String[] {
+                "AUTO",
+                "MANUAL"
+        });
+
+        modeBox.setBounds(500, 220, 200, 30);
+
+        add(modeBox);
+
+        // light type
+
+        JLabel lightLabel = new JLabel("Light Type:");
+
+        lightLabel.setForeground(Color.WHITE);
+
+        lightLabel.setBounds(350, 290, 150, 30);
+
+        add(lightLabel);
+
+        lightBox = new JComboBox<>(new String[] {
+                "NO COUNTDOWN",
+                "ALWAYS COUNTDOWN",
+                "COUNT <= 10"
+        });
+
+        lightBox.setBounds(500, 290, 200, 30);
+
+        add(lightBox);
+
+        // vehicle count
+
+        JLabel vehicleLabel = new JLabel("Vehicle Count:");
+
+        vehicleLabel.setForeground(Color.WHITE);
+
+        vehicleLabel.setBounds(350, 360, 150, 30);
+
+        add(vehicleLabel);
+
+        vehicleSlider = new JSlider(1, 100, 20);
+
+        vehicleSlider.setBounds(500, 360, 200, 50);
+
+        vehicleSlider.setMajorTickSpacing(10);
+
+        vehicleSlider.setPaintTicks(true);
+
+        vehicleSlider.setPaintLabels(true);
+
+        add(vehicleSlider);
+        // traffic density
+
+        JLabel densityLabel =
+        new JLabel("Traffic Density:");
+
+        densityLabel.setForeground(Color.WHITE);
+
+        densityLabel.setBounds(350, 430, 150, 30);
+
+        add(densityLabel);
+
+        densityBox = new JComboBox<>(new String[] {
+            "LOW",
+            "MEDIUM",
+            "HIGH"
+        });
+
+        densityBox.setBounds(500, 430, 200, 30);
+
+        add(densityBox);
+
+        // start button
+
+        startButton = new JButton("START SIMULATION");
+
+        startButton.setBounds(450, 540, 250, 50);
+
+        add(startButton);
+
+        startButton.addActionListener(e -> {
+
+            onStart.run();
+
+        });
+    }
+
+    public SimulationConfig getConfig() {
+
+    IntersectionType type;
+
+    switch ((String) intersectionBox.getSelectedItem()) {
+
+        case "Three Way":
+
+            type = IntersectionType.THREE_WAY;
+            break;
+
+        case "Five Way":
+
+            type = IntersectionType.FIVE_WAY;
+            break;
+
+        default:
+
+            type = IntersectionType.FOUR_WAY;
+    }
+
+    util.TrafficDensity density;
+
+    switch ((String) densityBox.getSelectedItem()) {
+
+        case "LOW":
+
+            density = util.TrafficDensity.LOW;
+            break;
+
+        case "HIGH":
+
+            density = util.TrafficDensity.HIGH;
+            break;
+
+        default:
+
+            density = util.TrafficDensity.MEDIUM;
+    }
+
+    return new SimulationConfig(
+
+            type,
+
+            (String) modeBox.getSelectedItem(),
+
+            (String) lightBox.getSelectedItem(),
+
+            vehicleSlider.getValue(),
+
+            density
+    );
+}
+}
+
+// FILE: d:\TrafficSimulation.VN\TrafficSimulation.VN\src\view\panel\SimulationPanel.java
+
+package view.panel;
+
+
+import model.vehicle.Vehicle;
+
+
+import view.renderer.VehicleRenderer;
+
+import javax.swing.JPanel;
+import javax.swing.Timer;
+
+import java.awt.Color;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.Font;
+
+import java.util.ArrayList;
+import java.util.List;
+
+
+import view.renderer.RoadRenderer;
+
+
+import model.trafficlight.LightColor;
+import model.trafficlight.TrafficLight;
+import view.renderer.TrafficLightRenderer;
+
+import controller.TrafficController;
+
+import model.SimulationConfig;
+
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+
+import java.awt.Rectangle;
+
+
+import manager.VehicleSpawnManager;
+public class SimulationPanel extends JPanel {
+
+    private Timer timer;
+    
+    private TrafficLight verticalLight;
+
+    private TrafficLight horizontalLight;
+
+    private TrafficLightRenderer trafficLightRenderer;
+
+    private List<Vehicle> vehicles;
+
+    private VehicleRenderer vehicleRenderer;
+    
+    private RoadRenderer roadRenderer;
+    
+    private TrafficController trafficController;
+    
+    private SimulationConfig config;
+    
+    private boolean manualMode;
+    
+    
+    private VehicleSpawnManager vehicleSpawnManager;
+    private int spawnCounter = 0;
+    private int fps = 0;
+
+    private long lastFpsTime = System.currentTimeMillis();
+
+    private int frameCount = 0;
+    private String jamLevel = "LOW";
+   public SimulationPanel(SimulationConfig config) {
+
+    this.config = config;
+
+    manualMode =
+            config.getTrafficMode().equals("MANUAL");
+
+    setBackground(Color.GRAY);
+
+    roadRenderer = new RoadRenderer();
+
+    vehicles = new ArrayList<>();
+
+    vehicleRenderer = new VehicleRenderer();
+
+    verticalLight = new TrafficLight(
+            LightColor.GREEN,
+            300
+    );
+
+    horizontalLight = new TrafficLight(
+            LightColor.RED,
+            300
+    );
+
+    trafficLightRenderer = new TrafficLightRenderer();
+
+    trafficController = new TrafficController();
+    vehicleSpawnManager =
+        new VehicleSpawnManager(
+                vehicles
+        );
+
+    spawnVehicles();
+
+    startGameLoop();
+
+    addMouseListener(new MouseAdapter() {
+
+        @Override
+        public void mouseClicked(MouseEvent e) {
+
+            if (manualMode) {
+
+                handleTrafficLightClick(
+                        e.getX(),
+                        e.getY()
+                );
+            }
+        }
+    });
+    
+}
+
+    private void spawnVehicles() {
+
+    vehicles.clear();
+
+    int count =
+            config.getVehicleCount();
+
+    for (int i = 0; i < count; i++) {
+
+        vehicleSpawnManager.spawnRandomVehicle(
+        config.getIntersectionType()
+                .getDirections()
+);
+    }
+}
+
+    private void startGameLoop() {
+
+        timer = new Timer(16, e -> {
+
+            updateSimulation();
+
+            repaint();
+
+        });
+
+        timer.start();
+    }
+
+private void updateSimulation() {
+
+    trafficController.updateVehicles(
+            vehicles,
+            verticalLight,
+            horizontalLight,
+            config.getIntersectionType()
+    );
+
+    if (!manualMode) {
+
+        verticalLight.update();
+        syncLights();
+    }
+
+    
+    updateSmartLights();
+
+    vehicleSpawnManager
+            .removeOutsideVehicles();
+
+    vehicles.removeIf(vehicle ->
+            !config.getIntersectionType()
+                    .getDirections()
+                    .contains(
+                            vehicle.getDirection()
+                    )
+    );
+
+    handleAutoSpawn();
+    updateTrafficJam();
+    updateFPS();
+}
+    @Override
+    protected void paintComponent(Graphics g) {
+
+        super.paintComponent(g);
+
+        Graphics2D g2d = (Graphics2D) g;
+
+        drawRoad(g2d);
+
+        drawVehicles(g2d);
+        
+        drawTrafficLights(g2d);
+        drawStatistics(g2d);
+
+    }
+
+    private void drawRoad(Graphics2D g2d) {
+
+    switch (config.getIntersectionType()) {
+
+        case THREE_WAY:
+
+            roadRenderer.renderThreeWay(g2d);
+            break;
+
+        case FIVE_WAY:
+
+            roadRenderer.renderFiveWay(g2d);
+            break;
+
+        default:
+
+            roadRenderer.renderFourWay(g2d);
+    }
+}
+
+    private void drawVehicles(Graphics2D g2d) {
+
+        for (Vehicle vehicle : vehicles) {
+
+            vehicleRenderer.render(g2d, vehicle);
+
+        }
+
+    }
+    private void syncLights() {
+
+    switch (verticalLight.getColor()) {
+
+        case GREEN:
+
+            horizontalLight.setColor(
+                    LightColor.RED
+            );
+
+            break;
+
+        case YELLOW:
+
+            horizontalLight.setColor(
+                    LightColor.RED
+            );
+
+            break;
+
+        case RED:
+
+            horizontalLight.setColor(
+                    LightColor.GREEN
+            );
+
+            break;
+    }
+
+    horizontalLight.setTimer(
+            verticalLight.getTimer()
+    );
+}
+    private void drawTrafficLights(Graphics2D g2d) {
+
+    trafficLightRenderer.render(
+        g2d,
+        verticalLight,
+        520,
+        250,
+        config.getLightType()
+);
+
+    if (config.getIntersectionType()
+            != model.intersection.IntersectionType.THREE_WAY) {
+
+        trafficLightRenderer.render(
+        g2d,
+        horizontalLight,
+        250,
+        520,
+        config.getLightType()
+);
+    }
+}
+    private void handleTrafficLightClick(int mouseX, int mouseY) {
+
+    Rectangle verticalBounds =
+            new Rectangle(520, 250, 40, 100);
+
+    if (verticalBounds.contains(mouseX, mouseY)) {
+
+        switchManualLights();
+    }
+}
+    private void switchManualLights() {
+
+    switch (verticalLight.getColor()) {
+
+        case GREEN:
+
+            verticalLight.setColor(
+                    LightColor.RED
+            );
+
+            horizontalLight.setColor(
+                    LightColor.GREEN
+            );
+
+            break;
+
+        case RED:
+
+            verticalLight.setColor(
+                    LightColor.GREEN
+            );
+
+            horizontalLight.setColor(
+                    LightColor.RED
+            );
+
+            break;
+    }
+
+    verticalLight.setTimer(300);
+
+    horizontalLight.setTimer(300);
+}
+    private void handleAutoSpawn() {
+
+    spawnCounter++;
+
+    if (spawnCounter >= getSpawnInterval()) {
+
+        spawnCounter = 0;
+
+        if (vehicles.size() < 20) {
+
+            vehicleSpawnManager
+                    .spawnRandomVehicle(
+                            config.getIntersectionType()
+                                    .getDirections()
+                    );
+        }
+    }
+}
+    private int getSpawnInterval() {
+
+    switch (
+            config.getTrafficDensity()
+    ) {
+
+        case LOW:
+
+            return 180;
+
+        case MEDIUM:
+
+            return 120;
+
+        case HIGH:
+
+            return 60;
+
+        default:
+
+            return 120;
+    }
+}
+    private void updateSmartLights() {
+
+    int verticalCount =
+            trafficController
+                    .countVehiclesByDirection(
+                            vehicles,
+                            util.Direction.NORTH,
+                            util.Direction.SOUTH
+                    );
+
+    int horizontalCount =
+            trafficController
+                    .countVehiclesByDirection(
+                            vehicles,
+                            util.Direction.EAST,
+                            util.Direction.WEST
+                    );
+
+    // vertical đông hơn
+
+    if (verticalCount > horizontalCount + 3) {
+
+        if (verticalLight.getColor()
+                == LightColor.GREEN) {
+
+            verticalLight.setTimer(
+                    Math.max(
+                            verticalLight.getTimer(),
+                            400
+                    )
+            );
+        }
+    }
+
+    // horizontal đông hơn
+
+    if (horizontalCount > verticalCount + 3) {
+
+        if (horizontalLight.getColor()
+                == LightColor.GREEN) {
+
+            horizontalLight.setTimer(
+                    Math.max(
+                            horizontalLight.getTimer(),
+                            400
+                    )
+            );
+        }
+    }
+    for (Vehicle vehicle : vehicles) {
+
+    boolean emergency =
+
+            vehicle instanceof model.vehicle.Ambulance
+            ||
+            vehicle instanceof model.vehicle.FireTruck;
+
+    if (!emergency) {
+        continue;
+    }
+
+    switch (vehicle.getDirection()) {
+
+        case NORTH:
+        case SOUTH:
+
+            if (verticalLight.getColor()
+                    == LightColor.RED) {
+
+                forceVerticalGreen();
+
+                verticalLight.setTimer(400);
+            }
+
+            break;
+
+        case EAST:
+        case WEST:
+
+            if (horizontalLight.getColor()
+                    == LightColor.RED) {
+
+                forceHorizontalGreen();
+
+                horizontalLight.setTimer(400);
+            }
+
+            break;
+    }
+}
+}
+   private void updateFPS() {
+
+    frameCount++;
+
+    long current =
+            System.currentTimeMillis();
+
+    if (current - lastFpsTime >= 1000) {
+
+        fps = frameCount;
+
+        frameCount = 0;
+
+        lastFpsTime = current;
+    }
+} 
+    private void drawStatistics(
+        Graphics2D g2d
+) {
+
+    g2d.setColor(
+            new Color(0, 0, 0, 180)
+    );
+
+    g2d.fillRoundRect(
+            20,
+            20,
+            260,
+            180,
+            20,
+            20
+    );
+
+    g2d.setColor(Color.WHITE);
+
+    g2d.setFont(
+            new Font(
+                    "Arial",
+                    Font.BOLD,
+                    16
+            )
+    );
+
+    int y = 50;
+
+    g2d.drawString(
+            "Vehicle Count: "
+                    + vehicles.size(),
+            40,
+            y
+    );
+
+    y += 30;
+
+    g2d.drawString(
+            "FPS: " + fps,
+            40,
+            y
+    );
+
+    y += 30;
+
+    g2d.drawString(
+            "Density: "
+                    + config.getTrafficDensity(),
+            40,
+            y
+    );
+
+    y += 30;
+
+    g2d.drawString(
+            "Vertical Light: "
+                    + verticalLight.getColor(),
+            40,
+            y
+    );
+
+    y += 30;
+
+    g2d.drawString(
+            "Horizontal Light: "
+                    + horizontalLight.getColor(),
+            40,
+            y
+    );
+    y += 30;
+
+    g2d.drawString(
+        "Traffic Jam: " + jamLevel,
+        40,
+        y
+    );
+}
+    private void updateTrafficJam() {
+
+    int stopped =
+            trafficController
+                    .countStoppedVehicles(
+                            vehicles
+                    );
+
+    if (stopped > 15) {
+
+        jamLevel = "HIGH";
+
+    } else if (stopped > 7) {
+
+        jamLevel = "MEDIUM";
+
+    } else {
+
+        jamLevel = "LOW";
+    }
+}
+    private void forceVerticalGreen() {
+
+    verticalLight.setColor(
+            LightColor.GREEN
+    );
+
+    horizontalLight.setColor(
+            LightColor.RED
+    );
+
+    verticalLight.setTimer(400);
+}
+
+private void forceHorizontalGreen() {
+
+    horizontalLight.setColor(
+            LightColor.GREEN
+    );
+
+    verticalLight.setColor(
+            LightColor.RED
+    );
+
+    horizontalLight.setTimer(400);
+}
+    
+}
+
+// FILE: d:\TrafficSimulation.VN\TrafficSimulation.VN\src\view\renderer\RoadRenderer.java
+
+package view.renderer;
+
+import java.awt.Color;
+import java.awt.Graphics2D;
+
+public class RoadRenderer {
+
+    public void renderFourWay(Graphics2D g2d) {
+
+        // đường dọc
+        g2d.setColor(Color.DARK_GRAY);
+        g2d.fillRect(300, 0, 200, 800);
+
+        // đường ngang
+        g2d.fillRect(0, 300, 1200, 200);
+
+        // lane line dọc
+        g2d.setColor(Color.WHITE);
+
+        for (int i = 0; i < 800; i += 40) {
+
+            g2d.fillRect(395, i, 10, 20);
+        }
+
+        // lane line ngang
+        for (int i = 0; i < 1200; i += 40) {
+
+            g2d.fillRect(i, 395, 20, 10);
+        }
+    }
+    public void renderThreeWay(Graphics2D g2d) {
+
+    g2d.setColor(Color.DARK_GRAY);
+
+    // dọc
+
+    g2d.fillRect(300, 0, 200, 800);
+
+    // ngang trái
+
+    g2d.fillRect(0, 300, 500, 200);
+}
+    public void renderFiveWay(Graphics2D g2d) {
+
+    renderFourWay(g2d);
+
+    Graphics2D g = (Graphics2D) g2d.create();
+
+    g.rotate(
+            Math.toRadians(45),
+            600,
+            400
+    );
+
+    g.fillRect(500, 350, 400, 120);
+
+    g.dispose();
+}
+}
+
+// FILE: d:\TrafficSimulation.VN\TrafficSimulation.VN\src\view\renderer\TrafficLightRenderer.java
+
+package view.renderer;
+
+import model.trafficlight.LightColor;
+import model.trafficlight.TrafficLight;
+
+import java.awt.Color;
+import java.awt.Font;
+import java.awt.Graphics2D;
+
+public class TrafficLightRenderer {
+
+    public void render(
+        Graphics2D g2d,
+        TrafficLight light,
+        int x,
+        int y,
+        String lightType
+) {
+
+        // cột đèn
+
+        g2d.setColor(Color.BLACK);
+
+        g2d.fillRect(x, y, 40, 100);
+
+        // RED
+
+        if (light.getColor() == LightColor.RED) {
+            g2d.setColor(Color.RED);
+        } else {
+            g2d.setColor(Color.DARK_GRAY);
+        }
+
+        g2d.fillOval(x + 5, y + 5, 30, 30);
+
+        // YELLOW
+
+        if (light.getColor() == LightColor.YELLOW) {
+            g2d.setColor(Color.YELLOW);
+        } else {
+            g2d.setColor(Color.DARK_GRAY);
+        }
+
+        g2d.fillOval(x + 5, y + 35, 30, 30);
+
+        // GREEN
+
+        if (light.getColor() == LightColor.GREEN) {
+            g2d.setColor(Color.GREEN);
+        } else {
+            g2d.setColor(Color.DARK_GRAY);
+        }
+
+        g2d.fillOval(x + 5, y + 65, 30, 30);
+
+        // TIMER
+
+        boolean showTimer = false;
+
+switch (lightType) {
+
+    case "ALWAYS COUNTDOWN":
+
+        showTimer = true;
+        break;
+
+    case "COUNT <= 10":
+
+        showTimer =
+                light.getTimer() / 60 <= 10;
+
+        break;
+
+    case "NO COUNTDOWN":
+
+        showTimer = false;
+        break;
+}
+
+if (showTimer) {
+
+    g2d.setColor(Color.WHITE);
+
+    g2d.setFont(
+            new Font(
+                    "Arial",
+                    Font.BOLD,
+                    18
+            )
+    );
+
+    g2d.drawString(
+            String.valueOf(
+                    light.getTimer() / 60
+            ),
+            x,
+            y - 10
+    );
+}
+    }
+}
+
+// FILE: d:\TrafficSimulation.VN\TrafficSimulation.VN\src\view\renderer\VehicleRenderer.java
+
+package view.renderer;
+
+import java.awt.*;
+import model.vehicle.Ambulance;
+import model.vehicle.FireTruck;
+import model.vehicle.Motorbike;
+import model.vehicle.Vehicle;
+
+public class VehicleRenderer {
+
+    private boolean flash = false;
+
+    private int flashCounter = 0;
+
+    public void render(
+            Graphics2D g2d,
+            Vehicle vehicle
+    ) {
+
+        Graphics2D g =
+                (Graphics2D) g2d.create();
+
+        int x = (int) vehicle.getX();
+        int y = (int) vehicle.getY();
+
+        int w = (int) vehicle.getWidth();
+        int h = (int) vehicle.getHeight();
+
+        updateFlash();
+
+        // xoay xe
+        g.rotate(
+                Math.toRadians(vehicle.getAngle()),
+                x + w / 2.0,
+                y + h / 2.0
+        );
+
+        // anti alias
+        g.setRenderingHint(
+                RenderingHints.KEY_ANTIALIASING,
+                RenderingHints.VALUE_ANTIALIAS_ON
+        );
+
+        // ===== MOTORBIKE =====
+        if (vehicle instanceof Motorbike) {
+
+            drawMotorbike(g, x, y, w, h);
+
+        }
+
+        // ===== AMBULANCE =====
+        else if (vehicle instanceof Ambulance) {
+
+            drawAmbulance(g, x, y, w, h);
+
+        }
+
+        // ===== FIRE TRUCK =====
+        else if (vehicle instanceof FireTruck) {
+
+            drawFireTruck(g, x, y, w, h);
+
+        }
+
+        // ===== NORMAL CAR =====
+        else {
+
+            drawCar(g, x, y, w, h);
+        }
+
+        g.dispose();
+    }
+
+    private void updateFlash() {
+
+        flashCounter++;
+
+        if (flashCounter >= 20) {
+
+            flash = !flash;
+
+            flashCounter = 0;
+        }
+    }
+
+    // ================= CAR =================
+
+    private void drawCar(
+            Graphics2D g,
+            int x,
+            int y,
+            int w,
+            int h
+    ) {
+
+        // body
+        g.setColor(new Color(220, 50, 50));
+
+        g.fillRoundRect(
+                x,
+                y,
+                w,
+                h,
+                12,
+                12
+        );
+
+        // window
+        g.setColor(new Color(170, 220, 255));
+
+        g.fillRoundRect(
+                x + 10,
+                y + 4,
+                w - 20,
+                h - 8,
+                8,
+                8
+        );
+
+        drawWheels(g, x, y, w, h);
+
+        drawLights(g, x, y, w, h);
+    }
+
+    // ================= AMBULANCE =================
+
+    private void drawAmbulance(
+            Graphics2D g,
+            int x,
+            int y,
+            int w,
+            int h
+    ) {
+
+        g.setColor(Color.WHITE);
+
+        g.fillRoundRect(
+                x,
+                y,
+                w,
+                h,
+                10,
+                10
+        );
+
+        // red stripe
+        g.setColor(Color.RED);
+
+        g.fillRect(
+                x,
+                y + h / 2 - 3,
+                w,
+                6
+        );
+
+        // window
+        g.setColor(new Color(170, 220, 255));
+
+        g.fillRoundRect(
+                x + 12,
+                y + 4,
+                w - 24,
+                h - 8,
+                8,
+                8
+        );
+
+        // flash lights
+        if (flash) {
+
+            g.setColor(Color.BLUE);
+
+        } else {
+
+            g.setColor(Color.RED);
+        }
+
+        g.fillOval(
+                x + w / 2 - 12,
+                y + 2,
+                10,
+                10
+        );
+
+        g.fillOval(
+                x + w / 2 + 2,
+                y + 2,
+                10,
+                10
+        );
+
+        drawWheels(g, x, y, w, h);
+
+        drawLights(g, x, y, w, h);
+    }
+
+    // ================= FIRE TRUCK =================
+
+    private void drawFireTruck(
+            Graphics2D g,
+            int x,
+            int y,
+            int w,
+            int h
+    ) {
+
+        g.setColor(new Color(200, 20, 20));
+
+        g.fillRoundRect(
+                x,
+                y,
+                w,
+                h,
+                10,
+                10
+        );
+
+        // ladder
+        g.setColor(Color.LIGHT_GRAY);
+
+        g.fillRect(
+                x + 15,
+                y + h / 2 - 3,
+                w - 30,
+                6
+        );
+
+        // cabin
+        g.setColor(new Color(170, 220, 255));
+
+        g.fillRoundRect(
+                x + 5,
+                y + 4,
+                18,
+                h - 8,
+                6,
+                6
+        );
+
+        // siren
+        if (flash) {
+
+            g.setColor(Color.BLUE);
+
+        } else {
+
+            g.setColor(Color.RED);
+        }
+
+        g.fillOval(
+                x + w / 2 - 5,
+                y + 2,
+                10,
+                10
+        );
+
+        drawWheels(g, x, y, w, h);
+
+        drawLights(g, x, y, w, h);
+    }
+
+    // ================= MOTORBIKE =================
+
+    private void drawMotorbike(
+            Graphics2D g,
+            int x,
+            int y,
+            int w,
+            int h
+    ) {
+
+        g.setColor(new Color(50, 50, 50));
+
+        g.fillOval(x, y, 10, 10);
+
+        g.fillOval(
+                x + w - 10,
+                y,
+                10,
+                10
+        );
+
+        g.setColor(Color.BLUE);
+
+        g.fillRoundRect(
+                x + 5,
+                y + 2,
+                w - 10,
+                h - 4,
+                6,
+                6
+        );
+    }
+
+    // ================= WHEELS =================
+
+    private void drawWheels(
+            Graphics2D g,
+            int x,
+            int y,
+            int w,
+            int h
+    ) {
+
+        g.setColor(Color.BLACK);
+
+        g.fillRect(x + 5, y - 2, 8, 4);
+
+        g.fillRect(
+                x + 5,
+                y + h - 2,
+                8,
+                4
+        );
+
+        g.fillRect(
+                x + w - 13,
+                y - 2,
+                8,
+                4
+        );
+
+        g.fillRect(
+                x + w - 13,
+                y + h - 2,
+                8,
+                4
+        );
+    }
+
+    // ================= LIGHTS =================
+
+    private void drawLights(
+            Graphics2D g,
+            int x,
+            int y,
+            int w,
+            int h
+    ) {
+
+        // front
+        g.setColor(Color.YELLOW);
+
+        g.fillRect(
+                x + w - 4,
+                y + 4,
+                4,
+                5
+        );
+
+        g.fillRect(
+                x + w - 4,
+                y + h - 9,
+                4,
+                5
+        );
+
+        // rear
+        g.setColor(Color.RED);
+
+        g.fillRect(
+                x,
+                y + 4,
+                4,
+                5
+        );
+
+        g.fillRect(
+                x,
+                y + h - 9,
+                4,
+                5
+        );
+    }
+}
+

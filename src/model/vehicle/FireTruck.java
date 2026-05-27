@@ -13,8 +13,8 @@ public class FireTruck extends Vehicle {
 
         super(x, y, direction);
 
-        width = 70;
-        height = 35;
+        width = 80;
+        height = 42;
 
         behavior = new EmergencyDriver();
 

@@ -47,9 +47,9 @@ public abstract class Vehicle {
     this.lane = Lane.RIGHT;
     switch (direction) {
 
-    case NORTH:
+    case EAST:
 
-        angle = -90;
+        angle = 0;
         break;
 
     case SOUTH:
@@ -57,14 +57,14 @@ public abstract class Vehicle {
         angle = 90;
         break;
 
-    case EAST:
-
-        angle = 0;
-        break;
-
     case WEST:
 
         angle = 180;
+        break;
+
+    case NORTH:
+
+        angle = -90;
         break;
 }
 }
