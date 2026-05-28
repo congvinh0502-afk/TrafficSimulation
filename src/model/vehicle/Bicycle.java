@@ -1,5 +1,6 @@
 package model.vehicle;
 
+import strategy.driver.NormalDriver;
 import util.Direction;
 
 public class Bicycle extends Vehicle {
@@ -12,10 +13,17 @@ public class Bicycle extends Vehicle {
 
         super(x, y, direction);
 
-        this.speed = 2;
+        // [FIX N-01] Trước đây behavior = null → NullPointerException
+        // sau khi fix C-01 gọi vehicle.getBehavior().shouldStop().
+        // Xe đạp dùng NormalDriver; tốc độ lấy từ behavior để nhất quán.
+        behavior = new NormalDriver();
+        speed = behavior.getSpeed(); // NormalDriver.getSpeed() = 4
 
-        this.width = 20;
-        this.height = 40;
+        // Nếu muốn xe đạp chậm hơn Car, override lại:
+        // speed = 2;
+
+        this.width = 34;
+        this.height = 16;
     }
 
     @Override
@@ -28,22 +36,18 @@ public class Bicycle extends Vehicle {
         switch (direction) {
 
             case NORTH:
-
                 y -= speed;
                 break;
 
             case SOUTH:
-
                 y += speed;
                 break;
 
             case EAST:
-
                 x += speed;
                 break;
 
             case WEST:
-
                 x -= speed;
                 break;
         }

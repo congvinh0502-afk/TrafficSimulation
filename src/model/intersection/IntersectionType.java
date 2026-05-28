@@ -27,13 +27,12 @@ public enum IntersectionType {
                 break;
 
             case FIVE_WAY:
-
-                directions.add(Direction.NORTH);
-                directions.add(Direction.SOUTH);
-                directions.add(Direction.EAST);
-                directions.add(Direction.WEST);
-
-                break;
+    directions.add(Direction.NORTH);
+    directions.add(Direction.SOUTH);
+    directions.add(Direction.EAST);
+    directions.add(Direction.WEST);
+    directions.add(Direction.NORTHEAST); // ← hướng thứ 5 thực sự
+    break;
 
             default:
 

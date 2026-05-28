@@ -1,50 +1,47 @@
 package model.vehicle;
 
-import util.Direction;
 import strategy.driver.NormalDriver;
+import util.Direction;
 
 public class Car extends Vehicle {
 
     public Car(double x, double y, Direction direction) {
 
-    super(x, y, direction);
+        super(x, y, direction);
 
-    width = 50;
-    height = 28;
+        width = 50;
+        height = 28;
 
-    speed = 2;
-
-    this.direction = direction;
-    
-    behavior = new NormalDriver();
-
-    speed = behavior.getSpeed();
-}
-
-@Override
-public void move() {
-
-    if (stopped) {
-        return;
+        // [FIX D-05] Xóa "speed = 2" thừa (bị ghi đè ngay bên dưới).
+        // Xóa "this.direction = direction" thừa (super() đã gán rồi).
+        behavior = new NormalDriver();
+        speed = behavior.getSpeed();
     }
 
-    switch (direction) {
+    @Override
+    public void move() {
 
-        case SOUTH:
-            y += speed;
-            break;
+        if (stopped) {
+            return;
+        }
 
-        case NORTH:
-            y -= speed;
-            break;
+        switch (direction) {
 
-        case EAST:
-            x += speed;
-            break;
+            case SOUTH:
+                y += speed;
+                break;
 
-        case WEST:
-            x -= speed;
-            break;
+            case NORTH:
+                y -= speed;
+                break;
+
+            case EAST:
+                x += speed;
+                break;
+
+            case WEST:
+                x -= speed;
+                break;
+        }
     }
-}
 }

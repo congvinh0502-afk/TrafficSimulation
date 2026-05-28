@@ -66,6 +66,9 @@ public abstract class Vehicle {
 
         angle = -90;
         break;
+    case NORTHEAST:
+    angle = -45;
+    break;
 }
 }
 
@@ -217,4 +220,12 @@ public void setLaneChangeCooldown(
 ) {
     this.laneChangeCooldown = laneChangeCooldown;
 }
+public void setSpeed(double speed) {
+    this.speed = speed;
+}
+
+public double getSpeed() {
+    return speed;
+}
+
 }

@@ -16,12 +16,13 @@ public class AggressiveDriver
             TrafficLight relevantLight
     ) {
 
-        // chỉ dừng nếu rất gần giao lộ
-
         if (relevantLight.getColor()
                 == LightColor.RED) {
 
-            return Math.random() > 0.4;
+            // [FIX N-06] Logic cũ: Math.random() > 0.4  = 60% dừng (SAI)
+            // AggressiveDriver nên VƯỢT đèn nhiều hơn dừng.
+            // Fix: Math.random() > 0.6  = chỉ 40% dừng, 60% vượt đèn đỏ.
+            return Math.random() > 0.6;
         }
 
         return false;
@@ -29,7 +30,6 @@ public class AggressiveDriver
 
     @Override
     public int getSpeed() {
-
         return 7;
     }
 }
