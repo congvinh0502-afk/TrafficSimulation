@@ -217,4 +217,5 @@ public void setLaneChangeCooldown(
 ) {
     this.laneChangeCooldown = laneChangeCooldown;
 }
+
 }

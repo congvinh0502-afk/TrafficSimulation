@@ -2,23 +2,20 @@ package view.renderer;
 
 import java.awt.*;
 import model.vehicle.Ambulance;
+import model.vehicle.Bicycle;
 import model.vehicle.FireTruck;
 import model.vehicle.Motorbike;
 import model.vehicle.Vehicle;
 
 public class VehicleRenderer {
 
-    private boolean flash = false;
-
-    private int flashCounter = 0;
-
     public void render(
             Graphics2D g2d,
-            Vehicle vehicle
+            Vehicle vehicle,
+            boolean flash
     ) {
 
-        Graphics2D g =
-                (Graphics2D) g2d.create();
+        Graphics2D g = (Graphics2D) g2d.create();
 
         int x = (int) vehicle.getX();
         int y = (int) vehicle.getY();
@@ -26,44 +23,34 @@ public class VehicleRenderer {
         int w = (int) vehicle.getWidth();
         int h = (int) vehicle.getHeight();
 
-        updateFlash();
-
-        // xoay xe
         g.rotate(
                 Math.toRadians(vehicle.getAngle()),
                 x + w / 2.0,
                 y + h / 2.0
         );
 
-        // anti alias
         g.setRenderingHint(
                 RenderingHints.KEY_ANTIALIASING,
                 RenderingHints.VALUE_ANTIALIAS_ON
         );
 
-        // ===== MOTORBIKE =====
-        if (vehicle instanceof Motorbike) {
+        if (vehicle instanceof Ambulance) {
+
+            drawAmbulance(g, x, y, w, h, flash);
+
+        } else if (vehicle instanceof FireTruck) {
+
+            drawFireTruck(g, x, y, w, h, flash);
+
+        } else if (vehicle instanceof Motorbike) {
 
             drawMotorbike(g, x, y, w, h);
 
-        }
+        } else if (vehicle instanceof Bicycle) {
 
-        // ===== AMBULANCE =====
-        else if (vehicle instanceof Ambulance) {
+            drawBicycle(g, x, y, w, h);
 
-            drawAmbulance(g, x, y, w, h);
-
-        }
-
-        // ===== FIRE TRUCK =====
-        else if (vehicle instanceof FireTruck) {
-
-            drawFireTruck(g, x, y, w, h);
-
-        }
-
-        // ===== NORMAL CAR =====
-        else {
+        } else {
 
             drawCar(g, x, y, w, h);
         }
@@ -71,305 +58,184 @@ public class VehicleRenderer {
         g.dispose();
     }
 
-    private void updateFlash() {
+    // =========================================================
+    // CAR
+    // =========================================================
 
-        flashCounter++;
+    private void drawCar(Graphics2D g, int x, int y, int w, int h) {
 
-        if (flashCounter >= 20) {
+    // thân xe
+    g.setColor(new Color(40, 120, 220));
+    g.fillRoundRect(x, y + 4, w, h - 8, 14, 14);
 
-            flash = !flash;
+    // cabin kính
+    g.setColor(new Color(180, 230, 255));
+    g.fillRoundRect(x + 10, y + 6, w - 20, h - 12, 10, 10);
 
-            flashCounter = 0;
-        }
-    }
+    // viền
+    g.setColor(Color.BLACK);
+    g.drawRoundRect(x, y + 4, w, h - 8, 14, 14);
 
-    // ================= CAR =================
+    drawWheels(g, x, y, w, h);
+    drawLights(g, x, y, w, h);
+}
 
-    private void drawCar(
-            Graphics2D g,
-            int x,
-            int y,
-            int w,
-            int h
-    ) {
-
-        // body
-        g.setColor(new Color(220, 50, 50));
-
-        g.fillRoundRect(
-                x,
-                y,
-                w,
-                h,
-                12,
-                12
-        );
-
-        // window
-        g.setColor(new Color(170, 220, 255));
-
-        g.fillRoundRect(
-                x + 10,
-                y + 4,
-                w - 20,
-                h - 8,
-                8,
-                8
-        );
-
-        drawWheels(g, x, y, w, h);
-
-        drawLights(g, x, y, w, h);
-    }
-
-    // ================= AMBULANCE =================
+    // =========================================================
+    // AMBULANCE
+    // =========================================================
 
     private void drawAmbulance(
             Graphics2D g,
             int x,
             int y,
             int w,
-            int h
+            int h,
+            boolean flash
     ) {
 
+        // thân
         g.setColor(Color.WHITE);
+        g.fillRoundRect(x, y, w, h, 10, 10);
 
-        g.fillRoundRect(
-                x,
-                y,
-                w,
-                h,
-                10,
-                10
-        );
+        // sọc đỏ
+        g.setColor(Color.RED);
+        g.fillRect(x, y + h / 2 - 3, w, 6);
 
-        // red stripe
+        // kính
+        g.setColor(new Color(150, 220, 255));
+        g.fillRoundRect(x + 12, y + 4, w - 24, h - 8, 8, 8);
+
+        // dấu +
         g.setColor(Color.RED);
 
-        g.fillRect(
-                x,
-                y + h / 2 - 3,
-                w,
-                6
-        );
+        int cx = x + w / 2;
+        int cy = y + h / 2;
 
-        // window
-        g.setColor(new Color(170, 220, 255));
+        g.fillRect(cx - 2, cy - 8, 4, 16);
+        g.fillRect(cx - 8, cy - 2, 16, 4);
 
-        g.fillRoundRect(
-                x + 12,
-                y + 4,
-                w - 24,
-                h - 8,
-                8,
-                8
-        );
+        // đèn ưu tiên hình chữ nhật ngang
+        g.setColor(flash ? Color.BLUE : Color.RED);
 
-        // flash lights
-        if (flash) {
-
-            g.setColor(Color.BLUE);
-
-        } else {
-
-            g.setColor(Color.RED);
-        }
-
-        g.fillOval(
-                x + w / 2 - 12,
-                y + 2,
-                10,
-                10
-        );
-
-        g.fillOval(
-                x + w / 2 + 2,
-                y + 2,
-                10,
-                10
-        );
+        g.fillRect(x + w / 2 - 14, y + 2, 10, 4);
+        g.fillRect(x + w / 2 + 4, y + 2, 10, 4);
 
         drawWheels(g, x, y, w, h);
-
         drawLights(g, x, y, w, h);
     }
 
-    // ================= FIRE TRUCK =================
+    // =========================================================
+    // FIRE TRUCK
+    // =========================================================
 
     private void drawFireTruck(
             Graphics2D g,
             int x,
             int y,
             int w,
-            int h
+            int h,
+            boolean flash
     ) {
 
-        g.setColor(new Color(200, 20, 20));
-
-        g.fillRoundRect(
-                x,
-                y,
-                w,
-                h,
-                10,
-                10
-        );
-
-        // ladder
-        g.setColor(Color.LIGHT_GRAY);
-
-        g.fillRect(
-                x + 15,
-                y + h / 2 - 3,
-                w - 30,
-                6
-        );
+        // thân chính
+        g.setColor(new Color(190, 20, 20));
+        g.fillRoundRect(x, y, w, h, 10, 10);
 
         // cabin
-        g.setColor(new Color(170, 220, 255));
+        g.setColor(new Color(120, 200, 255));
+        g.fillRoundRect(x + 5, y + 4, 20, h - 8, 6, 6);
 
-        g.fillRoundRect(
-                x + 5,
-                y + 4,
-                18,
-                h - 8,
-                6,
-                6
-        );
+        // thang
+        g.setColor(Color.LIGHT_GRAY);
+        g.fillRect(x + 25, y + h / 2 - 2, w - 35, 4);
 
-        // siren
-        if (flash) {
-
-            g.setColor(Color.BLUE);
-
-        } else {
-
-            g.setColor(Color.RED);
-        }
-
-        g.fillOval(
-                x + w / 2 - 5,
-                y + 2,
-                10,
-                10
-        );
+        // đèn
+        g.setColor(flash ? Color.BLUE : Color.RED);
+        g.fillRect(x + w / 2 - 5, y + 2, 10, 4);
 
         drawWheels(g, x, y, w, h);
-
         drawLights(g, x, y, w, h);
     }
 
-    // ================= MOTORBIKE =================
+    // =========================================================
+    // MOTORBIKE
+    // =========================================================
 
-    private void drawMotorbike(
-            Graphics2D g,
-            int x,
-            int y,
-            int w,
-            int h
-    ) {
+    private void drawMotorbike(Graphics2D g, int x, int y, int w, int h) {
 
-        g.setColor(new Color(50, 50, 50));
+        // bánh
+        g.setColor(Color.BLACK);
 
-        g.fillOval(x, y, 10, 10);
+        g.fillOval(x, y + h - 10, 10, 10);
+        g.fillOval(x + w - 10, y + h - 10, 10, 10);
 
-        g.fillOval(
-                x + w - 10,
-                y,
-                10,
-                10
-        );
+        // thân
+        g.setColor(new Color(30, 144, 255));
+        g.fillRoundRect(x + 6, y + h / 2 - 3, w - 12, 6, 6, 6);
 
-        g.setColor(Color.BLUE);
+        // đầu xe
+        g.setColor(Color.DARK_GRAY);
+        g.fillRect(x + w - 10, y + h / 2 - 6, 4, 8);
 
-        g.fillRoundRect(
-                x + 5,
-                y + 2,
-                w - 10,
-                h - 4,
-                6,
-                6
-        );
+        // yên xe
+        g.setColor(Color.GRAY);
+        g.fillRect(x + 10, y + h / 2 - 6, 10, 4);
     }
 
-    // ================= WHEELS =================
+    // =========================================================
+    // BICYCLE
+    // =========================================================
 
-    private void drawWheels(
-            Graphics2D g,
-            int x,
-            int y,
-            int w,
-            int h
-    ) {
+    private void drawBicycle(Graphics2D g, int x, int y, int w, int h) {
+
+        // bánh xe
+        g.setColor(Color.BLACK);
+
+        g.drawOval(x, y + h - 12, 12, 12);
+        g.drawOval(x + w - 12, y + h - 12, 12, 12);
+
+        // khung
+        g.setColor(new Color(50, 180, 50));
+
+        g.drawLine(x + 6, y + h - 6, x + w / 2, y + h / 2);
+        g.drawLine(x + w / 2, y + h / 2, x + w - 6, y + h - 6);
+        g.drawLine(x + 6, y + h - 6, x + w - 6, y + h - 6);
+
+        // tay lái
+        g.drawLine(x + w / 2, y + h / 2, x + w / 2 + 6, y + h / 2 - 6);
+    }
+
+    // =========================================================
+    // WHEELS
+    // =========================================================
+
+    private void drawWheels(Graphics2D g, int x, int y, int w, int h) {
 
         g.setColor(Color.BLACK);
 
-        g.fillRect(x + 5, y - 2, 8, 4);
+        g.fillRoundRect(x + 5, y - 2, 8, 4, 4, 4);
+        g.fillRoundRect(x + 5, y + h - 2, 8, 4, 4, 4);
 
-        g.fillRect(
-                x + 5,
-                y + h - 2,
-                8,
-                4
-        );
-
-        g.fillRect(
-                x + w - 13,
-                y - 2,
-                8,
-                4
-        );
-
-        g.fillRect(
-                x + w - 13,
-                y + h - 2,
-                8,
-                4
-        );
+        g.fillRoundRect(x + w - 13, y - 2, 8, 4, 4, 4);
+        g.fillRoundRect(x + w - 13, y + h - 2, 8, 4, 4, 4);
     }
 
-    // ================= LIGHTS =================
+    // =========================================================
+    // LIGHTS
+    // =========================================================
 
-    private void drawLights(
-            Graphics2D g,
-            int x,
-            int y,
-            int w,
-            int h
-    ) {
+    private void drawLights(Graphics2D g, int x, int y, int w, int h) {
 
-        // front
+        // đèn trước
         g.setColor(Color.YELLOW);
 
-        g.fillRect(
-                x + w - 4,
-                y + 4,
-                4,
-                5
-        );
+        g.fillRect(x + w - 3, y + 4, 3, 5);
+        g.fillRect(x + w - 3, y + h - 9, 3, 5);
 
-        g.fillRect(
-                x + w - 4,
-                y + h - 9,
-                4,
-                5
-        );
-
-        // rear
+        // đèn sau
         g.setColor(Color.RED);
 
-        g.fillRect(
-                x,
-                y + 4,
-                4,
-                5
-        );
-
-        g.fillRect(
-                x,
-                y + h - 9,
-                4,
-                5
-        );
+        g.fillRect(x, y + 4, 3, 5);
+        g.fillRect(x, y + h - 9, 3, 5);
     }
 }

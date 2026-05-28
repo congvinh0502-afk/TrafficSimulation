@@ -1,5 +1,6 @@
 package model.vehicle;
 
+import strategy.driver.AggressiveDriver;
 import util.Direction;
 
 public class Motorbike extends Vehicle {
@@ -12,9 +13,13 @@ public class Motorbike extends Vehicle {
 
         super(x, y, direction);
 
-        this.speed = 3.5;
+        // [FIX N-02] Trước đây: behavior = null, speed hardcode = 3.5.
+        // Motorbike dùng AggressiveDriver (chạy nhanh, hung hăng hơn Car).
+        // AggressiveDriver.getSpeed() = 7 — nhất quán với Car/Ambulance/FireTruck.
+        behavior = new AggressiveDriver();
+        speed = behavior.getSpeed();
 
-        this.width = 32;
+        this.width = 34;
         this.height = 16;
     }
 
@@ -28,22 +33,18 @@ public class Motorbike extends Vehicle {
         switch (direction) {
 
             case NORTH:
-
                 y -= speed;
                 break;
 
             case SOUTH:
-
                 y += speed;
                 break;
 
             case EAST:
-
                 x += speed;
                 break;
 
             case WEST:
-
                 x -= speed;
                 break;
         }
