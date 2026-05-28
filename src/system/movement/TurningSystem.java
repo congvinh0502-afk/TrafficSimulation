@@ -30,11 +30,14 @@ public class TurningSystem {
             return;
         }
 
+        double hw = vehicle.getWidth() / 2;
+        double hh = vehicle.getHeight() / 2;
+
         boolean insideIntersection =
-                vehicle.getX() > 430
-                        && vehicle.getX() < 520
-                        && vehicle.getY() > 430
-                        && vehicle.getY() < 520;
+                vehicle.getX() + hw > 420
+                && vehicle.getX() - hw < 530
+                && vehicle.getY() + hh > 420
+                && vehicle.getY() - hh < 530;
 
         if (!insideIntersection) {
             return;
@@ -137,7 +140,7 @@ public class TurningSystem {
             return;
         }
 
-        double speed = 1.8;
+        double speed = vehicle.getSpeed() * 0.35;
 
         double angle = Math.toRadians(vehicle.getAngle());
 

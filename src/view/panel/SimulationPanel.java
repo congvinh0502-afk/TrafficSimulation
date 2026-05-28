@@ -27,6 +27,7 @@ import java.awt.event.MouseEvent;
 import java.awt.Rectangle;
 import manager.VehicleSpawnManager;
 import view.renderer.EnvironmentRenderer;
+import system.emergency.EmergencyVehicleSystem;
 public class SimulationPanel extends JPanel {
 
     private Timer timer;
@@ -51,7 +52,7 @@ public class SimulationPanel extends JPanel {
     // chạy 1 lần/frame, không N lần theo số xe.
     private boolean flash = false;
     private int flashCounter = 0;
-
+    private EmergencyVehicleSystem emergencyVehicleSystem;
     public SimulationPanel(SimulationConfig config) {
 
         this.config = config;
@@ -70,7 +71,7 @@ public class SimulationPanel extends JPanel {
         trafficLightRenderer = new TrafficLightRenderer();
         trafficController = new TrafficController();
         vehicleSpawnManager = new VehicleSpawnManager(vehicles);
-        
+        emergencyVehicleSystem = new EmergencyVehicleSystem();
         
         spawnVehicles();
         startGameLoop();
@@ -129,6 +130,7 @@ public class SimulationPanel extends JPanel {
         }
 
         vehicleSpawnManager.removeOutsideVehicles();
+        emergencyVehicleSystem.updateEmergencyVehicles(vehicles);
         handleAutoSpawn();
         updateTrafficJam();
         updateFPS();
@@ -192,13 +194,23 @@ public class SimulationPanel extends JPanel {
     }
 
     private void syncLights() {
-        // [FIX M-02] Chỉ đồng bộ màu, KHÔNG clone timer
-        switch (verticalLight.getColor()) {
-            case GREEN:  horizontalLight.setColor(LightColor.RED);   break;
-            case YELLOW: horizontalLight.setColor(LightColor.RED);   break;
-            case RED:    horizontalLight.setColor(LightColor.GREEN); break;
-        }
+    switch (verticalLight.getColor()) {
+        case GREEN:
+            horizontalLight.setColor(LightColor.RED);
+            break;
+        case YELLOW:
+            horizontalLight.setColor(LightColor.RED); // giữ RED trong lúc YELLOW
+            break;
+        case RED:
+            // chỉ bật GREEN cho horizontal khi vertical thực sự RED
+            // và horizontal chưa phải GREEN (tránh set liên tục)
+            if (horizontalLight.getColor() != LightColor.GREEN) {
+                horizontalLight.setColor(LightColor.GREEN);
+                horizontalLight.setTimer(300);
+            }
+            break;
     }
+}
 
     private void drawTrafficLights(Graphics2D g2d) {
 
@@ -335,11 +347,20 @@ public class SimulationPanel extends JPanel {
     }
 
     private void updateTrafficJam() {
-        int stopped = trafficController.countStoppedVehicles(vehicles);
-        if (stopped > 15) jamLevel = "HIGH";
-        else if (stopped > 7) jamLevel = "MEDIUM";
-        else jamLevel = "LOW";
+    int stopped = trafficController.countStoppedVehicles(vehicles);
+    int total = vehicles.size();
+
+    if (total == 0) {
+        jamLevel = "LOW";
+        return;
     }
+
+    double ratio = (double) stopped / total;
+
+    if (ratio > 0.6) jamLevel = "HIGH";
+    else if (ratio > 0.3) jamLevel = "MEDIUM";
+    else jamLevel = "LOW";
+}
 
     private void forceVerticalGreen() {
         verticalLight.setColor(LightColor.GREEN);

@@ -116,6 +116,10 @@ public class LaneManager {
                 return lane == Lane.LEFT
                         ? 330
                         : 370;
+            // getLaneCenterX
+case NORTHEAST:
+    return lane == Lane.LEFT ? 430 : 470;
+
 
             default:
 
@@ -141,6 +145,9 @@ public class LaneManager {
                 return lane == Lane.LEFT
                         ? 430
                         : 470;
+            // getLaneCenterY  
+case NORTHEAST:
+    return lane == Lane.LEFT ? 430 : 470;
 
             default:
 
@@ -165,7 +172,7 @@ import model.vehicle.Vehicle;
 import strategy.driver.AggressiveDriver;
 import strategy.driver.EmergencyDriver;
 import strategy.driver.NormalDriver;
-
+import strategy.driver.DriverBehavior;
 import util.Direction;
 import util.Lane;
 import util.TurnType;
@@ -336,19 +343,28 @@ public class VehicleSpawnManager {
 
     private void setupDriverBehavior(Vehicle vehicle) {
 
-        if (vehicle instanceof Ambulance
-                || vehicle instanceof FireTruck) {
-
-            vehicle.setBehavior(new EmergencyDriver());
-            return;
-        }
-
-        if (Math.random() < 0.3) {
-            vehicle.setBehavior(new AggressiveDriver());
-        } else {
-            vehicle.setBehavior(new NormalDriver());
-        }
+    // Emergency giá»¯ nguyÃªn behavior tá»« constructor, khÃ´ng ghi Ä‘Ã¨
+    if (vehicle instanceof Ambulance || vehicle instanceof FireTruck) {
+        return;
     }
+
+    // Motorbike giá»¯ AggressiveDriver tá»« constructor
+    if (vehicle instanceof Motorbike) {
+        return;
+    }
+
+    // Car, Bicycle: random behavior
+    DriverBehavior newBehavior;
+
+    if (Math.random() < 0.3) {
+        newBehavior = new AggressiveDriver();
+    } else {
+        newBehavior = new NormalDriver();
+    }
+
+    vehicle.setBehavior(newBehavior);
+    vehicle.setSpeed(newBehavior.getSpeed()); // sync speed sau khi Ä‘á»•i behavior
+}
 
     // =========================
     // SPAWN POSITION X
@@ -373,9 +389,13 @@ public class VehicleSpawnManager {
 
             case WEST:
                 return 1100;
-
+                
+              // getSpawnX()
+            case NORTHEAST:
+                return -100; // spawn tá»« gÃ³c dÆ°á»›i trÃ¡i, di chuyá»ƒn lÃªn pháº£i
             default:
                 return 0;
+                
         }
     }
 
@@ -398,6 +418,9 @@ public class VehicleSpawnManager {
 
             case WEST:
                 return 530;
+            // getSpawnY()
+            case NORTHEAST:
+                return 1100;
 
             default:
                 return 0;
@@ -435,7 +458,7 @@ public class VehicleSpawnManager {
 
             double distance = Math.sqrt(dx * dx + dy * dy);
 
-            if (distance < 120) {
+            if (distance < 150) {
                 return false;
             }
         }
@@ -474,13 +497,12 @@ public enum IntersectionType {
                 break;
 
             case FIVE_WAY:
-
-                directions.add(Direction.NORTH);
-                directions.add(Direction.SOUTH);
-                directions.add(Direction.EAST);
-                directions.add(Direction.WEST);
-
-                break;
+    directions.add(Direction.NORTH);
+    directions.add(Direction.SOUTH);
+    directions.add(Direction.EAST);
+    directions.add(Direction.WEST);
+    directions.add(Direction.NORTHEAST); // â† hÆ°á»›ng thá»© 5 thá»±c sá»±
+    break;
 
             default:
 
@@ -1035,6 +1057,9 @@ public abstract class Vehicle {
 
         angle = -90;
         break;
+    case NORTHEAST:
+    angle = -45;
+    break;
 }
 }
 
@@ -1185,6 +1210,13 @@ public void setLaneChangeCooldown(
         int laneChangeCooldown
 ) {
     this.laneChangeCooldown = laneChangeCooldown;
+}
+public void setSpeed(double speed) {
+    this.speed = speed;
+}
+
+public double getSpeed() {
+    return speed;
 }
 
 }
@@ -1343,8 +1375,7 @@ public class CollisionSystem {
                 continue;
             }
 
-            double safeDistance = 120;
-
+            double safeDistance = current.getWidth() * 2.0;
             switch (current.getDirection()) {
 
                 case SOUTH:
@@ -1509,14 +1540,37 @@ package system.emergency;
 
 import java.util.List;
 import model.vehicle.Vehicle;
+import model.vehicle.Ambulance;
+import model.vehicle.FireTruck;
 
 public class EmergencyVehicleSystem {
 
-    public void updateEmergencyVehicles(
-            List<Vehicle> vehicles
-    ) {
+    public void updateEmergencyVehicles(List<Vehicle> vehicles) {
 
+    for (Vehicle vehicle : vehicles) {
+
+        if (!(vehicle instanceof Ambulance)
+                && !(vehicle instanceof FireTruck)) {
+            continue;
+        }
+
+        // Ã©p xe thÆ°á»ng dá»«ng láº¡i náº¿u Emergency Ä‘ang Ä‘áº¿n gáº§n
+        for (Vehicle other : vehicles) {
+
+            if (other == vehicle) continue;
+            if (other instanceof Ambulance) continue;
+            if (other instanceof FireTruck) continue;
+
+            double dx = vehicle.getX() - other.getX();
+            double dy = vehicle.getY() - other.getY();
+            double dist = Math.sqrt(dx * dx + dy * dy);
+
+            if (dist < 150 && other.getDirection() == vehicle.getDirection()) {
+    other.setStopped(true);
+}
+        }
     }
+}
 }
 
 // FILE: D:\TrafficSimulation.VN\TrafficSimulation.VN\src\system\movement\LaneAlignmentSystem.java
@@ -1535,7 +1589,7 @@ public class LaneAlignmentSystem {
             return;
         }
 
-        double smooth = 0.5;
+        double smooth = Math.min(vehicle.getSpeed() * 0.15, 2.0);
 
         switch (vehicle.getDirection()) {
 
@@ -1728,11 +1782,14 @@ public class TurningSystem {
             return;
         }
 
+        double hw = vehicle.getWidth() / 2;
+        double hh = vehicle.getHeight() / 2;
+
         boolean insideIntersection =
-                vehicle.getX() > 430
-                        && vehicle.getX() < 520
-                        && vehicle.getY() > 430
-                        && vehicle.getY() < 520;
+                vehicle.getX() + hw > 420
+                && vehicle.getX() - hw < 530
+                && vehicle.getY() + hh > 420
+                && vehicle.getY() - hh < 530;
 
         if (!insideIntersection) {
             return;
@@ -1835,7 +1892,7 @@ public class TurningSystem {
             return;
         }
 
-        double speed = 1.8;
+        double speed = vehicle.getSpeed() * 0.35;
 
         double angle = Math.toRadians(vehicle.getAngle());
 
@@ -1938,7 +1995,7 @@ public class VehicleMovementSystem {
 
     public void move(Vehicle vehicle) {
 
-        alignVehicle(vehicle);
+        
 
         recoverAfterIntersection(vehicle);
 
@@ -2094,12 +2151,13 @@ public class TrafficRuleSystem {
             }
         }
 
-        boolean blocked =
-        !collisionSystem.canEnterIntersection(vehicle, vehicles);
+        boolean blocked = !collisionSystem.canEnterIntersection(vehicle, vehicles);
 
-        if (mustStop || blocked) {
-            vehicle.setStopped(true);
-        }
+if (mustStop || blocked) {
+    vehicle.setStopped(true);
+} else {
+    vehicle.setStopped(false); // â† thÃªm dÃ²ng nÃ y: reset khi khÃ´ng cáº§n dá»«ng
+}
     
 
     
@@ -2168,10 +2226,11 @@ public class VehicleUpdatePipeline {
         // xá»­ lÃ½ ráº½
         turningSystem.updateTurning(vehicle, type);
 
-        // náº¿u Ä‘ang ráº½ thÃ¬ bá» qua logic khÃ¡c
         if (vehicle.isTurning()) {
-            return;
-        }
+    // váº«n giá»¯ khoáº£ng cÃ¡ch cÆ¡ báº£n khi Ä‘ang quáº¹o
+    collisionSystem.maintainDistance(vehicle, vehicles);
+    return;
+}
 
         // kiá»ƒm tra Ä‘Ã¨n giao thÃ´ng
         trafficRuleSystem.checkTrafficLight(
@@ -2588,6 +2647,7 @@ import java.awt.event.MouseEvent;
 import java.awt.Rectangle;
 import manager.VehicleSpawnManager;
 import view.renderer.EnvironmentRenderer;
+import system.emergency.EmergencyVehicleSystem;
 public class SimulationPanel extends JPanel {
 
     private Timer timer;
@@ -2612,7 +2672,7 @@ public class SimulationPanel extends JPanel {
     // cháº¡y 1 láº§n/frame, khÃ´ng N láº§n theo sá»‘ xe.
     private boolean flash = false;
     private int flashCounter = 0;
-
+    private EmergencyVehicleSystem emergencyVehicleSystem;
     public SimulationPanel(SimulationConfig config) {
 
         this.config = config;
@@ -2631,7 +2691,7 @@ public class SimulationPanel extends JPanel {
         trafficLightRenderer = new TrafficLightRenderer();
         trafficController = new TrafficController();
         vehicleSpawnManager = new VehicleSpawnManager(vehicles);
-        
+        emergencyVehicleSystem = new EmergencyVehicleSystem();
         
         spawnVehicles();
         startGameLoop();
@@ -2690,6 +2750,7 @@ public class SimulationPanel extends JPanel {
         }
 
         vehicleSpawnManager.removeOutsideVehicles();
+        emergencyVehicleSystem.updateEmergencyVehicles(vehicles);
         handleAutoSpawn();
         updateTrafficJam();
         updateFPS();
@@ -2753,13 +2814,23 @@ public class SimulationPanel extends JPanel {
     }
 
     private void syncLights() {
-        // [FIX M-02] Chá»‰ Ä‘á»“ng bá»™ mÃ u, KHÃ”NG clone timer
-        switch (verticalLight.getColor()) {
-            case GREEN:  horizontalLight.setColor(LightColor.RED);   break;
-            case YELLOW: horizontalLight.setColor(LightColor.RED);   break;
-            case RED:    horizontalLight.setColor(LightColor.GREEN); break;
-        }
+    switch (verticalLight.getColor()) {
+        case GREEN:
+            horizontalLight.setColor(LightColor.RED);
+            break;
+        case YELLOW:
+            horizontalLight.setColor(LightColor.RED); // giá»¯ RED trong lÃºc YELLOW
+            break;
+        case RED:
+            // chá»‰ báº­t GREEN cho horizontal khi vertical thá»±c sá»± RED
+            // vÃ  horizontal chÆ°a pháº£i GREEN (trÃ¡nh set liÃªn tá»¥c)
+            if (horizontalLight.getColor() != LightColor.GREEN) {
+                horizontalLight.setColor(LightColor.GREEN);
+                horizontalLight.setTimer(300);
+            }
+            break;
     }
+}
 
     private void drawTrafficLights(Graphics2D g2d) {
 
@@ -2896,11 +2967,20 @@ public class SimulationPanel extends JPanel {
     }
 
     private void updateTrafficJam() {
-        int stopped = trafficController.countStoppedVehicles(vehicles);
-        if (stopped > 15) jamLevel = "HIGH";
-        else if (stopped > 7) jamLevel = "MEDIUM";
-        else jamLevel = "LOW";
+    int stopped = trafficController.countStoppedVehicles(vehicles);
+    int total = vehicles.size();
+
+    if (total == 0) {
+        jamLevel = "LOW";
+        return;
     }
+
+    double ratio = (double) stopped / total;
+
+    if (ratio > 0.6) jamLevel = "HIGH";
+    else if (ratio > 0.3) jamLevel = "MEDIUM";
+    else jamLevel = "LOW";
+}
 
     private void forceVerticalGreen() {
         verticalLight.setColor(LightColor.GREEN);

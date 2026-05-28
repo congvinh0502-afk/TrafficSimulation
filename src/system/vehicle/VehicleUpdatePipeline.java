@@ -59,10 +59,11 @@ public class VehicleUpdatePipeline {
         // xử lý rẽ
         turningSystem.updateTurning(vehicle, type);
 
-        // nếu đang rẽ thì bỏ qua logic khác
         if (vehicle.isTurning()) {
-            return;
-        }
+    // vẫn giữ khoảng cách cơ bản khi đang quẹo
+    collisionSystem.maintainDistance(vehicle, vehicles);
+    return;
+}
 
         // kiểm tra đèn giao thông
         trafficRuleSystem.checkTrafficLight(

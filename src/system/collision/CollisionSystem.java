@@ -38,8 +38,7 @@ public class CollisionSystem {
                 continue;
             }
 
-            double safeDistance = 120;
-
+            double safeDistance = current.getWidth() * 2.0;
             switch (current.getDirection()) {
 
                 case SOUTH:

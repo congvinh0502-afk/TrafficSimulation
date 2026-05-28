@@ -10,7 +10,7 @@ public class VehicleMovementSystem {
 
     public void move(Vehicle vehicle) {
 
-        alignVehicle(vehicle);
+        
 
         recoverAfterIntersection(vehicle);
 

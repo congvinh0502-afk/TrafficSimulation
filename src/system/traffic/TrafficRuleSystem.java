@@ -66,12 +66,13 @@ public class TrafficRuleSystem {
             }
         }
 
-        boolean blocked =
-        !collisionSystem.canEnterIntersection(vehicle, vehicles);
+        boolean blocked = !collisionSystem.canEnterIntersection(vehicle, vehicles);
 
-        if (mustStop || blocked) {
-            vehicle.setStopped(true);
-        }
+if (mustStop || blocked) {
+    vehicle.setStopped(true);
+} else {
+    vehicle.setStopped(false); // ← thêm dòng này: reset khi không cần dừng
+}
     
 
     

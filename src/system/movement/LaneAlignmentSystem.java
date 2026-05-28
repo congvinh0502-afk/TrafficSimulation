@@ -13,7 +13,7 @@ public class LaneAlignmentSystem {
             return;
         }
 
-        double smooth = 0.5;
+        double smooth = Math.min(vehicle.getSpeed() * 0.15, 2.0);
 
         switch (vehicle.getDirection()) {
 

@@ -13,7 +13,7 @@ import model.vehicle.Vehicle;
 import strategy.driver.AggressiveDriver;
 import strategy.driver.EmergencyDriver;
 import strategy.driver.NormalDriver;
-
+import strategy.driver.DriverBehavior;
 import util.Direction;
 import util.Lane;
 import util.TurnType;
@@ -184,19 +184,28 @@ public class VehicleSpawnManager {
 
     private void setupDriverBehavior(Vehicle vehicle) {
 
-        if (vehicle instanceof Ambulance
-                || vehicle instanceof FireTruck) {
-
-            vehicle.setBehavior(new EmergencyDriver());
-            return;
-        }
-
-        if (Math.random() < 0.3) {
-            vehicle.setBehavior(new AggressiveDriver());
-        } else {
-            vehicle.setBehavior(new NormalDriver());
-        }
+    // Emergency giữ nguyên behavior từ constructor, không ghi đè
+    if (vehicle instanceof Ambulance || vehicle instanceof FireTruck) {
+        return;
     }
+
+    // Motorbike giữ AggressiveDriver từ constructor
+    if (vehicle instanceof Motorbike) {
+        return;
+    }
+
+    // Car, Bicycle: random behavior
+    DriverBehavior newBehavior;
+
+    if (Math.random() < 0.3) {
+        newBehavior = new AggressiveDriver();
+    } else {
+        newBehavior = new NormalDriver();
+    }
+
+    vehicle.setBehavior(newBehavior);
+    vehicle.setSpeed(newBehavior.getSpeed()); // sync speed sau khi đổi behavior
+}
 
     // =========================
     // SPAWN POSITION X
@@ -221,9 +230,13 @@ public class VehicleSpawnManager {
 
             case WEST:
                 return 1100;
-
+                
+              // getSpawnX()
+            case NORTHEAST:
+                return -100; // spawn từ góc dưới trái, di chuyển lên phải
             default:
                 return 0;
+                
         }
     }
 
@@ -246,6 +259,9 @@ public class VehicleSpawnManager {
 
             case WEST:
                 return 530;
+            // getSpawnY()
+            case NORTHEAST:
+                return 1100;
 
             default:
                 return 0;
@@ -283,7 +299,7 @@ public class VehicleSpawnManager {
 
             double distance = Math.sqrt(dx * dx + dy * dy);
 
-            if (distance < 120) {
+            if (distance < 150) {
                 return false;
             }
         }

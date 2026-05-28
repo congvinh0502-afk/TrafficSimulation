@@ -23,6 +23,10 @@ public class LaneManager {
                 return lane == Lane.LEFT
                         ? 330
                         : 370;
+            // getLaneCenterX
+case NORTHEAST:
+    return lane == Lane.LEFT ? 430 : 470;
+
 
             default:
 
@@ -48,6 +52,9 @@ public class LaneManager {
                 return lane == Lane.LEFT
                         ? 430
                         : 470;
+            // getLaneCenterY  
+case NORTHEAST:
+    return lane == Lane.LEFT ? 430 : 470;
 
             default:
 
