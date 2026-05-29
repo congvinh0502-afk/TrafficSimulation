@@ -45,25 +45,23 @@ public class VehicleUpdatePipeline {
             IntersectionType type
     ) {
 
-        // reset trạng thái stop mỗi frame
-        vehicle.setStopped(false);
+                    // cooldown đổi lane
+            if (vehicle.getLaneChangeCooldown() > 0) {
+                vehicle.setLaneChangeCooldown(
+                        vehicle.getLaneChangeCooldown() - 1
+                );
+            }
 
-        // cooldown đổi lane
-        if (vehicle.getLaneChangeCooldown() > 0) {
+            // xử lý rẽ TRƯỚC – không reset stopped nếu đang turning
+            turningSystem.updateTurning(vehicle, type);
 
-            vehicle.setLaneChangeCooldown(
-                    vehicle.getLaneChangeCooldown() - 1
-            );
-        }
+            if (vehicle.isTurning()) {
+                collisionSystem.maintainDistance(vehicle, vehicles);
+                return;
+            }
 
-        // xử lý rẽ
-        turningSystem.updateTurning(vehicle, type);
-
-        if (vehicle.isTurning()) {
-    // vẫn giữ khoảng cách cơ bản khi đang quẹo
-    collisionSystem.maintainDistance(vehicle, vehicles);
-    return;
-}
+            // reset stopped CHỈ khi không đang rẽ
+            vehicle.setStopped(false);
 
         // kiểm tra đèn giao thông
         trafficRuleSystem.checkTrafficLight(

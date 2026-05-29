@@ -15,18 +15,13 @@
             <file>file:/D:/TrafficSimulation.VN/TrafficSimulation.VN/src/system/movement/LaneAlignmentSystem.java</file>
             <file>file:/D:/TrafficSimulation.VN/TrafficSimulation.VN/src/system/vehicle/VehicleUpdatePipeline.java</file>
             <file>file:/D:/TrafficSimulation.VN/TrafficSimulation.VN/src/view/renderer/VehicleRenderer.java</file>
-            <file>file:/D:/TrafficSimulation.VN/TrafficSimulation.VN/src/model/vehicle/Bicycle.java</file>
-            <file>file:/D:/TrafficSimulation.VN/TrafficSimulation.VN/src/model/vehicle/Motorbike.java</file>
-            <file>file:/D:/TrafficSimulation.VN/TrafficSimulation.VN/src/view/renderer/TrafficLightRenderer.java</file>
-            <file>file:/D:/TrafficSimulation.VN/TrafficSimulation.VN/src/view/renderer/RoadRenderer.java</file>
-            <file>file:/D:/TrafficSimulation.VN/TrafficSimulation.VN/src/view/renderer/EnvironmentRenderer.java</file>
             <file>file:/D:/TrafficSimulation.VN/TrafficSimulation.VN/src/view/panel/SimulationPanel.java</file>
             <file>file:/D:/TrafficSimulation.VN/TrafficSimulation.VN/src/model/trafficlight/TrafficLight.java</file>
             <file>file:/D:/TrafficSimulation.VN/TrafficSimulation.VN/src/view/renderer/BaseRenderer.java</file>
-            <file>file:/D:/TrafficSimulation.VN/TrafficSimulation.VN/src/view/renderer/NatureRenderer.java</file>
-            <file>file:/D:/TrafficSimulation.VN/TrafficSimulation.VN/src/view/renderer/BuildingRenderer.java</file>
-            <file>file:/D:/TrafficSimulation.VN/TrafficSimulation.VN/src/view/renderer/ParkingRenderer.java</file>
-            <file>file:/D:/TrafficSimulation.VN/TrafficSimulation.VN/src/util/Direction.java</file>
+            <file>file:/D:/TrafficSimulation.VN/TrafficSimulation.VN/src/manager/VehicleSpawnManager.java</file>
+            <file>file:/D:/TrafficSimulation.VN/TrafficSimulation.VN/src/model/vehicle/Vehicle.java</file>
+            <file>file:/D:/TrafficSimulation.VN/TrafficSimulation.VN/src/model/intersection/IntersectionType.java</file>
+            <file>file:/D:/TrafficSimulation.VN/TrafficSimulation.VN/src/manager/LaneManager.java</file>
         </group>
     </open-files>
 </project-private>

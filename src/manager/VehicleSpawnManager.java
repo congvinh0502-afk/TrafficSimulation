@@ -78,7 +78,10 @@ public class VehicleSpawnManager {
                 break;
         }
 
-        setupVehicle(vehicle);
+        setupVehicle(
+        vehicle,
+        directions
+);
 
         vehicles.add(vehicle);
     }
@@ -111,9 +114,15 @@ public class VehicleSpawnManager {
     // SETUP VEHICLE
     // =========================
 
-    private void setupVehicle(Vehicle vehicle) {
+    private void setupVehicle(
+        Vehicle vehicle,
+        List<Direction> availableDirections
+) {
         setupLane(vehicle);
-        setupTurnType(vehicle);
+        setupTurnType(
+        vehicle,
+        availableDirections
+);
         setupDriverBehavior(vehicle);
     }
 
@@ -165,18 +174,64 @@ public class VehicleSpawnManager {
     // SETUP TURN TYPE
     // =========================
 
-    private void setupTurnType(Vehicle vehicle) {
+    private void setupTurnType(
+        Vehicle vehicle,
+        List<Direction> availableDirections
+) {
 
-        double random = Math.random();
+    double random = Math.random();
 
-        if (random < 0.33) {
-            vehicle.setTurnType(TurnType.LEFT);
-        } else if (random < 0.66) {
-            vehicle.setTurnType(TurnType.RIGHT);
-        } else {
-            vehicle.setTurnType(TurnType.STRAIGHT);
-        }
+    util.TurnType turnType;
+
+    if (random < 0.33) {
+
+        turnType = util.TurnType.LEFT;
+
+    } else if (random < 0.66) {
+
+        turnType = util.TurnType.RIGHT;
+
+    } else {
+
+        turnType = util.TurnType.STRAIGHT;
     }
+
+    Direction targetDirection =
+            vehicle.getDirection();
+
+    switch (turnType) {
+
+        case LEFT:
+
+            targetDirection =
+                    util.DirectionHelper.getLeftDirection(
+                            vehicle.getDirection()
+                    );
+
+            break;
+
+        case RIGHT:
+
+            targetDirection =
+                    util.DirectionHelper.getRightDirection(
+                            vehicle.getDirection()
+                    );
+
+            break;
+
+        default:
+            break;
+    }
+
+    // target direction không tồn tại
+    // => fallback đi thẳng
+    if (!availableDirections.contains(targetDirection)) {
+
+        turnType = util.TurnType.STRAIGHT;
+    }
+
+    vehicle.setTurnType(turnType);
+}
 
     // =========================
     // SETUP DRIVER
