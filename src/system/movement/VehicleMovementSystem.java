@@ -1,79 +1,49 @@
 package system.movement;
 
+import config.Constants;
 import model.vehicle.Vehicle;
-import static util.Direction.EAST;
-import static util.Direction.NORTH;
-import static util.Direction.SOUTH;
-import static util.Direction.WEST;
 
+/**
+ * Hệ thống di chuyển chính của xe mỗi frame.
+ *
+ * <p>
+ * Trước khi gọi {@link Vehicle#move()}, reset trạng thái bị kẹt
+ * cho xe đã ra khỏi vùng giao lộ ({@link #recoverAfterIntersection}).
+ * Điều này đảm bảo xe không bị đóng băng sau khi rẽ xong.
+ * </p>
+ */
 public class VehicleMovementSystem {
 
+    /**
+     * Di chuyển xe một bước nếu không bị dừng.
+     * Trước tiên kiểm tra xe đã thoát khỏi vùng giao lộ chưa.
+     *
+     * @param vehicle xe cần cập nhật
+     */
     public void move(Vehicle vehicle) {
-
-        
-
         recoverAfterIntersection(vehicle);
-
         if (!vehicle.isStopped()) {
             vehicle.move();
         }
     }
-    private void alignVehicle(Vehicle vehicle) {
 
-        if (vehicle.isChangingLane()
-                || vehicle.isTurning()) {
+    /**
+     * Reset trạng thái kẹt khi xe đã hoàn toàn ra khỏi vùng giao lộ.
+     *
+     * <p>
+     * Vùng giao lộ mở rộng ({@link Constants#RECOVER_LEFT} ..
+     * {@link Constants#RECOVER_RIGHT}) cho phép xe kết thúc animation
+     * rẽ trước khi bị reset, tránh snap sai vị trí.
+     * </p>
+     */
+    private void recoverAfterIntersection(Vehicle vehicle) {
+        boolean outside = vehicle.getX() < Constants.RECOVER_LEFT
+                || vehicle.getX() > Constants.RECOVER_RIGHT
+                || vehicle.getY() < Constants.RECOVER_TOP
+                || vehicle.getY() > Constants.RECOVER_BOTTOM;
+
+        if (!outside)
             return;
-        }
-
-        double smooth = 2;
-
-        switch (vehicle.getDirection()) {
-
-            case NORTH:
-            case SOUTH:
-
-                if (vehicle.getTargetX() != 0) {
-
-                    if (vehicle.getX() < vehicle.getTargetX()) {
-                        vehicle.setX(vehicle.getX() + smooth);
-                    } else if (vehicle.getX() > vehicle.getTargetX()) {
-                        vehicle.setX(vehicle.getX() - smooth);
-                    }
-                }
-
-                break;
-
-            case EAST:
-            case WEST:
-
-                if (vehicle.getTargetY() != 0) {
-
-                    if (vehicle.getY() < vehicle.getTargetY()) {
-                        vehicle.setY(vehicle.getY() + smooth);
-                    } else if (vehicle.getY() > vehicle.getTargetY()) {
-                        vehicle.setY(vehicle.getY() - smooth);
-                    }
-                }
-
-                break;
-        }
-    }
-     private void recoverAfterIntersection(Vehicle vehicle) {
-
-        // [FIX M-05] Cũ: buffer < 380 || > 570 — quá hẹp.
-        // Xe sau khi rẽ có thể ở x=375 (sát biên 380), turning=false set sớm
-        // trước khi xe align đúng làn → snap sai vị trí.
-        // Fix: mở rộng buffer ra 360 / 590 để xe hoàn toàn thoát khỏi
-        // vùng giao lộ trước khi reset turning.
-        boolean outside =
-                vehicle.getX() < 360
-                        || vehicle.getX() > 590
-                        || vehicle.getY() < 360
-                        || vehicle.getY() > 590;
-
-        if (!outside) {
-            return;
-        }
 
         vehicle.setStopped(false);
         vehicle.setChangingLane(false);

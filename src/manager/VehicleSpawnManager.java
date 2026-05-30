@@ -1,115 +1,90 @@
 package manager;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import model.vehicle.Ambulance;
-import model.vehicle.Bicycle;
-import model.vehicle.Car;
-import model.vehicle.FireTruck;
-import model.vehicle.Motorbike;
-import model.vehicle.Vehicle;
-
+import model.vehicle.*;
 import strategy.driver.AggressiveDriver;
-import strategy.driver.EmergencyDriver;
-import strategy.driver.NormalDriver;
 import strategy.driver.DriverBehavior;
+import strategy.driver.NormalDriver;
 import util.Direction;
 import util.Lane;
 import util.TurnType;
+import config.Constants;
 
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * Quản lý việc spawn và xóa phương tiện trên bản đồ.
+ *
+ * <p>
+ * Mỗi lần spawn:
+ * <ol>
+ * <li>Chọn ngẫu nhiên loại xe và hướng hợp lệ.</li>
+ * <li>Kiểm tra khoảng cách tối thiểu — bỏ qua nếu vị trí đã có xe.</li>
+ * <li>Thiết lập làn đường, loại rẽ, và chiến lược lái.</li>
+ * </ol>
+ * </p>
+ */
 public class VehicleSpawnManager {
+
+    /** Xác suất để xe không phải xe máy có kiểu lái hung hăng. */
+    private static final double AGGRESSIVE_PROBABILITY = 0.3;
 
     private final List<Vehicle> vehicles;
 
-    public VehicleSpawnManager(
-            List<Vehicle> vehicles
-    ) {
-
+    /**
+     * @param vehicles danh sách xe chung — được cập nhật trực tiếp
+     */
+    public VehicleSpawnManager(List<Vehicle> vehicles) {
         this.vehicles = vehicles;
     }
 
-    // =========================
-    // SPAWN RANDOM VEHICLE
-    // =========================
+    // ==========================================================
+    // Spawn
+    // ==========================================================
 
-    public void spawnRandomVehicle(List<Direction> directions) {
+    /**
+     * Spawn một xe ngẫu nhiên từ danh sách hướng hợp lệ.
+     * Không làm gì nếu vị trí spawn quá gần xe hiện có.
+     *
+     * @param validDirections các hướng được phép spawn (theo loại ngã rẽ)
+     */
+    public void spawnRandomVehicle(List<Direction> validDirections) {
+        Direction direction = randomFrom(validDirections);
+        double spawnX = getSpawnX(direction);
+        double spawnY = getSpawnY(direction);
 
-        int randomType =
-                (int) (Math.random() * 5);
-
-        Direction direction =
-            directions.get(
-                    (int)(
-                            Math.random()
-                            * directions.size()
-                    )
-            );
-
-        double x = getSpawnX(direction);
-        double y = getSpawnY(direction);
-
-        if (!canSpawn(x, y)) {
+        if (!canSpawn(spawnX, spawnY)) {
             return;
         }
 
-        Vehicle vehicle;
-
-        switch (randomType) {
-
-            case 0:
-                vehicle = createCar(direction);
-                break;
-
-            case 1:
-                vehicle = createMotorbike(direction);
-                break;
-
-            case 2:
-                vehicle = createBicycle(direction);
-                break;
-
-            case 3:
-                vehicle = createAmbulance(direction);
-                break;
-
-            default:
-                vehicle = createFireTruck(direction);
-                break;
-        }
-
+        Vehicle vehicle = createRandomVehicle(direction);
         setupVehicle(vehicle);
-
         vehicles.add(vehicle);
     }
 
-    // =========================
-    // CREATE VEHICLES
-    // =========================
+    // ----------------------------------------------------------
+    // Tạo xe
+    // ----------------------------------------------------------
 
-    private Vehicle createCar(Direction direction) {
-        return new Car(getSpawnX(direction), getSpawnY(direction), direction);
+    private Vehicle createRandomVehicle(Direction direction) {
+        int type = (int) (Math.random() * 5);
+        switch (type) {
+            case 0:
+                return new Car(getSpawnX(direction), getSpawnY(direction), direction);
+            case 1:
+                return new Motorbike(getSpawnX(direction), getSpawnY(direction), direction);
+            case 2:
+                return new Bicycle(getSpawnX(direction), getSpawnY(direction), direction);
+            case 3:
+                return new Ambulance(getSpawnX(direction), getSpawnY(direction), direction);
+            default:
+                return new FireTruck(getSpawnX(direction), getSpawnY(direction), direction);
+        }
     }
 
-    private Vehicle createMotorbike(Direction direction) {
-        return new Motorbike(getSpawnX(direction), getSpawnY(direction), direction);
-    }
-
-    private Vehicle createBicycle(Direction direction) {
-        return new Bicycle(getSpawnX(direction), getSpawnY(direction), direction);
-    }
-
-    private Vehicle createAmbulance(Direction direction) {
-        return new Ambulance(getSpawnX(direction), getSpawnY(direction), direction);
-    }
-
-    private Vehicle createFireTruck(Direction direction) {
-        return new FireTruck(getSpawnX(direction), getSpawnY(direction), direction);
-    }
-
-    // =========================
-    // SETUP VEHICLE
-    // =========================
+    // ----------------------------------------------------------
+    // Thiết lập xe sau khi tạo
+    // ----------------------------------------------------------
 
     private void setupVehicle(Vehicle vehicle) {
         setupLane(vehicle);
@@ -117,193 +92,135 @@ public class VehicleSpawnManager {
         setupDriverBehavior(vehicle);
     }
 
-    // =========================
-    // SETUP LANE
-    // =========================
-
+    /**
+     * Snap xe vào trung tâm làn ngẫu nhiên và lưu thông tin làn.
+     */
     private void setupLane(Vehicle vehicle) {
-
-        Lane lane;
-
-        if (Math.random() < 0.5) {
-            lane = Lane.LEFT;
-        } else {
-            lane = Lane.RIGHT;
-        }
-
+        Lane lane = (Math.random() < 0.5) ? Lane.LEFT : Lane.RIGHT;
         vehicle.setLane(lane);
 
         switch (vehicle.getDirection()) {
-
             case NORTH:
             case SOUTH:
-
-                vehicle.setX(
-                        LaneManager.getLaneCenterX(
-                                vehicle.getDirection(),
-                                lane
-                        )
-                );
-
+                vehicle.setX(LaneManager.getLaneCenterX(vehicle.getDirection(), lane));
                 break;
-
             case EAST:
             case WEST:
-
-                vehicle.setY(
-                        LaneManager.getLaneCenterY(
-                                vehicle.getDirection(),
-                                lane
-                        )
-                );
-
+                vehicle.setY(LaneManager.getLaneCenterY(vehicle.getDirection(), lane));
+                break;
+            default:
                 break;
         }
     }
 
-    // =========================
-    // SETUP TURN TYPE
-    // =========================
-
+    /** Gán loại rẽ ngẫu nhiên theo tỉ lệ đều. */
     private void setupTurnType(Vehicle vehicle) {
-
-        double random = Math.random();
-
-        if (random < 0.33) {
+        double r = Math.random();
+        if (r < 0.33)
             vehicle.setTurnType(TurnType.LEFT);
-        } else if (random < 0.66) {
+        else if (r < 0.66)
             vehicle.setTurnType(TurnType.RIGHT);
-        } else {
+        else
             vehicle.setTurnType(TurnType.STRAIGHT);
-        }
     }
 
-    // =========================
-    // SETUP DRIVER
-    // =========================
-
+    /**
+     * Giữ nguyên behavior của xe ưu tiên và xe máy (đã gán trong constructor).
+     * Đối với ô tô / xe đạp: random giữa NormalDriver và AggressiveDriver.
+     */
     private void setupDriverBehavior(Vehicle vehicle) {
+        if (vehicle instanceof Ambulance || vehicle instanceof FireTruck) {
+            return; // EmergencyDriver đã gán, không ghi đè
+        }
+        if (vehicle instanceof Motorbike) {
+            return; // AggressiveDriver đã gán, không ghi đè
+        }
 
-    // Emergency giữ nguyên behavior từ constructor, không ghi đè
-    if (vehicle instanceof Ambulance || vehicle instanceof FireTruck) {
-        return;
+        DriverBehavior behavior = (Math.random() < AGGRESSIVE_PROBABILITY)
+                ? new AggressiveDriver()
+                : new NormalDriver();
+
+        vehicle.setBehavior(behavior);
+        vehicle.setSpeed(behavior.getSpeed());
     }
 
-    // Motorbike giữ AggressiveDriver từ constructor
-    if (vehicle instanceof Motorbike) {
-        return;
-    }
-
-    // Car, Bicycle: random behavior
-    DriverBehavior newBehavior;
-
-    if (Math.random() < 0.3) {
-        newBehavior = new AggressiveDriver();
-    } else {
-        newBehavior = new NormalDriver();
-    }
-
-    vehicle.setBehavior(newBehavior);
-    vehicle.setSpeed(newBehavior.getSpeed()); // sync speed sau khi đổi behavior
-}
-
-    // =========================
-    // SPAWN POSITION X
-    // =========================
+    // ----------------------------------------------------------
+    // Tọa độ spawn theo hướng
+    // ----------------------------------------------------------
 
     private double getSpawnX(Direction direction) {
-
         switch (direction) {
-
             case NORTH:
-                // [FIX C-04] Trung tâm lane NORTH (430-470) → 450
-                return 450;
-
+                return Constants.LANE_NORTH_RIGHT_X; // giữa đường dọc
             case SOUTH:
-                // [FIX C-04] Trước đây: 530 (sai ~160px).
-                // Lane SOUTH: LEFT=330, RIGHT=370 → trung tâm 350.
-                // setupLane() sẽ snap về đúng lane, không còn giật hình.
-                return 350;
-
+                return Constants.LANE_SOUTH_RIGHT_X;
             case EAST:
-                return -100;
-
+                return Constants.SPAWN_OFFSCREEN_NEGATIVE;
             case WEST:
-                return 1100;
-                
-              // getSpawnX()
+                return Constants.SPAWN_OFFSCREEN_POSITIVE;
             case NORTHEAST:
-                return -100; // spawn từ góc dưới trái, di chuyển lên phải
+                return Constants.SPAWN_OFFSCREEN_NEGATIVE;
             default:
                 return 0;
-                
         }
     }
-
-    // =========================
-    // SPAWN POSITION Y
-    // =========================
 
     private double getSpawnY(Direction direction) {
-
         switch (direction) {
-
             case NORTH:
-                return 1100;
-
+                return Constants.SPAWN_OFFSCREEN_POSITIVE;
             case SOUTH:
-                return -100;
-
+                return Constants.SPAWN_OFFSCREEN_NEGATIVE;
             case EAST:
-                return 470;
-
+                return Constants.LANE_EAST_RIGHT_Y;
             case WEST:
-                return 530;
-            // getSpawnY()
+                return Constants.LANE_WEST_RIGHT_Y;
             case NORTHEAST:
-                return 1100;
-
+                return Constants.SPAWN_OFFSCREEN_POSITIVE;
             default:
                 return 0;
         }
     }
 
-    // =========================
-    // REMOVE OUTSIDE VEHICLE
-    // =========================
+    // ==========================================================
+    // Xóa xe ra ngoài bản đồ
+    // ==========================================================
 
+    /**
+     * Xóa các xe đã ra ngoài biên bản đồ.
+     * Gọi mỗi frame sau khi cập nhật vị trí.
+     */
     public void removeOutsideVehicles() {
-
-        List<Vehicle> removeList = new ArrayList<>();
-
-        for (Vehicle vehicle : vehicles) {
-
-            if (vehicle.getX() < -200
-                    || vehicle.getX() > 1400
-                    || vehicle.getY() < -200
-                    || vehicle.getY() > 1400) {
-
-                removeList.add(vehicle);
+        List<Vehicle> toRemove = new ArrayList<>();
+        for (Vehicle v : vehicles) {
+            if (v.getX() < Constants.REMOVE_THRESHOLD_MIN
+                    || v.getX() > Constants.REMOVE_THRESHOLD_MAX
+                    || v.getY() < Constants.REMOVE_THRESHOLD_MIN
+                    || v.getY() > Constants.REMOVE_THRESHOLD_MAX) {
+                toRemove.add(v);
             }
         }
-
-        vehicles.removeAll(removeList);
+        vehicles.removeAll(toRemove);
     }
 
+    // ==========================================================
+    // Tiện ích
+    // ==========================================================
+
+    /** Kiểm tra có đủ khoảng cách để spawn tại (x, y) không. */
     private boolean canSpawn(double x, double y) {
-
-        for (Vehicle vehicle : vehicles) {
-
-            double dx = vehicle.getX() - x;
-            double dy = vehicle.getY() - y;
-
-            double distance = Math.sqrt(dx * dx + dy * dy);
-
-            if (distance < 150) {
+        for (Vehicle v : vehicles) {
+            double dx = v.getX() - x;
+            double dy = v.getY() - y;
+            if (Math.sqrt(dx * dx + dy * dy) < Constants.SPAWN_MIN_DISTANCE) {
                 return false;
             }
         }
-
         return true;
+    }
+
+    /** Chọn ngẫu nhiên một phần tử từ list. */
+    private <T> T randomFrom(List<T> list) {
+        return list.get((int) (Math.random() * list.size()));
     }
 }

@@ -3,52 +3,45 @@ package model.vehicle;
 import strategy.driver.NormalDriver;
 import util.Direction;
 
+/**
+ * Xe đạp — chậm nhất, tuân thủ luật giao thông.
+ *
+ * <p>
+ * Dùng {@link NormalDriver} với tốc độ thấp.
+ * Kích thước nhỏ — dễ len lỏi giữa các xe.
+ * </p>
+ */
 public class Bicycle extends Vehicle {
 
-    public Bicycle(
-            double x,
-            double y,
-            Direction direction
-    ) {
+    private static final double WIDTH = 34;
+    private static final double HEIGHT = 16;
 
+    public Bicycle(double x, double y, Direction direction) {
         super(x, y, direction);
-
-        // [FIX N-01] Trước đây behavior = null → NullPointerException
-        // sau khi fix C-01 gọi vehicle.getBehavior().shouldStop().
-        // Xe đạp dùng NormalDriver; tốc độ lấy từ behavior để nhất quán.
+        width = WIDTH;
+        height = HEIGHT;
         behavior = new NormalDriver();
-        speed = behavior.getSpeed(); // NormalDriver.getSpeed() = 4
-
-        // Nếu muốn xe đạp chậm hơn Car, override lại:
-        // speed = 2;
-
-        this.width = 34;
-        this.height = 16;
+        speed = behavior.getSpeed();
     }
 
     @Override
     public void move() {
-
-        if (stopped) {
+        if (stopped)
             return;
-        }
-
         switch (direction) {
-
             case NORTH:
                 y -= speed;
                 break;
-
             case SOUTH:
                 y += speed;
                 break;
-
             case EAST:
                 x += speed;
                 break;
-
             case WEST:
                 x -= speed;
+                break;
+            default:
                 break;
         }
     }

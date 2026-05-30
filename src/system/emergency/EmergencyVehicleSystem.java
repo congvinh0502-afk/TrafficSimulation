@@ -1,36 +1,59 @@
 package system.emergency;
 
-import java.util.List;
-import model.vehicle.Vehicle;
+import config.Constants;
 import model.vehicle.Ambulance;
 import model.vehicle.FireTruck;
+import model.vehicle.Vehicle;
 
+import java.util.List;
+
+/**
+ * Hệ thống ưu tiên xe cứu thương và xe cứu hỏa.
+ *
+ * <p>
+ * Mỗi frame, với mỗi xe ưu tiên đang lưu thông:
+ * buộc các xe thường cùng hướng trong bán kính
+ * {@link Constants#EMERGENCY_YIELD_RADIUS} phải dừng lại nhường đường.
+ * </p>
+ *
+ * <p>
+ * Xe ưu tiên không bao giờ bị hệ thống này dừng.
+ * </p>
+ */
 public class EmergencyVehicleSystem {
 
+    /**
+     * Cập nhật trạng thái nhường đường cho xe ưu tiên.
+     *
+     * @param vehicles toàn bộ xe trên bản đồ
+     */
     public void updateEmergencyVehicles(List<Vehicle> vehicles) {
+        for (Vehicle emergency : vehicles) {
+            if (!isEmergency(emergency))
+                continue;
 
-    for (Vehicle vehicle : vehicles) {
+            for (Vehicle other : vehicles) {
+                if (other == emergency)
+                    continue;
+                if (isEmergency(other))
+                    continue;
 
-        if (!(vehicle instanceof Ambulance)
-                && !(vehicle instanceof FireTruck)) {
-            continue;
-        }
+                double dx = emergency.getX() - other.getX();
+                double dy = emergency.getY() - other.getY();
+                double dist = Math.sqrt(dx * dx + dy * dy);
 
-        // ép xe thường dừng lại nếu Emergency đang đến gần
-        for (Vehicle other : vehicles) {
+                boolean sameDirection = (emergency.getDirection() == other.getDirection());
+                boolean tooClose = (dist < Constants.EMERGENCY_YIELD_RADIUS);
 
-            if (other == vehicle) continue;
-            if (other instanceof Ambulance) continue;
-            if (other instanceof FireTruck) continue;
-
-            double dx = vehicle.getX() - other.getX();
-            double dy = vehicle.getY() - other.getY();
-            double dist = Math.sqrt(dx * dx + dy * dy);
-
-            if (dist < 150 && other.getDirection() == vehicle.getDirection()) {
-    other.setStopped(true);
-}
+                if (tooClose && sameDirection) {
+                    other.setStopped(true);
+                }
+            }
         }
     }
-}
+
+    /** Kiểm tra xe có phải xe ưu tiên không. */
+    private boolean isEmergency(Vehicle vehicle) {
+        return vehicle instanceof Ambulance || vehicle instanceof FireTruck;
+    }
 }

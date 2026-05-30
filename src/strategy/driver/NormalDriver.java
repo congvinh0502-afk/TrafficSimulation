@@ -6,22 +6,24 @@ import model.vehicle.Vehicle;
 
 import java.util.List;
 
+/**
+ * Lái xe bình thường — tuân thủ hoàn toàn luật giao thông.
+ *
+ * <p>
+ * Luôn dừng khi đèn đỏ. Tốc độ vừa phải.
+ * </p>
+ */
 public class NormalDriver implements DriverBehavior {
 
-    @Override
-    public boolean shouldStop(
-            Vehicle self,
-            List<Vehicle> vehicles,
-            TrafficLight relevantLight
-    ) {
+    private static final int SPEED = 4;
 
-        return relevantLight.getColor()
-                == LightColor.RED;
+    @Override
+    public boolean shouldStop(Vehicle self, List<Vehicle> vehicles, TrafficLight relevantLight) {
+        return relevantLight.getColor() == LightColor.RED;
     }
 
     @Override
     public int getSpeed() {
-
-        return 4;
+        return SPEED;
     }
 }

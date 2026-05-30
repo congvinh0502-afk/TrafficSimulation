@@ -1,0 +1,42 @@
+==========================================================
+* Đây là phần tổng hợp sửa chữa và nâng cấp hệ thống
+* Tôi tạo ra để anh em dễ dàng trao đổi và làm việc nhóm
+==========================================================
+
+Cú pháp: (STT) (+) [Vấn đề] [Người số 1] {Người số 2}
+Trong đó, (+) là trạng thái của vấn đề. Cụ thể, 
+. (*) là vấn đề hiện tại của hệ thống cần sửa chữa
+. (-) là vấn đề đã được sửa chữa xong
+. (+) là đề xuất chỉnh sửa
+. (/) là vấn đề đang được chỉnh sửa
+
+Ví dụ, anh em vào check hệ thống thấy lỗi, hãy vào files này và ghi ra
+1. (*) Xe đang đi vào cỏ ở ngã tư [Tên người đề xuất]
+2. (*) Bảng công cụ nên được thay đổi như sau:.... [Tên người đề xuất]
+
+Người khác vô đọc được, nếu thấy hợp tình hợp lý sẽ sửa lỗi trên hệ thống và cập nhật dòng trạng thái
+(hoặc anh em có thể tự sửa luôn)
+1. (-) Xe đang đi vào cỏ ở ngã tư [Tên người đề xuất] {Tên người chỉnh sửa}
+2. (-) Bảng công cụ nên được thay đổi như sau:.... [Tên người đề xuất] {Tên người chỉnh sửa}
+Trong đó có 2 cập nhật quan trọng: 
+. Một là dấu trạng thái của vấn đề
+. Hai là tên người đã chỉnh sửa
+
+Nếu anh em vô đọc, thấy hợp lý nhưng có đề xuất khác với người đã nêu vấn đề,
+hãy cập nhật dòng trạng thái như sau
+2. (+) Bảng công cụ nên được giữ nguyên, vì.... [Tên người đề xuất] {Tên người góp ý}
+Trong đó có 2 cập nhật quan trọng: 
+. Một là dấu trạng thái của vấn đề
+. Hai là tên người góp ý
+
+Hoặc nếu anh em đã đọc, quyết định chỉnh sửa lỗi này nhưng chưa làm xong, 
+chưa hoàn thiện thì hãy cập nhật dòng trạng thái
+2. (\) Bảng công cụ nên được thay đổi như sau:.... [Tên người đề xuất] {Tên người đang chỉnh sửa}
+Trong đó có 2 cập nhật quan trọng: 
+. Một là dấu trạng thái của vấn đề
+. Hai là tên người đang chỉnh sửa
+
+Tôi giải thích dễ hiểu mà phải không? Anh em áp dụng đúng công thức này và sử dụng nó ở Files Fix&Update nhé.
+Không thực hiện trên Files này. Mọi người thay đổi dòng trạng thái để lưu lại lịch sử cũng như để anh em khác nắm được quá trình.
+
+Lan Hương.

@@ -1,207 +1,153 @@
 package view.panel;
 
 import model.SimulationConfig;
+import model.intersection.IntersectionType;
+import util.TrafficDensity;
 
 import javax.swing.*;
 import java.awt.*;
-import model.intersection.IntersectionType;
 
+/**
+ * Panel menu — cho phép người dùng cấu hình phiên mô phỏng.
+ *
+ * <p>
+ * Thu thập 5 thông số:
+ * <ul>
+ * <li>Loại ngã rẽ (Three/Four/Five Way)</li>
+ * <li>Chế độ đèn (AUTO / MANUAL)</li>
+ * <li>Kiểu đếm ngược đèn</li>
+ * <li>Số lượng xe tối đa (slider 1–100)</li>
+ * <li>Mật độ giao thông (LOW / MEDIUM / HIGH)</li>
+ * </ul>
+ * </p>
+ *
+ * <p>
+ * Khi người dùng nhấn START, callback {@code onStart} được gọi.
+ * Lấy cấu hình đã chọn qua {@link #getConfig()}.
+ * </p>
+ */
 public class MenuPanel extends JPanel {
 
-    private JComboBox<String> intersectionBox;
+    private final JComboBox<String> intersectionBox;
+    private final JComboBox<String> modeBox;
+    private final JComboBox<String> lightBox;
+    private final JSlider vehicleSlider;
+    private final JComboBox<String> densityBox;
 
-    private JComboBox<String> modeBox;
+    // Màu sắc giao diện
+    private static final Color BG_COLOR = new Color(30, 30, 30);
+    private static final Color LABEL_COLOR = Color.WHITE;
+    private static final Font TITLE_FONT = new Font("Arial", Font.BOLD, 28);
+    private static final Font LABEL_FONT = new Font("Arial", Font.PLAIN, 14);
 
-    private JComboBox<String> lightBox;
-
-    private JSlider vehicleSlider;
-
-    private JButton startButton;
-    private JComboBox<String> densityBox;
-
+    /**
+     * Tạo panel menu.
+     *
+     * @param onStart callback chạy khi người dùng nhấn START
+     */
     public MenuPanel(Runnable onStart) {
-
         setLayout(null);
+        setBackground(BG_COLOR);
 
-        setBackground(new Color(30, 30, 30));
-
-        JLabel title = new JLabel("SMART TRAFFIC SIMULATION");
-
-        title.setForeground(Color.WHITE);
-
-        title.setFont(new Font("Arial", Font.BOLD, 28));
-
-        title.setBounds(350, 50, 500, 40);
-
+        // Tiêu đề
+        JLabel title = createLabel("SMART TRAFFIC SIMULATION", TITLE_FONT, 350, 50, 500, 40);
         add(title);
 
-        // intersection
-
-        JLabel intersectionLabel = new JLabel("Intersection:");
-
-        intersectionLabel.setForeground(Color.WHITE);
-
-        intersectionLabel.setBounds(350, 150, 150, 30);
-
-        add(intersectionLabel);
-
-        intersectionBox = new JComboBox<>(new String[] {
-                "Three Way",
-                "Four Way",
-                "Five Way"
-        });
-
+        // Loại ngã rẽ
+        add(createLabel("Intersection:", 350, 150));
+        intersectionBox = new JComboBox<>(new String[] { "Three Way", "Four Way", "Five Way" });
         intersectionBox.setBounds(500, 150, 200, 30);
-
         add(intersectionBox);
 
-        // mode
-
-        JLabel modeLabel = new JLabel("Traffic Mode:");
-
-        modeLabel.setForeground(Color.WHITE);
-
-        modeLabel.setBounds(350, 220, 150, 30);
-
-        add(modeLabel);
-
-        modeBox = new JComboBox<>(new String[] {
-                "AUTO",
-                "MANUAL"
-        });
-
-        modeBox.setBounds(500, 220, 200, 30);
-
+        // Chế độ đèn
+        add(createLabel("Traffic Mode:", 350, 210));
+        modeBox = new JComboBox<>(new String[] { "AUTO", "MANUAL" });
+        modeBox.setBounds(500, 210, 200, 30);
         add(modeBox);
 
-        // light type
-
-        JLabel lightLabel = new JLabel("Light Type:");
-
-        lightLabel.setForeground(Color.WHITE);
-
-        lightLabel.setBounds(350, 290, 150, 30);
-
-        add(lightLabel);
-
-        lightBox = new JComboBox<>(new String[] {
-                "NO COUNTDOWN",
-                "ALWAYS COUNTDOWN",
-                "COUNT <= 10"
-        });
-
-        lightBox.setBounds(500, 290, 200, 30);
-
+        // Kiểu đếm ngược
+        add(createLabel("Light Type:", 350, 270));
+        lightBox = new JComboBox<>(new String[] { "NO COUNTDOWN", "ALWAYS COUNTDOWN", "COUNT <= 10" });
+        lightBox.setBounds(500, 270, 200, 30);
         add(lightBox);
 
-        // vehicle count
-
-        JLabel vehicleLabel = new JLabel("Vehicle Count:");
-
-        vehicleLabel.setForeground(Color.WHITE);
-
-        vehicleLabel.setBounds(350, 360, 150, 30);
-
-        add(vehicleLabel);
-
+        // Số lượng xe
+        add(createLabel("Vehicle Count:", 350, 340));
         vehicleSlider = new JSlider(1, 100, 20);
-
-        vehicleSlider.setBounds(500, 360, 200, 50);
-
+        vehicleSlider.setBounds(500, 335, 200, 50);
         vehicleSlider.setMajorTickSpacing(10);
-
         vehicleSlider.setPaintTicks(true);
-
         vehicleSlider.setPaintLabels(true);
-
+        vehicleSlider.setOpaque(false);
         add(vehicleSlider);
-        // traffic density
 
-        JLabel densityLabel =
-        new JLabel("Traffic Density:");
-
-        densityLabel.setForeground(Color.WHITE);
-
-        densityLabel.setBounds(350, 430, 150, 30);
-
-        add(densityLabel);
-
-        densityBox = new JComboBox<>(new String[] {
-            "LOW",
-            "MEDIUM",
-            "HIGH"
-        });
-
-        densityBox.setBounds(500, 430, 200, 30);
-
+        // Mật độ giao thông
+        add(createLabel("Traffic Density:", 350, 405));
+        densityBox = new JComboBox<>(new String[] { "LOW", "MEDIUM", "HIGH" });
+        densityBox.setBounds(500, 405, 200, 30);
         add(densityBox);
 
-        // start button
-
-        startButton = new JButton("START SIMULATION");
-
-        startButton.setBounds(450, 540, 250, 50);
-
+        // Nút bắt đầu
+        JButton startButton = new JButton("START SIMULATION");
+        startButton.setBounds(450, 490, 250, 50);
+        startButton.setFont(new Font("Arial", Font.BOLD, 16));
+        startButton.addActionListener(e -> onStart.run());
         add(startButton);
-
-        startButton.addActionListener(e -> {
-
-            onStart.run();
-
-        });
     }
 
+    // ----------------------------------------------------------
+    // Lấy cấu hình từ form
+    // ----------------------------------------------------------
+
+    /**
+     * Đọc các lựa chọn hiện tại trên form và trả về {@link SimulationConfig}.
+     *
+     * @return cấu hình phiên mô phỏng
+     */
     public SimulationConfig getConfig() {
-
-    IntersectionType type;
-
-    switch ((String) intersectionBox.getSelectedItem()) {
-
-        case "Three Way":
-
-            type = IntersectionType.THREE_WAY;
-            break;
-
-        case "Five Way":
-
-            type = IntersectionType.FIVE_WAY;
-            break;
-
-        default:
-
-            type = IntersectionType.FOUR_WAY;
+        return new SimulationConfig(
+                parseIntersectionType(),
+                (String) modeBox.getSelectedItem(),
+                (String) lightBox.getSelectedItem(),
+                vehicleSlider.getValue(),
+                parseDensity());
     }
 
-    util.TrafficDensity density;
-
-    switch ((String) densityBox.getSelectedItem()) {
-
-        case "LOW":
-
-            density = util.TrafficDensity.LOW;
-            break;
-
-        case "HIGH":
-
-            density = util.TrafficDensity.HIGH;
-            break;
-
-        default:
-
-            density = util.TrafficDensity.MEDIUM;
+    private IntersectionType parseIntersectionType() {
+        switch ((String) intersectionBox.getSelectedItem()) {
+            case "Three Way":
+                return IntersectionType.THREE_WAY;
+            case "Five Way":
+                return IntersectionType.FIVE_WAY;
+            default:
+                return IntersectionType.FOUR_WAY;
+        }
     }
 
-    return new SimulationConfig(
+    private TrafficDensity parseDensity() {
+        switch ((String) densityBox.getSelectedItem()) {
+            case "LOW":
+                return TrafficDensity.LOW;
+            case "HIGH":
+                return TrafficDensity.HIGH;
+            default:
+                return TrafficDensity.MEDIUM;
+        }
+    }
 
-            type,
+    // ----------------------------------------------------------
+    // Tiện ích tạo label
+    // ----------------------------------------------------------
 
-            (String) modeBox.getSelectedItem(),
+    private JLabel createLabel(String text, int x, int y) {
+        return createLabel(text, LABEL_FONT, x, y, 150, 30);
+    }
 
-            (String) lightBox.getSelectedItem(),
-
-            vehicleSlider.getValue(),
-
-            density
-    );
-}
+    private JLabel createLabel(String text, Font font, int x, int y, int w, int h) {
+        JLabel label = new JLabel(text);
+        label.setForeground(LABEL_COLOR);
+        label.setFont(font);
+        label.setBounds(x, y, w, h);
+        return label;
+    }
 }

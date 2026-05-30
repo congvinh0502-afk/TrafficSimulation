@@ -1,119 +1,130 @@
 package system.movement;
 
-import java.util.List;
+import config.Constants;
 import manager.LaneManager;
 import model.vehicle.Vehicle;
+import util.Lane;
 
+import java.util.List;
+
+/**
+ * Hệ thống đổi làn.
+ *
+ * <p>
+ * Hai chức năng:
+ * <ul>
+ * <li>{@link #updateLaneChanging} — di chuyển xe từng pixel về làn đích mỗi
+ * frame.</li>
+ * <li>{@link #tryChangeLane} — kiểm tra điều kiện và kích hoạt đổi làn nếu an
+ * toàn.</li>
+ * </ul>
+ * </p>
+ */
 public class LaneChangeSystem {
 
+    // ==========================================================
+    // Cập nhật vị trí khi đang đổi làn
+    // ==========================================================
+
+    /**
+     * Dịch chuyển xe dần về trung tâm làn đích.
+     * Khi đến nơi, snap chính xác và xác nhận hoàn thành.
+     *
+     * @param vehicle xe đang đổi làn
+     */
     public void updateLaneChanging(Vehicle vehicle) {
-
-        if (!vehicle.isChangingLane()) {
+        if (!vehicle.isChangingLane())
             return;
-        }
 
-        double smooth = 0.6;
+        double smooth = Constants.LANE_CHANGE_SMOOTH;
 
         switch (vehicle.getDirection()) {
-
             case NORTH:
-            case SOUTH:
-
-                int targetX = LaneManager.getLaneCenterX(
-                        vehicle.getDirection(),
-                        vehicle.getTargetLane()
-                );
-
-                if (Math.abs(vehicle.getX() - targetX) < 3) {
+            case SOUTH: {
+                int targetX = LaneManager.getLaneCenterX(vehicle.getDirection(), vehicle.getTargetLane());
+                if (Math.abs(vehicle.getX() - targetX) < Constants.LANE_CHANGE_SNAP_THRESHOLD) {
                     vehicle.setX(targetX);
                     vehicle.setLane(vehicle.getTargetLane());
                     vehicle.setChangingLane(false);
                     return;
                 }
-
-                if (vehicle.getX() < targetX) {
-                    vehicle.setX(vehicle.getX() + smooth);
-                } else {
-                    vehicle.setX(vehicle.getX() - smooth);
-                }
-
+                vehicle.setX(vehicle.getX() + (vehicle.getX() < targetX ? smooth : -smooth));
                 break;
-
+            }
             case EAST:
-            case WEST:
-
-                int targetY = LaneManager.getLaneCenterY(
-                        vehicle.getDirection(),
-                        vehicle.getTargetLane()
-                );
-
-                if (Math.abs(vehicle.getY() - targetY) < 3) {
+            case WEST: {
+                int targetY = LaneManager.getLaneCenterY(vehicle.getDirection(), vehicle.getTargetLane());
+                if (Math.abs(vehicle.getY() - targetY) < Constants.LANE_CHANGE_SNAP_THRESHOLD) {
                     vehicle.setY(targetY);
                     vehicle.setLane(vehicle.getTargetLane());
                     vehicle.setChangingLane(false);
                     return;
                 }
-
-                if (vehicle.getY() < targetY) {
-                    vehicle.setY(vehicle.getY() + smooth);
-                } else {
-                    vehicle.setY(vehicle.getY() - smooth);
-                }
-
+                vehicle.setY(vehicle.getY() + (vehicle.getY() < targetY ? smooth : -smooth));
+                break;
+            }
+            default:
                 break;
         }
     }
-    public boolean tryChangeLane(
-            Vehicle current,
-            List<Vehicle> vehicles
-    ) {
-        if (current.isChangingLane()) {
-            return false;
-        }
-        if (current.isTurning()) {
-            return false;
-        }
-        if (current.getLaneChangeCooldown() > 0) {
-            return false;
-        }
 
-        util.Lane targetLane;
+    // ==========================================================
+    // Thử đổi làn
+    // ==========================================================
 
-        if (current.getLane() == util.Lane.LEFT) {
-            targetLane = util.Lane.RIGHT;
-        } else {
-            targetLane = util.Lane.LEFT;
-        }
+    /**
+     * Kiểm tra điều kiện an toàn và kích hoạt đổi làn nếu hợp lệ.
+     *
+     * <p>
+     * Không đổi làn nếu:
+     * <ul>
+     * <li>Đang trong quá trình đổi làn khác.</li>
+     * <li>Đang rẽ.</li>
+     * <li>Đang trong thời gian cooldown.</li>
+     * <li>Có xe trong làn đích cách dưới
+     * {@link Constants#LANE_CHANGE_SAFE_DISTANCE}.</li>
+     * </ul>
+     * </p>
+     *
+     * @param current  xe muốn đổi làn
+     * @param vehicles toàn bộ xe trên bản đồ
+     * @return {@code true} nếu đã kích hoạt đổi làn thành công
+     */
+    public boolean tryChangeLane(Vehicle current, List<Vehicle> vehicles) {
+        if (current.isChangingLane())
+            return false;
+        if (current.isTurning())
+            return false;
+        if (current.getLaneChangeCooldown() > 0)
+            return false;
+
+        Lane targetLane = (current.getLane() == Lane.LEFT) ? Lane.RIGHT : Lane.LEFT;
 
         for (Vehicle other : vehicles) {
-
-            if (current == other) {
+            if (other == current)
                 continue;
-            }
-
-            if (other.getDirection() != current.getDirection()) {
+            if (other.getDirection() != current.getDirection())
                 continue;
-            }
-
-            if (other.getLane() == targetLane) {
-
-                if (distance(current, other) < 120) {
-                    return false;
-                }
+            if (other.getLane() == targetLane
+                    && distance(current, other) < Constants.LANE_CHANGE_SAFE_DISTANCE) {
+                return false;
             }
         }
 
         current.setTargetLane(targetLane);
         current.setChangingLane(true);
-        current.setLaneChangeCooldown(60);
-
+        current.setLaneChangeCooldown(Constants.LANE_CHANGE_COOLDOWN);
         return true;
     }
-    public double distance(Vehicle a, Vehicle b) {
 
+    // ----------------------------------------------------------
+    // Tiện ích
+    // ----------------------------------------------------------
+
+    /** Khoảng cách Euclidean giữa hai xe. */
+    public double distance(Vehicle a, Vehicle b) {
         double dx = a.getX() - b.getX();
         double dy = a.getY() - b.getY();
-
         return Math.sqrt(dx * dx + dy * dy);
     }
 }

@@ -6,30 +6,29 @@ import model.vehicle.Vehicle;
 
 import java.util.List;
 
-public class AggressiveDriver
-        implements DriverBehavior {
+/**
+ * Lái xe hung hăng — tốc độ cao, thường xuyên vượt đèn đỏ.
+ *
+ * <p>
+ * Khi đèn đỏ: chỉ 40% khả năng dừng, 60% khả năng vượt.
+ * Tốc độ nhanh hơn {@link NormalDriver}.
+ * </p>
+ */
+public class AggressiveDriver implements DriverBehavior {
+
+    private static final int SPEED = 7;
+    private static final double STOP_PROBABILITY = 0.4; // xác suất dừng khi đèn đỏ
 
     @Override
-    public boolean shouldStop(
-            Vehicle self,
-            List<Vehicle> vehicles,
-            TrafficLight relevantLight
-    ) {
-
-        if (relevantLight.getColor()
-                == LightColor.RED) {
-
-            // [FIX N-06] Logic cũ: Math.random() > 0.4  = 60% dừng (SAI)
-            // AggressiveDriver nên VƯỢT đèn nhiều hơn dừng.
-            // Fix: Math.random() > 0.6  = chỉ 40% dừng, 60% vượt đèn đỏ.
-            return Math.random() > 0.6;
+    public boolean shouldStop(Vehicle self, List<Vehicle> vehicles, TrafficLight relevantLight) {
+        if (relevantLight.getColor() == LightColor.RED) {
+            return Math.random() < STOP_PROBABILITY;
         }
-
         return false;
     }
 
     @Override
     public int getSpeed() {
-        return 7;
+        return SPEED;
     }
 }
