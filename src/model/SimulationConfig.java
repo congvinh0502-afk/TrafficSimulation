@@ -10,21 +10,21 @@ public class SimulationConfig {
 
     private String lightType;
 
-    private int vehicleCount;
+    //private int vehicleCount;
     private TrafficDensity trafficDensity;
 
     public SimulationConfig(
         IntersectionType intersectionType,
         String trafficMode,
         String lightType,
-        int vehicleCount,
+        //int vehicleCount,
         TrafficDensity trafficDensity
 ) {
 
         this.intersectionType = intersectionType;
         this.trafficMode = trafficMode;
         this.lightType = lightType;
-        this.vehicleCount = vehicleCount;
+        //this.vehicleCount = vehicleCount;
         this.trafficDensity = trafficDensity;
     }
 
@@ -40,9 +40,9 @@ public class SimulationConfig {
         return lightType;
     }
 
-    public int getVehicleCount() {
+    /*public int getVehicleCount() {
         return vehicleCount;
-    }
+    }*/
     public TrafficDensity getTrafficDensity() {
 
     return trafficDensity;

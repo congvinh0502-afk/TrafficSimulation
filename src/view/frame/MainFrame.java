@@ -1,12 +1,19 @@
 package view.frame;
 
 import model.SimulationConfig;
-import view.panel.MenuPanel;
+import model.intersection.IntersectionType;
+import util.TrafficDensity;
+
+import view.panel.ControlPanel;
 import view.panel.SimulationPanel;
 
 import javax.swing.JFrame;
+import java.awt.BorderLayout;
 
 public class MainFrame extends JFrame {
+
+    private SimulationPanel simulationPanel;
+    private ControlPanel controlPanel;
 
     public MainFrame() {
 
@@ -18,37 +25,31 @@ public class MainFrame extends JFrame {
 
         setLocationRelativeTo(null);
 
-        setResizable(false);
+        setLayout(new BorderLayout());
 
-        showMenu();
+        SimulationConfig defaultConfig =
+                new SimulationConfig(
+                        IntersectionType.FOUR_WAY,
+                        "AUTO",
+                        "NO COUNTDOWN",
+                        
+                        TrafficDensity.LOW
+                );
+
+        simulationPanel =
+                new SimulationPanel(defaultConfig);
+
+        controlPanel =
+                new ControlPanel(config -> {
+
+                    simulationPanel.applyConfig(config);
+
+                });
+
+        add(controlPanel, BorderLayout.NORTH);
+
+        add(simulationPanel, BorderLayout.CENTER);
 
         setVisible(true);
-    }
-
-  private void showMenu() {
-
-    final MenuPanel[] menuPanelRef = new MenuPanel[1];
-
-    menuPanelRef[0] = new MenuPanel(() -> {
-
-        SimulationConfig config =
-                menuPanelRef[0].getConfig();
-
-        startSimulation(config);
-    });
-
-    setContentPane(menuPanelRef[0]);
-
-    revalidate();
-}
-
-    private void startSimulation(SimulationConfig config) {
-
-        SimulationPanel simulationPanel =
-                new SimulationPanel(config);
-
-        setContentPane(simulationPanel);
-
-        revalidate();
     }
 }

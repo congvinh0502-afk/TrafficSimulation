@@ -3,9 +3,6 @@ package view.panel;
 
 import model.vehicle.Vehicle;
 
-
-import view.renderer.VehicleRenderer;
-
 import javax.swing.JPanel;
 import javax.swing.Timer;
 
@@ -16,18 +13,20 @@ import java.awt.Font;
 
 import java.util.ArrayList;
 import java.util.List;
-import view.renderer.RoadRenderer;
+
 import model.trafficlight.LightColor;
 import model.trafficlight.TrafficLight;
-import view.renderer.TrafficLightRenderer;
 import controller.TrafficController;
 import model.SimulationConfig;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.Rectangle;
 import manager.VehicleSpawnManager;
-import view.renderer.EnvironmentRenderer;
 import system.emergency.EmergencyVehicleSystem;
+import view.renderer.EnvironmentRenderer;
+import view.renderer.RoadRenderer;
+import view.renderer.TrafficLightRenderer;
+import view.renderer.VehicleRenderer;
 public class SimulationPanel extends JPanel {
 
     private Timer timer;
@@ -53,6 +52,7 @@ public class SimulationPanel extends JPanel {
     private boolean flash = false;
     private int flashCounter = 0;
     private EmergencyVehicleSystem emergencyVehicleSystem;
+    private boolean simulationStarted = false;
     public SimulationPanel(SimulationConfig config) {
 
         this.config = config;
@@ -73,7 +73,7 @@ public class SimulationPanel extends JPanel {
         vehicleSpawnManager = new VehicleSpawnManager(vehicles);
         emergencyVehicleSystem = new EmergencyVehicleSystem();
         
-        spawnVehicles();
+        //spawnVehicles();
         startGameLoop();
 
         addMouseListener(new MouseAdapter() {
@@ -87,14 +87,96 @@ public class SimulationPanel extends JPanel {
     }
 
     private void spawnVehicles() {
-        vehicles.clear();
-        int count = config.getVehicleCount();
-        for (int i = 0; i < count; i++) {
-            vehicleSpawnManager.spawnRandomVehicle(
-                config.getIntersectionType().getDirections()
-            );
-        }
+
+    vehicles.clear();
+
+    switch (config.getTrafficDensity()) {
+
+        case LOW:
+
+            vehicleSpawnManager.spawnTrafficQueue(
+        util.Direction.NORTH,
+        2,
+        config.getIntersectionType().getDirections()
+);
+
+vehicleSpawnManager.spawnTrafficQueue(
+        util.Direction.SOUTH,
+        2,
+        config.getIntersectionType().getDirections()
+);
+
+vehicleSpawnManager.spawnTrafficQueue(
+        util.Direction.EAST,
+        1,
+        config.getIntersectionType().getDirections()
+);
+
+vehicleSpawnManager.spawnTrafficQueue(
+        util.Direction.WEST,
+        1,
+        config.getIntersectionType().getDirections()
+);
+
+            break;
+
+        case MEDIUM:
+
+            vehicleSpawnManager.spawnTrafficQueue(
+        util.Direction.NORTH,
+        4,
+        config.getIntersectionType().getDirections()
+);
+
+vehicleSpawnManager.spawnTrafficQueue(
+        util.Direction.SOUTH,
+        4,
+        config.getIntersectionType().getDirections()
+);
+
+vehicleSpawnManager.spawnTrafficQueue(
+        util.Direction.EAST,
+        3,
+        config.getIntersectionType().getDirections()
+);
+
+vehicleSpawnManager.spawnTrafficQueue(
+        util.Direction.WEST,
+        3,
+        config.getIntersectionType().getDirections()
+);
+
+            break;
+
+        case HIGH:
+
+            vehicleSpawnManager.spawnTrafficQueue(
+        util.Direction.NORTH,
+        8,
+        config.getIntersectionType().getDirections()
+);
+
+vehicleSpawnManager.spawnTrafficQueue(
+        util.Direction.SOUTH,
+        8,
+        config.getIntersectionType().getDirections()
+);
+
+vehicleSpawnManager.spawnTrafficQueue(
+        util.Direction.EAST,
+        6,
+        config.getIntersectionType().getDirections()
+);
+
+vehicleSpawnManager.spawnTrafficQueue(
+        util.Direction.WEST,
+        6,
+        config.getIntersectionType().getDirections()
+);
+
+            break;
     }
+}
 
     private void startGameLoop() {
         timer = new Timer(16, e -> {
@@ -111,6 +193,9 @@ public class SimulationPanel extends JPanel {
         //             → tabrakan/kedip → baru dihapus removeIf.
         // Fix: filter dulu kendaraan yang arahnya tidak ada di tipe persimpangan,
         //      sebelum mereka sempat bergerak sekalipun.
+        if (!simulationStarted) {
+        return;
+    }
         vehicles.removeIf(vehicle ->
                 !config.getIntersectionType()
                         .getDirections()
@@ -125,7 +210,7 @@ public class SimulationPanel extends JPanel {
         if (!manualMode) {
             verticalLight.update();
             syncLights();
-            // [FIX M-07] updateSmartLights() hanya di AUTO mode
+            // [FIX M-07] updateSmartLights() chỉ di AUTO mode
             updateSmartLights();
         }
 
@@ -135,11 +220,11 @@ public class SimulationPanel extends JPanel {
         updateTrafficJam();
         updateFPS();
 
-        // [FIX N-05] Satu kali per frame
+        // [FIX N-05] Một lần per frame
         updateFlash();
     }
 
-    // [FIX N-05] Dipindah dari VehicleRenderer ke sini
+    // [FIX N-05] Di chuyển từ VehicleRenderer về đây
     private void updateFlash() {
         flashCounter++;
         if (flashCounter >= 20) {
@@ -254,13 +339,56 @@ public class SimulationPanel extends JPanel {
         spawnCounter++;
         if (spawnCounter >= getSpawnInterval()) {
             spawnCounter = 0;
-            // [FIX M-03] Dùng config thay hardcode 20
-            int maxVehicles = config.getVehicleCount();
+            // [FIX M-03] Dùng config thay vì hardcode 20
+            int maxVehicles;
+
+switch (config.getTrafficDensity()) {
+
+    case LOW:
+        maxVehicles = 25;
+        break;
+
+    case HIGH:
+        maxVehicles = 100;
+        break;
+
+    default:
+        maxVehicles = 60;
+        break;
+}
             if (vehicles.size() < maxVehicles) {
-                vehicleSpawnManager.spawnRandomVehicle(
-                        config.getIntersectionType().getDirections()
-                );
-            }
+
+    int queueSize;
+
+    switch (config.getTrafficDensity()) {
+
+        case LOW:
+            queueSize = (int)(Math.random() * 2) + 1; // 1-2 xe
+            break;
+
+        case HIGH:
+            queueSize = (int)(Math.random() * 4) + 2; // 2-5 xe
+            break;
+
+        default:
+            queueSize = (int)(Math.random() * 3) + 1; // 1-3 xe
+            break;
+    }
+
+    java.util.List<util.Direction> directions =
+            config.getIntersectionType().getDirections();
+
+    util.Direction direction =
+            directions.get(
+                    (int)(Math.random() * directions.size())
+            );
+
+    vehicleSpawnManager.spawnTrafficQueue(
+        direction,
+        queueSize,
+        config.getIntersectionType().getDirections()
+);
+}
         }
     }
 
@@ -373,4 +501,24 @@ public class SimulationPanel extends JPanel {
         verticalLight.setColor(LightColor.RED);
         horizontalLight.setTimer(400);
     }
+    public void applyConfig(SimulationConfig newConfig) {
+    
+    simulationStarted = true;
+    this.config = newConfig;
+
+    this.manualMode =
+            newConfig.getTrafficMode().equals("MANUAL");
+
+    vehicles.clear();
+
+    spawnVehicles();
+
+    verticalLight.setColor(LightColor.GREEN);
+    horizontalLight.setColor(LightColor.RED);
+
+    verticalLight.setTimer(300);
+    horizontalLight.setTimer(300);
+
+    repaint();
+}
 }

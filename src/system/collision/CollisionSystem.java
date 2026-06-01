@@ -37,8 +37,11 @@ public class CollisionSystem {
             if (current.getDirection() != other.getDirection()) {
                 continue;
             }
+            if (current.getLane() != other.getLane()) {
+                continue;
+            }
 
-            double safeDistance = current.getWidth() * 2.0;
+            double safeDistance = 100;
             switch (current.getDirection()) {
 
                 case SOUTH:
@@ -47,12 +50,7 @@ public class CollisionSystem {
                             && other.getY() > current.getY()
                             && other.getY() - current.getY() < safeDistance) {
 
-                        boolean changedLane = laneChangeSystem.tryChangeLane(current, vehicles);
-
-                        if (!changedLane) {
-                            current.setStopped(true);
-                        }
-
+                        current.setStopped(true);
                         return;
                     }
 
@@ -64,12 +62,7 @@ public class CollisionSystem {
                             && other.getY() < current.getY()
                             && current.getY() - other.getY() < safeDistance) {
 
-                        boolean changedLane = laneChangeSystem.tryChangeLane(current, vehicles);
-
-                        if (!changedLane) {
-                            current.setStopped(true);
-                        }
-
+                        current.setStopped(true);
                         return;
                     }
 
@@ -81,12 +74,9 @@ public class CollisionSystem {
                             && other.getX() > current.getX()
                             && other.getX() - current.getX() < safeDistance) {
 
-                        boolean changedLane = laneChangeSystem.tryChangeLane(current, vehicles);
+                        
 
-                        if (!changedLane) {
-                            current.setStopped(true);
-                        }
-
+                        current.setStopped(true);
                         return;
                     }
 
@@ -98,16 +88,37 @@ public class CollisionSystem {
                             && other.getX() < current.getX()
                             && current.getX() - other.getX() < safeDistance) {
 
-                        boolean changedLane = laneChangeSystem.tryChangeLane(current, vehicles);
-
-                        if (!changedLane) {
-                            current.setStopped(true);
-                        }
-
+                        current.setStopped(true);
                         return;
                     }
 
                     break;
+                case NORTHEAST:
+
+    double dx =
+            other.getX() - current.getX();
+
+    double dy =
+            current.getY() - other.getY();
+
+    double dist =
+            Math.sqrt(dx * dx + dy * dy);
+
+    // xe nằm phía trước trên đường chéo
+    if (dx > 0
+            && dy > 0
+
+            // nằm gần cùng diagonal line
+            && Math.abs(dx - dy) < 40
+
+            // khoảng cách an toàn
+            && dist < safeDistance) {
+
+        current.setStopped(true);
+        return;
+    }
+
+    break;
             }
         }
     }
@@ -124,16 +135,19 @@ public class CollisionSystem {
                 for (Vehicle other : vehicles) {
 
                     if (other == vehicle) continue;
+                    if (other.isTurning()) continue;
 
                     // [FIX M-04] Cũ: other.getY() > 520 — chỉ check phía SAU giao lộ,
                     // bỏ sót xe đang ở GIỮA giao lộ (y=430–520).
                     // Fix: check toàn bộ vùng giao lộ + buffer (430–570).
                     if (Math.abs(other.getX() - vehicle.getX()) < 50
-                            && other.getY() > 430
-                            && other.getY() < 570
-                            && other.getY() - vehicle.getY() < 120) {
-                        return false;
-                    }
+                        && other.getY() > 430
+                        && other.getY() < 570
+                        && other.getY() > vehicle.getY()
+                        && other.getY() - vehicle.getY() < 80) {
+
+                    return false;
+                }
                 }
 
                 break;
@@ -143,15 +157,18 @@ public class CollisionSystem {
                 for (Vehicle other : vehicles) {
 
                     if (other == vehicle) continue;
+                    if (other.isTurning()) continue;
 
                     // [FIX M-04] Cũ: other.getY() < 430 — bỏ sót xe trong giao lộ.
                     // Fix: check vùng 360–520 (giao lộ + buffer phía trên).
                     if (Math.abs(other.getX() - vehicle.getX()) < 50
-                            && other.getY() > 360
-                            && other.getY() < 520
-                            && vehicle.getY() - other.getY() < 120) {
-                        return false;
-                    }
+                        && other.getY() > 360
+                        && other.getY() < 520
+                        && other.getY() < vehicle.getY()
+                        && vehicle.getY() - other.getY() < 80) {
+
+                    return false;
+                }
                 }
 
                 break;
@@ -161,15 +178,18 @@ public class CollisionSystem {
                 for (Vehicle other : vehicles) {
 
                     if (other == vehicle) continue;
+                    if (other.isTurning()) continue;
 
                     // [FIX M-04] Cũ: other.getX() > 520 — bỏ sót xe trong giao lộ.
                     // Fix: check vùng 430–570.
                     if (Math.abs(other.getY() - vehicle.getY()) < 50
-                            && other.getX() > 430
-                            && other.getX() < 570
-                            && other.getX() - vehicle.getX() < 120) {
-                        return false;
-                    }
+                    && other.getX() > 430
+                    && other.getX() < 570
+                    && other.getX() > vehicle.getX()
+                    && other.getX() - vehicle.getX() < 80) {
+
+                return false;
+            }
                 }
 
                 break;
@@ -179,15 +199,18 @@ public class CollisionSystem {
                 for (Vehicle other : vehicles) {
 
                     if (other == vehicle) continue;
+                    if (other.isTurning()) continue;
 
                     // [FIX M-04] Cũ: other.getX() < 430 — bỏ sót xe trong giao lộ.
                     // Fix: check vùng 360–520.
                     if (Math.abs(other.getY() - vehicle.getY()) < 50
-                            && other.getX() > 360
-                            && other.getX() < 520
-                            && vehicle.getX() - other.getX() < 120) {
-                        return false;
-                    }
+                        && other.getX() > 360
+                        && other.getX() < 520
+                        && other.getX() < vehicle.getX()
+                        && vehicle.getX() - other.getX() < 80) {
+
+                    return false;
+                }
                 }
 
                 break;
@@ -195,4 +218,4 @@ public class CollisionSystem {
 
         return true;
     }
-}
+}  

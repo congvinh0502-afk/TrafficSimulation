@@ -21,6 +21,7 @@ import util.TurnType;
 public class VehicleSpawnManager {
 
     private final List<Vehicle> vehicles;
+    
 
     public VehicleSpawnManager(
             List<Vehicle> vehicles
@@ -85,6 +86,82 @@ public class VehicleSpawnManager {
 
         vehicles.add(vehicle);
     }
+    public void spawnTrafficQueue(
+        Direction direction,
+        int amount,
+        List<Direction> availableDirections
+) {
+
+    for (int i = 0; i < amount; i++) {
+
+        Vehicle vehicle;
+
+        int randomType =
+                (int) (Math.random() * 5);
+
+        switch (randomType) {
+
+            case 0:
+                vehicle = createCar(direction);
+                break;
+
+            case 1:
+                vehicle = createMotorbike(direction);
+                break;
+
+            case 2:
+                vehicle = createBicycle(direction);
+                break;
+
+            case 3:
+                vehicle = createAmbulance(direction);
+                break;
+
+            default:
+                vehicle = createFireTruck(direction);
+                break;
+        }
+
+        setupVehicle(
+        vehicle,
+        availableDirections
+);
+
+        double spacing = 90;
+
+        switch (direction) {
+
+            case NORTH:
+                vehicle.setY(
+                        vehicle.getY() + i * spacing
+                );
+                break;
+
+            case SOUTH:
+                vehicle.setY(
+                        vehicle.getY() - i * spacing
+                );
+                break;
+
+            case EAST:
+                vehicle.setX(
+                        vehicle.getX() - i * spacing
+                );
+                break;
+
+            case WEST:
+                vehicle.setX(
+                        vehicle.getX() + i * spacing
+                );
+                break;
+
+            default:
+                break;
+        }
+
+        vehicles.add(vehicle);
+    }
+}
 
     // =========================
     // CREATE VEHICLES
@@ -118,13 +195,15 @@ public class VehicleSpawnManager {
         Vehicle vehicle,
         List<Direction> availableDirections
 ) {
-        setupLane(vehicle);
-        setupTurnType(
-        vehicle,
-        availableDirections
-);
-        setupDriverBehavior(vehicle);
-    }
+    setupTurnType(
+            vehicle,
+            availableDirections
+    );
+
+    setupLane(vehicle);
+
+    setupDriverBehavior(vehicle);
+}
 
     // =========================
     // SETUP LANE
@@ -134,11 +213,11 @@ public class VehicleSpawnManager {
 
         Lane lane;
 
-        if (Math.random() < 0.5) {
+        if (vehicle.getTurnType() == TurnType.LEFT) {
             lane = Lane.LEFT;
-        } else {
+}       else {
             lane = Lane.RIGHT;
-        }
+}
 
         vehicle.setLane(lane);
 
@@ -167,6 +246,20 @@ public class VehicleSpawnManager {
                 );
 
                 break;
+            case NORTHEAST:
+
+    if (lane == Lane.LEFT) {
+
+        vehicle.setX(vehicle.getX() - 30);
+        vehicle.setY(vehicle.getY() - 30);
+
+    } else {
+
+        vehicle.setX(vehicle.getX() + 30);
+        vehicle.setY(vehicle.getY() + 30);
+    }
+
+    break;
         }
     }
 
@@ -231,6 +324,7 @@ public class VehicleSpawnManager {
     }
 
     vehicle.setTurnType(turnType);
+   
 }
 
     // =========================
@@ -303,11 +397,11 @@ public class VehicleSpawnManager {
 
         switch (direction) {
 
-            case NORTH:
-                return 1100;
+           case NORTH:
+    return 1100;
 
-            case SOUTH:
-                return -100;
+case SOUTH:
+    return -100;
 
             case EAST:
                 return 470;
@@ -361,4 +455,4 @@ public class VehicleSpawnManager {
 
         return true;
     }
-}
+} 

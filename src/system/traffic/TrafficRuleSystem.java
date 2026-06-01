@@ -22,6 +22,10 @@ public class TrafficRuleSystem {
         if (vehicle.isTurning()) {
             return;
         }
+        if (isInsideIntersection(vehicle)) {
+            vehicle.setStopped(false);
+            return;
+        }
         if (vehicle.getTurnType() == util.TurnType.RIGHT) {
 
             boolean blocked =
@@ -80,15 +84,25 @@ public class TrafficRuleSystem {
         }
 
                     // CHỈ check blocked khi xe đang ở vùng nearStopLine
-            boolean blocked = nearStopLine && !collisionSystem.canEnterIntersection(vehicle, vehicles);
+            boolean blocked =
+            nearStopLine
+            && !isInsideIntersection(vehicle)
+            && !collisionSystem.canEnterIntersection(
+                    vehicle,
+                    vehicles
+            );
 
             if (mustStop || blocked) {
                 vehicle.setStopped(true);
             } else {
                 vehicle.setStopped(false);
             }
-    
-
-    
     }
+    private boolean isInsideIntersection(Vehicle vehicle) {
+
+    return vehicle.getX() > 360
+            && vehicle.getX() < 640
+            && vehicle.getY() > 360
+            && vehicle.getY() < 640;
+}
 }

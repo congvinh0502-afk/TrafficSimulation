@@ -6,59 +6,52 @@ import util.Lane;
 public class LaneManager {
 
     public static int getLaneCenterX(
-            Direction direction,
-            Lane lane
-    ) {
+        Direction direction,
+        Lane lane
+) {
 
-        switch (direction) {
+    switch (direction) {
 
-            case NORTH:
+        case NORTH:
+            return lane == Lane.RIGHT ? 430 : 470;
 
-                return lane == Lane.LEFT
-                        ? 430
-                        : 470;
+        case SOUTH:
+            return lane == Lane.RIGHT ? 370 : 330;
 
-            case SOUTH:
+        case NORTHEAST:
+            return lane == Lane.LEFT ? 360 : 420;
 
-                return lane == Lane.LEFT
-                        ? 330
-                        : 370;
-            // getLaneCenterX
-case NORTHEAST:
-    return lane == Lane.LEFT ? 430 : 470;
-
-
-            default:
-
-                return 0;
-        }
+        default:
+            return 0;
     }
+}
 
     public static int getLaneCenterY(
-            Direction direction,
-            Lane lane
-    ) {
+        Direction direction,
+        Lane lane
+) {
 
-        switch (direction) {
+    switch (direction) {
 
-            case EAST:
+        case EAST:
+            // đi từ trái sang phải
+            // làn phải = phía dưới
+            return lane == Lane.RIGHT
+                    ? 430
+                    : 470;
 
-                return lane == Lane.LEFT
-                        ? 330
-                        : 370;
+        case WEST:
+            // đi từ phải sang trái
+            // làn phải = phía trên
+            return lane == Lane.RIGHT
+                    ? 370
+                    : 330;
 
-            case WEST:
+        case NORTHEAST:
+            return lane == Lane.LEFT ? 640 : 580;
 
-                return lane == Lane.LEFT
-                        ? 430
-                        : 470;
-            // getLaneCenterY  
-case NORTHEAST:
-    return lane == Lane.LEFT ? 430 : 470;
-
-            default:
-
-                return 0;
-        }
+        default:
+            return 0;
     }
+}
 }
