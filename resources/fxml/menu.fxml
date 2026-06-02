@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.*?>
+<?import javafx.geometry.*?>
+
+<StackPane xmlns="http://javafx.com/javafx/17"
+           xmlns:fx="http://javafx.com/fxml/1"
+           fx:controller="view.controller.MenuController"
+           prefWidth="1200" prefHeight="800"
+           style="-fx-background-color: #1E1E1E;">
+
+    <VBox alignment="CENTER" spacing="0">
+        <!-- Tiêu đề -->
+        <Label text="SMART TRAFFIC SIMULATION"
+               style="-fx-text-fill: #FFFFFF; -fx-font-size: 32px; -fx-font-weight: BOLD; -fx-font-family: 'Arial';">
+            <VBox.margin><Insets bottom="40"/></VBox.margin>
+        </Label>
+
+        <!-- Card form -->
+        <VBox spacing="16" alignment="CENTER_LEFT"
+              style="-fx-background-color: #2A2A2A; -fx-background-radius: 16; -fx-padding: 36;">
+            <maxWidth>480</maxWidth>
+
+            <!-- Intersection Type -->
+            <HBox alignment="CENTER_LEFT" spacing="24">
+                <Label text="Intersection Type:" minWidth="160"
+                       style="-fx-text-fill: #CCCCCC; -fx-font-size: 14px;"/>
+                <ComboBox fx:id="intersectionBox" prefWidth="200"/>
+            </HBox>
+
+            <!-- Traffic Mode -->
+            <HBox alignment="CENTER_LEFT" spacing="24">
+                <Label text="Traffic Mode:" minWidth="160"
+                       style="-fx-text-fill: #CCCCCC; -fx-font-size: 14px;"/>
+                <ComboBox fx:id="modeBox" prefWidth="200"/>
+            </HBox>
+
+            <!-- Light Type -->
+            <HBox alignment="CENTER_LEFT" spacing="24">
+                <Label text="Light Type:" minWidth="160"
+                       style="-fx-text-fill: #CCCCCC; -fx-font-size: 14px;"/>
+                <ComboBox fx:id="lightBox" prefWidth="200"/>
+            </HBox>
+
+            <!-- Vehicle Count -->
+            <HBox alignment="CENTER_LEFT" spacing="24">
+                <Label text="Vehicle Count:" minWidth="160"
+                       style="-fx-text-fill: #CCCCCC; -fx-font-size: 14px;"/>
+                <VBox spacing="4">
+                    <Slider fx:id="vehicleSlider" prefWidth="200"/>
+                    <Label fx:id="vehicleCountLabel" text="20"
+                           style="-fx-text-fill: #AAAAAA; -fx-font-size: 12px;"
+                           alignment="CENTER"/>
+                </VBox>
+            </HBox>
+
+            <!-- Traffic Density -->
+            <HBox alignment="CENTER_LEFT" spacing="24">
+                <Label text="Traffic Density:" minWidth="160"
+                       style="-fx-text-fill: #CCCCCC; -fx-font-size: 14px;"/>
+                <ComboBox fx:id="densityBox" prefWidth="200"/>
+            </HBox>
+
+            <!-- Start Button -->
+            <Button fx:id="startButton" text="▶  START SIMULATION"
+                    prefWidth="384" prefHeight="50"
+                    style="-fx-background-color: #2E7D32; -fx-text-fill: white;
+                           -fx-font-size: 16px; -fx-font-weight: BOLD;
+                           -fx-background-radius: 10; -fx-cursor: hand;">
+                <VBox.margin><Insets top="20"/></VBox.margin>
+            </Button>
+        </VBox>
+
+        <!-- Footer -->
+        <Label text="Use mouse scroll to zoom · Drag to pan · Press [R] to reset view"
+               style="-fx-text-fill: #666666; -fx-font-size: 12px;">
+            <VBox.margin><Insets top="24"/></VBox.margin>
+        </Label>
+    </VBox>
+</StackPane>
