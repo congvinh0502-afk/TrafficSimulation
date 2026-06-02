@@ -13,9 +13,9 @@ public class Motorbike extends Vehicle {
 
         super(x, y, direction);
 
-        // [FIX N-02] Trước đây: behavior = null, speed hardcode = 3.5.
-        // Motorbike dùng AggressiveDriver (chạy nhanh, hung hăng hơn Car).
-        // AggressiveDriver.getSpeed() = 7 — nhất quán với Car/Ambulance/FireTruck.
+        // [FIX N-02] TrÆ°á»›c Ä‘Ã¢y: behavior = null, speed hardcode = 3.5.
+        // Motorbike dÃ¹ng AggressiveDriver (cháº¡y nhanh, hung hÄƒng hÆ¡n Car).
+        // AggressiveDriver.getSpeed() = 7 â€” nháº¥t quÃ¡n vá»›i Car/Ambulance/FireTruck.
         behavior = new AggressiveDriver();
         speed = behavior.getSpeed();
 

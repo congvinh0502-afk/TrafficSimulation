@@ -1,11 +1,95 @@
 package view.renderer;
 
 import model.trafficlight.LightColor;
+import model.trafficlight.LightDisplayMode;
 import model.trafficlight.TrafficLight;
 
 import java.awt.*;
 
+/**
+ * TrafficLightRenderer — vẽ đèn giao thông.
+ *
+ * Thay đổi so với phiên bản cũ:
+ *   - Nhận LightDisplayMode enum thay vì String.
+ *   - Thêm getBounds() để SimulationPanel dùng cho click detection,
+ *     không còn hardcode Rectangle trong SimulationPanel.
+ *   - Logic vẽ (body, 3 bóng đèn, cột, timer) giữ nguyên hoàn toàn.
+ */
 public class TrafficLightRenderer {
+
+    // Kích thước đèn (không thay đổi)
+    public static final int LIGHT_WIDTH  = 42;
+    public static final int LIGHT_HEIGHT = 110;
+    public static final int POLE_HEIGHT  = 35;
+    public static final int TOTAL_HEIGHT = LIGHT_HEIGHT + POLE_HEIGHT; // 145
+
+    // ─────────────────────────────────────────────────────────────
+    // RENDER (overload nhận enum — dùng từ bây giờ)
+    // ─────────────────────────────────────────────────────────────
+
+    public void render(
+            Graphics2D g2d,
+            TrafficLight light,
+            int x,
+            int y,
+            LightDisplayMode mode
+    ) {
+        Graphics2D g = (Graphics2D) g2d.create();
+        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+        // ── BODY ──
+        g.setColor(new Color(35, 35, 35));
+        g.fillRoundRect(x, y, LIGHT_WIDTH, LIGHT_HEIGHT, 12, 12);
+
+        g.setColor(Color.BLACK);
+        g.drawRoundRect(x, y, LIGHT_WIDTH, LIGHT_HEIGHT, 12, 12);
+
+        // ── 3 BÓNG ĐÈN ──
+        drawLight(g, x + 6, y +  6, Color.RED,    light.getColor() == LightColor.RED);
+        drawLight(g, x + 6, y + 40, Color.YELLOW, light.getColor() == LightColor.YELLOW);
+        drawLight(g, x + 6, y + 74, Color.GREEN,  light.getColor() == LightColor.GREEN);
+
+        // ── CỘT ──
+        g.setColor(Color.DARK_GRAY);
+        g.fillRect(x + 18, y + LIGHT_HEIGHT, 6, POLE_HEIGHT);
+
+        // ── TIMER ──
+        boolean showTimer = false;
+        switch (mode) {
+            case ALWAYS_COUNTDOWN:
+                showTimer = true;
+                break;
+            case LAST_10S_COUNTDOWN:
+                showTimer = light.getTimer() / 60 <= 10;
+                break;
+            case NO_COUNTDOWN:
+            default:
+                showTimer = false;
+                break;
+        }
+
+        if (showTimer) {
+            int seconds = light.getTimer() / 60;
+
+            // nền timer
+            g.setColor(new Color(20, 20, 20));
+            g.fillRoundRect(x - 2, y - 32, 46, 24, 8, 8);
+
+            // text
+            g.setColor(Color.WHITE);
+            g.setFont(new Font("Arial", Font.BOLD, 16));
+            String text = String.valueOf(seconds);
+            FontMetrics fm = g.getFontMetrics();
+            int textX = x + (LIGHT_WIDTH - fm.stringWidth(text)) / 2;
+            g.drawString(text, textX, y - 14);
+        }
+
+        g.dispose();
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // RENDER (overload nhận String — backward-compatible với code cũ)
+    // ─────────────────────────────────────────────────────────────
 
     public void render(
             Graphics2D g2d,
@@ -14,215 +98,42 @@ public class TrafficLightRenderer {
             int y,
             String lightType
     ) {
-
-        Graphics2D g = (Graphics2D) g2d.create();
-
-        g.setRenderingHint(
-                RenderingHints.KEY_ANTIALIASING,
-                RenderingHints.VALUE_ANTIALIAS_ON
-        );
-
-        // =====================================================
-        // BODY
-        // =====================================================
-
-        g.setColor(new Color(35, 35, 35));
-
-        g.fillRoundRect(
-                x,
-                y,
-                42,
-                110,
-                12,
-                12
-        );
-
-        // viền
-
-        g.setColor(Color.BLACK);
-
-        g.drawRoundRect(
-                x,
-                y,
-                42,
-                110,
-                12,
-                12
-        );
-
-        // =====================================================
-        // LIGHTS
-        // =====================================================
-
-        drawLight(
-                g,
-                x + 6,
-                y + 6,
-                Color.RED,
-                light.getColor() == LightColor.RED
-        );
-
-        drawLight(
-                g,
-                x + 6,
-                y + 40,
-                Color.YELLOW,
-                light.getColor() == LightColor.YELLOW
-        );
-
-        drawLight(
-                g,
-                x + 6,
-                y + 74,
-                Color.GREEN,
-                light.getColor() == LightColor.GREEN
-        );
-
-        // =====================================================
-        // POLE
-        // =====================================================
-
-        g.setColor(Color.DARK_GRAY);
-
-        g.fillRect(
-                x + 18,
-                y + 110,
-                6,
-                35
-        );
-
-        // =====================================================
-        // TIMER
-        // =====================================================
-
-        boolean showTimer = false;
-
-        switch (lightType) {
-
-            case "ALWAYS COUNTDOWN":
-
-                showTimer = true;
-                break;
-
-            case "COUNT <= 10":
-
-                showTimer = light.getTimer() / 60 <= 10;
-                break;
-
-            case "NO COUNTDOWN":
-
-                showTimer = false;
-                break;
-        }
-
-        if (showTimer) {
-
-            int seconds = light.getTimer() / 60;
-
-            // nền timer
-
-            g.setColor(new Color(20, 20, 20));
-
-            g.fillRoundRect(
-                    x - 2,
-                    y - 32,
-                    46,
-                    24,
-                    8,
-                    8
-            );
-
-            // text
-
-            g.setColor(Color.WHITE);
-
-            g.setFont(
-                    new Font(
-                            "Arial",
-                            Font.BOLD,
-                            16
-                    )
-            );
-
-            String text = String.valueOf(seconds);
-
-            FontMetrics fm = g.getFontMetrics();
-
-            int textX =
-                    x + (42 - fm.stringWidth(text)) / 2;
-
-            g.drawString(
-                    text,
-                    textX,
-                    y - 14
-            );
-        }
-
-        g.dispose();
+        render(g2d, light, x, y, LightDisplayMode.fromString(lightType));
     }
 
-    // =========================================================
-    // DRAW SINGLE LIGHT
-    // =========================================================
+    // ─────────────────────────────────────────────────────────────
+    // BOUNDS — dùng cho click detection trong SimulationPanel
+    // ─────────────────────────────────────────────────────────────
 
-    private void drawLight(
-            Graphics2D g,
-            int x,
-            int y,
-            Color color,
-            boolean active
-    ) {
+    /**
+     * Trả về bounding box của đèn (body + cột) tại vị trí (x, y).
+     * SimulationPanel.handleTrafficLightClick() dùng method này thay vì
+     * hardcode new Rectangle(520, 250, 40, 100).
+     */
+    public Rectangle getBounds(int x, int y) {
+        return new Rectangle(x, y, LIGHT_WIDTH, TOTAL_HEIGHT);
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // PRIVATE: vẽ 1 bóng đèn
+    // ─────────────────────────────────────────────────────────────
+
+    private void drawLight(Graphics2D g, int x, int y, Color color, boolean active) {
 
         // glow
-
         if (active) {
-
-            g.setColor(
-                    new Color(
-                            color.getRed(),
-                            color.getGreen(),
-                            color.getBlue(),
-                            80
-                    )
-            );
-
-            g.fillOval(
-                    x - 6,
-                    y - 6,
-                    42,
-                    42
-            );
+            g.setColor(new Color(
+                    color.getRed(), color.getGreen(), color.getBlue(), 80
+            ));
+            g.fillOval(x - 6, y - 6, 42, 42);
         }
 
-        // light body
-
-        if (active) {
-
-            g.setColor(color);
-
-        } else {
-
-            g.setColor(color.darker().darker());
-        }
-
-        g.fillOval(
-                x,
-                y,
-                30,
-                30
-        );
+        // thân bóng
+        g.setColor(active ? color : color.darker().darker());
+        g.fillOval(x, y, 30, 30);
 
         // highlight
-
-        g.setColor(
-                new Color(255, 255, 255, 120)
-        );
-
-        g.fillOval(
-                x + 6,
-                y + 5,
-                10,
-                10
-        );
+        g.setColor(new Color(255, 255, 255, 120));
+        g.fillOval(x + 6, y + 5, 10, 10);
     }
 }

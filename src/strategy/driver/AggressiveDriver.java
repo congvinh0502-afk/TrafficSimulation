@@ -19,9 +19,9 @@ public class AggressiveDriver
         if (relevantLight.getColor()
                 == LightColor.RED) {
 
-            // [FIX N-06] Logic cũ: Math.random() > 0.4  = 60% dừng (SAI)
-            // AggressiveDriver nên VƯỢT đèn nhiều hơn dừng.
-            // Fix: Math.random() > 0.6  = chỉ 40% dừng, 60% vượt đèn đỏ.
+            // [FIX N-06] Logic cÅ©: Math.random() > 0.4  = 60% dá»«ng (SAI)
+            // AggressiveDriver nÃªn VÆ¯á»¢T Ä‘Ã¨n nhiá»u hÆ¡n dá»«ng.
+            // Fix: Math.random() > 0.6  = chá»‰ 40% dá»«ng, 60% vÆ°á»£t Ä‘Ã¨n Ä‘á».
             return Math.random() > 0.6;
         }
 

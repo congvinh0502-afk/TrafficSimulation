@@ -12,8 +12,8 @@ public class Car extends Vehicle {
         width = 50;
         height = 28;
 
-        // [FIX D-05] Xóa "speed = 2" thừa (bị ghi đè ngay bên dưới).
-        // Xóa "this.direction = direction" thừa (super() đã gán rồi).
+        // [FIX D-05] XÃ³a "speed = 2" thá»«a (bá»‹ ghi Ä‘Ã¨ ngay bÃªn dÆ°á»›i).
+        // XÃ³a "this.direction = direction" thá»«a (super() Ä‘Ã£ gÃ¡n rá»“i).
         behavior = new NormalDriver();
         speed = behavior.getSpeed();
     }

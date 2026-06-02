@@ -31,7 +31,7 @@ public enum IntersectionType {
     directions.add(Direction.SOUTH);
     directions.add(Direction.EAST);
     directions.add(Direction.WEST);
-    directions.add(Direction.NORTHEAST); // ← hướng thứ 5 thực sự
+    directions.add(Direction.NORTHEAST); // â† hÆ°á»›ng thá»© 5 thá»±c sá»±
     break;
 
             default:

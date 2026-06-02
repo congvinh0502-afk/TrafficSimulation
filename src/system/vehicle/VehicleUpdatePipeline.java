@@ -45,14 +45,14 @@ public class VehicleUpdatePipeline {
             IntersectionType type
     ) {
 
-                    // cooldown đổi lane
+                    // cooldown Ä‘á»•i lane
             if (vehicle.getLaneChangeCooldown() > 0) {
                 vehicle.setLaneChangeCooldown(
                         vehicle.getLaneChangeCooldown() - 1
                 );
             }
 
-            // xử lý rẽ TRƯỚC – không reset stopped nếu đang turning
+            // xá»­ lÃ½ ráº½ TRÆ¯á»šC â€“ khÃ´ng reset stopped náº¿u Ä‘ang turning
             turningSystem.updateTurning(vehicle, type);
 
             if (vehicle.isTurning()) {
@@ -60,10 +60,10 @@ public class VehicleUpdatePipeline {
                 return;
             }
 
-            // reset stopped CHỈ khi không đang rẽ
+            // reset stopped CHá»ˆ khi khÃ´ng Ä‘ang ráº½
             vehicle.setStopped(false);
 
-        // kiểm tra đèn giao thông
+        // kiá»ƒm tra Ä‘Ã¨n giao thÃ´ng
         trafficRuleSystem.checkTrafficLight(
                 vehicle,
                 verticalLight,
@@ -71,24 +71,24 @@ public class VehicleUpdatePipeline {
                 vehicles
         );
 
-        // xử lý khoảng cách xe
+        // xá»­ lÃ½ khoáº£ng cÃ¡ch xe
         collisionSystem.maintainDistance(
                 vehicle,
                 vehicles
         );
 
-        // nếu đang stop thì dừng update movement
+        // náº¿u Ä‘ang stop thÃ¬ dá»«ng update movement
         if (vehicle.isStopped()) {
             return;
         }
 
-        // đổi lane
+        // Ä‘á»•i lane
         laneChangeSystem.updateLaneChanging(vehicle);
 
-        // căn giữa lane
+        // cÄƒn giá»¯a lane
         laneAlignmentSystem.alignToLane(vehicle);
 
-        // movement chính
+        // movement chÃ­nh
         movementSystem.move(vehicle);
     }
 }

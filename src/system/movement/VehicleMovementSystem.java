@@ -1,27 +1,56 @@
 package system.movement;
 
+import layout.IntersectionLayout;
+import manager.LaneManager;
 import model.vehicle.Vehicle;
-import static util.Direction.EAST;
-import static util.Direction.NORTH;
-import static util.Direction.SOUTH;
-import static util.Direction.WEST;
 
+import java.awt.Rectangle;
+
+/**
+ * VehicleMovementSystem — di chuyển xe sau khi đã qua các check khác.
+ *
+ * Thay đổi so với phiên bản cũ:
+ *   - recoverAfterIntersection() dùng layout.getRecoverBounds() thay vì hardcode (360/590).
+ *   - Logic move() và alignVehicle() giữ nguyên.
+ */
 public class VehicleMovementSystem {
 
     public void move(Vehicle vehicle) {
-
-        
-
         recoverAfterIntersection(vehicle);
 
         if (!vehicle.isStopped()) {
             vehicle.move();
         }
     }
-    private void alignVehicle(Vehicle vehicle) {
 
-        if (vehicle.isChangingLane()
-                || vehicle.isTurning()) {
+    /**
+     * Khi xe ra khỏi vùng ngã rẽ (ngoài recoverBounds), reset turning/changingLane.
+     * Trước đây hardcode: x < 360 || x > 590 || y < 360 || y > 590.
+     * Bây giờ lấy từ layout.getRecoverBounds().
+     */
+    private void recoverAfterIntersection(Vehicle vehicle) {
+        IntersectionLayout layout = LaneManager.getLayout();
+        Rectangle recover = layout.getRecoverBounds();
+
+        boolean outside =
+                vehicle.getX() < recover.getMinX()
+             || vehicle.getX() > recover.getMaxX()
+             || vehicle.getY() < recover.getMinY()
+             || vehicle.getY() > recover.getMaxY();
+
+        if (!outside) {
+            return;
+        }
+
+        vehicle.setStopped(false);
+        vehicle.setChangingLane(false);
+        vehicle.setTurning(false);
+    }
+
+    // Giữ nguyên alignVehicle (không dùng trong pipeline hiện tại nhưng giữ để không mất)
+    @SuppressWarnings("unused")
+    private void alignVehicle(Vehicle vehicle) {
+        if (vehicle.isChangingLane() || vehicle.isTurning()) {
             return;
         }
 
@@ -31,52 +60,25 @@ public class VehicleMovementSystem {
 
             case NORTH:
             case SOUTH:
-
                 if (vehicle.getTargetX() != 0) {
-
                     if (vehicle.getX() < vehicle.getTargetX()) {
                         vehicle.setX(vehicle.getX() + smooth);
                     } else if (vehicle.getX() > vehicle.getTargetX()) {
                         vehicle.setX(vehicle.getX() - smooth);
                     }
                 }
-
                 break;
 
             case EAST:
             case WEST:
-
                 if (vehicle.getTargetY() != 0) {
-
                     if (vehicle.getY() < vehicle.getTargetY()) {
                         vehicle.setY(vehicle.getY() + smooth);
                     } else if (vehicle.getY() > vehicle.getTargetY()) {
                         vehicle.setY(vehicle.getY() - smooth);
                     }
                 }
-
                 break;
         }
-    }
-     private void recoverAfterIntersection(Vehicle vehicle) {
-
-        // [FIX M-05] Cũ: buffer < 380 || > 570 — quá hẹp.
-        // Xe sau khi rẽ có thể ở x=375 (sát biên 380), turning=false set sớm
-        // trước khi xe align đúng làn → snap sai vị trí.
-        // Fix: mở rộng buffer ra 360 / 590 để xe hoàn toàn thoát khỏi
-        // vùng giao lộ trước khi reset turning.
-        boolean outside =
-                vehicle.getX() < 360
-                        || vehicle.getX() > 590
-                        || vehicle.getY() < 360
-                        || vehicle.getY() > 590;
-
-        if (!outside) {
-            return;
-        }
-
-        vehicle.setStopped(false);
-        vehicle.setChangingLane(false);
-        vehicle.setTurning(false);
     }
 }

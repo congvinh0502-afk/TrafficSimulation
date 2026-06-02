@@ -16,7 +16,7 @@ public class EmergencyVehicleSystem {
             continue;
         }
 
-        // ép xe thường dừng lại nếu Emergency đang đến gần
+        // Ã©p xe thÆ°á»ng dá»«ng láº¡i náº¿u Emergency Ä‘ang Ä‘áº¿n gáº§n
         for (Vehicle other : vehicles) {
 
             if (other == vehicle) continue;

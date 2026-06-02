@@ -13,13 +13,13 @@ public class Bicycle extends Vehicle {
 
         super(x, y, direction);
 
-        // [FIX N-01] Trước đây behavior = null → NullPointerException
-        // sau khi fix C-01 gọi vehicle.getBehavior().shouldStop().
-        // Xe đạp dùng NormalDriver; tốc độ lấy từ behavior để nhất quán.
+        // [FIX N-01] TrÆ°á»›c Ä‘Ã¢y behavior = null â†’ NullPointerException
+        // sau khi fix C-01 gá»i vehicle.getBehavior().shouldStop().
+        // Xe Ä‘áº¡p dÃ¹ng NormalDriver; tá»‘c Ä‘á»™ láº¥y tá»« behavior Ä‘á»ƒ nháº¥t quÃ¡n.
         behavior = new NormalDriver();
         speed = behavior.getSpeed(); // NormalDriver.getSpeed() = 4
 
-        // Nếu muốn xe đạp chậm hơn Car, override lại:
+        // Náº¿u muá»‘n xe Ä‘áº¡p cháº­m hÆ¡n Car, override láº¡i:
         // speed = 2;
 
         this.width = 34;
