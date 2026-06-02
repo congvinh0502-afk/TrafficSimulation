@@ -1,13 +1,12 @@
 package system.movement;
 
+import java.awt.Rectangle;
 import layout.IntersectionLayout;
 import manager.LaneManager;
 import model.intersection.IntersectionType;
 import model.vehicle.Vehicle;
 import util.Direction;
 import util.DirectionHelper;
-
-import java.awt.Rectangle;
 
 /**
  * TurningSystem — xử lý rẽ xe tại ngã rẽ.
@@ -109,6 +108,9 @@ public class TurningSystem {
                 vehicle.setTargetAngle(-90);
                 break;
         }
+        if (!(vehicle instanceof model.vehicle.Bicycle)) {
+            manager.SoundManager.getInstance().onVehicleSpawned("turnsignal");
+        }
         vehicle.setTurning(true);
     }
 
@@ -135,6 +137,10 @@ public class TurningSystem {
                 vehicle.setTargetDirection(Direction.EAST);
                 vehicle.setTargetAngle(0);
                 break;
+        }
+        
+        if (!(vehicle instanceof model.vehicle.Bicycle)) {
+        manager.SoundManager.getInstance().onVehicleSpawned("turnsignal");
         }
         vehicle.setTurning(true);
     }
@@ -171,6 +177,10 @@ public class TurningSystem {
         vehicle.setDirection(vehicle.getTargetDirection());
         assignLaneAfterTurn(vehicle);
         recoverLane(vehicle);
+
+        if (!(vehicle instanceof model.vehicle.Bicycle) && vehicle.isTurning()) {
+            manager.SoundManager.getInstance().onVehicleRemoved("turnsignal");
+        }
         vehicle.setTurning(false);
     }
 

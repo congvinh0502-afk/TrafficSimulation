@@ -1,10 +1,9 @@
 package system.movement;
 
+import java.awt.Rectangle;
 import layout.IntersectionLayout;
 import manager.LaneManager;
 import model.vehicle.Vehicle;
-
-import java.awt.Rectangle;
 
 /**
  * VehicleMovementSystem — di chuyển xe sau khi đã qua các check khác.
@@ -16,6 +15,7 @@ import java.awt.Rectangle;
 public class VehicleMovementSystem {
 
     public void move(Vehicle vehicle) {
+        
         recoverAfterIntersection(vehicle);
 
         if (!vehicle.isStopped()) {
@@ -44,6 +44,9 @@ public class VehicleMovementSystem {
 
         vehicle.setStopped(false);
         vehicle.setChangingLane(false);
+        if (!(vehicle instanceof model.vehicle.Bicycle) && vehicle.isTurning()) {
+            manager.SoundManager.getInstance().onVehicleRemoved("turnsignal");
+        }
         vehicle.setTurning(false);
     }
 

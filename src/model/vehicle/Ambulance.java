@@ -5,46 +5,27 @@ import util.Direction;
 
 public class Ambulance extends Vehicle {
 
-    public Ambulance(
-            double x,
-            double y,
-            Direction direction
-    ) {
-
+    public Ambulance(double x, double y, Direction direction) {
         super(x, y, direction);
-
         width = 65;
         height = 36;
-
         behavior = new EmergencyDriver();
-
         speed = behavior.getSpeed();
     }
 
     @Override
+    public String getSoundKey() {
+        return "ambulance";
+    }
+
+    @Override
     public void move() {
-
-        if (stopped) {
-            return;
-        }
-
+        if (stopped) return;
         switch (direction) {
-
-            case NORTH:
-                y -= speed;
-                break;
-
-            case SOUTH:
-                y += speed;
-                break;
-
-            case EAST:
-                x += speed;
-                break;
-
-            case WEST:
-                x -= speed;
-                break;
+            case NORTH: y -= speed; break;
+            case SOUTH: y += speed; break;
+            case EAST:  x += speed; break;
+            case WEST:  x -= speed; break;
         }
     }
 }

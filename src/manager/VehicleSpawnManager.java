@@ -2,7 +2,6 @@ package manager;
 
 import java.util.ArrayList;
 import java.util.List;
-
 import layout.IntersectionLayout;
 import model.vehicle.Ambulance;
 import model.vehicle.Bicycle;
@@ -10,11 +9,9 @@ import model.vehicle.Car;
 import model.vehicle.FireTruck;
 import model.vehicle.Motorbike;
 import model.vehicle.Vehicle;
-
 import strategy.driver.AggressiveDriver;
-import strategy.driver.EmergencyDriver;
-import strategy.driver.NormalDriver;
 import strategy.driver.DriverBehavior;
+import strategy.driver.NormalDriver;
 import util.Direction;
 import util.Lane;
 import util.TurnType;
@@ -22,6 +19,7 @@ import util.TurnType;
 public class VehicleSpawnManager {
 
     private final List<Vehicle> vehicles;
+    private final SoundManager soundManager = SoundManager.getInstance();
 
     public VehicleSpawnManager(List<Vehicle> vehicles) {
         this.vehicles = vehicles;
@@ -32,22 +30,19 @@ public class VehicleSpawnManager {
     // ─────────────────────────────────────────────────────────────
 
     public void spawnRandomVehicle(List<Direction> directions) {
-
         Direction direction = directions.get(
                 (int)(Math.random() * directions.size())
         );
-
         java.awt.Point spawn = LaneManager.getLayout().getSpawnPoint(direction);
-
         if (!canSpawn(spawn.x, spawn.y)) return;
 
         Vehicle vehicle = createRandom(direction);
         setupVehicle(vehicle, directions);
-        vehicles.add(vehicle);
+        addVehicleWithSound(vehicle);
     }
 
     // ─────────────────────────────────────────────────────────────
-    // SPAWN QUEUE (dùng khi START hoặc auto-spawn theo hướng)
+    // SPAWN QUEUE
     // ─────────────────────────────────────────────────────────────
 
     public void spawnTrafficQueue(
@@ -60,29 +55,75 @@ public class VehicleSpawnManager {
         double             spacing = layout.getQueueSpacing();
 
         for (int i = 0; i < amount; i++) {
-
             Vehicle vehicle = createRandom(direction);
             vehicle.setX(spawn.x);
             vehicle.setY(spawn.y);
-
             setupVehicle(vehicle, availableDirections);
 
-            // Giãn hàng xe ra khỏi điểm spawn theo chiều đến
             switch (direction) {
                 case NORTH:     vehicle.setY(vehicle.getY() + i * spacing); break;
                 case SOUTH:     vehicle.setY(vehicle.getY() - i * spacing); break;
                 case EAST:      vehicle.setX(vehicle.getX() - i * spacing); break;
                 case WEST:      vehicle.setX(vehicle.getX() + i * spacing); break;
                 case NORTHEAST:
-                    // chéo 45°: tăng cả X và Y về phía sau điểm spawn
                     vehicle.setX(vehicle.getX() - i * spacing * 0.707);
                     vehicle.setY(vehicle.getY() + i * spacing * 0.707);
                     break;
                 default: break;
             }
 
-            vehicles.add(vehicle);
+            addVehicleWithSound(vehicle);
         }
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // SPAWN EMERGENCY
+    // ─────────────────────────────────────────────────────────────
+
+    public void spawnEmergencyVehicle(List<Direction> availableDirections) {
+        Direction direction = availableDirections.get(
+                (int)(Math.random() * availableDirections.size())
+        );
+        java.awt.Point spawn = LaneManager.getLayout().getSpawnPoint(direction);
+        if (!canSpawn(spawn.x, spawn.y)) return;
+
+        Vehicle vehicle = createEmergency(direction);
+        setupVehicle(vehicle, availableDirections);
+        addVehicleWithSound(vehicle);
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // REMOVE
+    // ─────────────────────────────────────────────────────────────
+
+    public void removeOutsideVehicles() {
+        // Dùng iterator thay vì removeIf để có thể gọi sound trước khi xóa
+        List<Vehicle> toRemove = new ArrayList<>();
+        for (Vehicle v : vehicles) {
+            if (v.getX() < -200 || v.getX() > 1400
+             || v.getY() < -200 || v.getY() > 1400) {
+                toRemove.add(v);
+            }
+        }
+        for (Vehicle v : toRemove) {
+            removeVehicleWithSound(v);
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // HELPER — thêm/xóa kèm sound
+    // ─────────────────────────────────────────────────────────────
+
+    /** Thêm xe vào danh sách và báo SoundManager. */
+    private void addVehicleWithSound(Vehicle vehicle) {
+        vehicles.add(vehicle);
+        soundManager.onVehicleSpawned(vehicle.getSoundKey());
+    }
+
+    /** Xóa xe khỏi danh sách và báo SoundManager. */
+    private void removeVehicleWithSound(Vehicle vehicle) {
+        vehicles.remove(vehicle);
+        soundManager.onVehicleRemoved(vehicle.getSoundKey());
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -91,12 +132,20 @@ public class VehicleSpawnManager {
 
     private Vehicle createRandom(Direction direction) {
         java.awt.Point spawn = LaneManager.getLayout().getSpawnPoint(direction);
-        // Bây giờ chỉ random ra các xe bình thường (Car, Motorbike, Bicycle)
         int type = (int)(Math.random() * 3);
         switch (type) {
             case 0: return new Car      (spawn.x, spawn.y, direction);
             case 1: return new Motorbike(spawn.x, spawn.y, direction);
             default:return new Bicycle  (spawn.x, spawn.y, direction);
+        }
+    }
+
+    private Vehicle createEmergency(Direction direction) {
+        java.awt.Point spawn = LaneManager.getLayout().getSpawnPoint(direction);
+        if (Math.random() < 0.5) {
+            return new Ambulance(spawn.x, spawn.y, direction);
+        } else {
+            return new FireTruck(spawn.x, spawn.y, direction);
         }
     }
 
@@ -124,12 +173,9 @@ public class VehicleSpawnManager {
                 vehicle.setY(LaneManager.getLaneCenterY(vehicle.getDirection(), lane));
                 break;
             case NORTHEAST:
-                // Dùng lượng giác để offset xe vào đúng tâm làn của góc -18 độ (342 độ)
                 double angleRad = Math.toRadians(-18);
-                // Phóng theo pháp tuyến của đường chéo
-                double normalAngle = angleRad + Math.PI / 2; 
-                double laneOffset = (lane == Lane.LEFT) ? -20 : 20; // Lệch sang trái/phải 20px
-                
+                double normalAngle = angleRad + Math.PI / 2;
+                double laneOffset = (lane == Lane.LEFT) ? -20 : 20;
                 vehicle.setX(vehicle.getX() + laneOffset * Math.cos(normalAngle));
                 vehicle.setY(vehicle.getY() + laneOffset * Math.sin(normalAngle));
                 break;
@@ -160,7 +206,7 @@ public class VehicleSpawnManager {
 
     private void setupDriverBehavior(Vehicle vehicle) {
         if (vehicle instanceof Ambulance || vehicle instanceof FireTruck) return;
-        if (vehicle instanceof Motorbike) return; // giữ AggressiveDriver từ constructor
+        if (vehicle instanceof Motorbike) return;
 
         DriverBehavior b = Math.random() < 0.3 ? new AggressiveDriver() : new NormalDriver();
         vehicle.setBehavior(b);
@@ -168,15 +214,8 @@ public class VehicleSpawnManager {
     }
 
     // ─────────────────────────────────────────────────────────────
-    // REMOVE / CAN SPAWN
+    // CAN SPAWN
     // ─────────────────────────────────────────────────────────────
-
-    public void removeOutsideVehicles() {
-        vehicles.removeIf(v ->
-                v.getX() < -200 || v.getX() > 1400
-             || v.getY() < -200 || v.getY() > 1400
-        );
-    }
 
     private boolean canSpawn(double x, double y) {
         for (Vehicle v : vehicles) {
@@ -185,28 +224,5 @@ public class VehicleSpawnManager {
             if (Math.sqrt(dx*dx + dy*dy) < 150) return false;
         }
         return true;
-    }
-    private Vehicle createEmergency(Direction direction) {
-        java.awt.Point spawn = LaneManager.getLayout().getSpawnPoint(direction);
-        // Random 50/50 giữa Xe cứu thương và Xe cứu hỏa
-        if (Math.random() < 0.5) {
-            return new Ambulance(spawn.x, spawn.y, direction);
-        } else {
-            return new FireTruck(spawn.x, spawn.y, direction);
-        }
-    }
-
-    public void spawnEmergencyVehicle(List<Direction> availableDirections) {
-        Direction direction = availableDirections.get(
-                (int)(Math.random() * availableDirections.size())
-        );
-        java.awt.Point spawn = LaneManager.getLayout().getSpawnPoint(direction);
-
-        // Kiểm tra xem vị trí đó có đang bị chiếm không
-        if (!canSpawn(spawn.x, spawn.y)) return;
-
-        Vehicle vehicle = createEmergency(direction);
-        setupVehicle(vehicle, availableDirections);
-        vehicles.add(vehicle);
     }
 }
