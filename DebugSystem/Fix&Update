@@ -1,9 +1,9 @@
 /* Đọc hướng dẫn sử dụng ở UserManual */
 # Đề xuất thay đổi
-(+) sử dụng `lane` để tạo `road`, một `road` bao gồm một hoặc nhiều `lane`, five-way, four-way, three-way gồm `road` và `intersection` [Minh]
-(+) tạo hitbox(hộp chạm/ biên giới) để kiểm tra xem các thực thể có chạm nhau hay không, chạy song song với code giữ khoảng cách [Minh]
-(+) thêm "gia tốc" (acceleration) thay vì sử dụng tốc độ và hướng, tốc độ = tốc độ + gia tốc mỗi khung hình(frame) [Minh]
-(+) thêm lựa chọn quay trở lại menu khi đang chạy chương trình [Minh]
-(+) thêm hệ thống di chuyển góc quay phóng to, thu nhỏ màn hình [Minh]
-(*) khoảng cách `direction` của `lane` hiện tại đang sử dụng "north", "south",..... Đề xuất thay đổi bằng vector [Minh]
-(*) các phương tiện hiện đang teleport ở ngã rẽ, chưa tìm thấy nguyên nhân [Minh]
+(-) sử dụng `lane` để tạo `road`, một `road` bao gồm một hoặc nhiều `lane`, five-way, four-way, three-way gồm `road` và `intersection` [Minh]
+(-) tạo hitbox(hộp chạm/ biên giới) để kiểm tra xem các thực thể có chạm nhau hay không, chạy song song với code giữ khoảng cách [Minh]
+(-) thêm "gia tốc" (acceleration) thay vì sử dụng tốc độ và hướng, tốc độ = tốc độ + gia tốc mỗi khung hình(frame) [Minh]
+(-) thêm lựa chọn quay trở lại menu khi đang chạy chương trình [Minh]
+(-) thêm hệ thống di chuyển góc quay phóng to, thu nhỏ màn hình [Minh]
+(-) khoảng cách `direction` của `lane` hiện tại đang sử dụng "north", "south",..... Đề xuất thay đổi bằng vector [Minh]
+(-) các phương tiện hiện đang teleport ở ngã rẽ, chưa tìm thấy nguyên nhân [Minh]
