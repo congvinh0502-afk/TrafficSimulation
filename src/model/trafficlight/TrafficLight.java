@@ -1,70 +1,51 @@
 package model.trafficlight;
-
 public class TrafficLight {
 
     private LightColor color;
+    private long timerMs; // đổi từ int ticks → long milliseconds
 
-    private int timer;
-
-    public TrafficLight(LightColor color, int timer) {
-
-        this.color = color;
-        this.timer = timer;
+    public TrafficLight(LightColor color, long timerMs) {
+        this.color   = color;
+        this.timerMs = timerMs;
     }
-    
 
-    public void update() {
-
-        timer--;
-
-        if (timer <= 0) {
-
+    // Thay update() cũ bằng:
+    public void update(long deltaMs) {
+        timerMs -= deltaMs;
+        if (timerMs <= 0) {
             switchLight();
         }
     }
 
     private void switchLight() {
-
         switch (color) {
-
             case GREEN:
-
-                color = LightColor.YELLOW;
-                timer = 120;
+                color   = LightColor.YELLOW;
+                timerMs = 3_000;   // 3 giây
                 break;
-
             case YELLOW:
-
-                color = LightColor.RED;
-                timer = 300;
+                color   = LightColor.RED;
+                timerMs = 15_000;  // 15 giây
                 break;
-
             case RED:
-
-                color = LightColor.GREEN;
-                timer = 300;
+                color   = LightColor.GREEN;
+                timerMs = 12_000;  // 12 giây
                 break;
         }
     }
 
-    public LightColor getColor() {
-        return color;
+    // getter trả về giây để hiển thị countdown
+    public int getTimerSeconds() {
+        return (int) Math.ceil(timerMs / 1000.0);
     }
 
-    public int getTimer() {
-        return timer;
-    }
-    public void setColor(
-        LightColor color
-) {
+    public long getTimerMs() { return timerMs; }
+    public void setTimerMs(long ms) { this.timerMs = Math.max(0, ms); }
 
-    this.color = color;
-}
+    // Giữ lại getTimer/setTimer cũ nếu code khác vẫn dùng
+    public int getTimer() { return (int) timerMs; }
+    public void setTimer(int t) { this.timerMs = t; }
 
-public void setTimer(
-        int timer
-) {
-
-    this.timer = timer;
-}
+    public LightColor getColor() { return color; }
+    public void setColor(LightColor color) { this.color = color; }
 }

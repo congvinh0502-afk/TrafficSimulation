@@ -1,102 +1,86 @@
 package view.panel;
 
+import controller.TrafficController;
+import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.util.ArrayList;
+import java.util.List;
+import javax.swing.JPanel;
+import javax.swing.Timer;
 import layout.IntersectionLayout;
 import layout.IntersectionLayoutFactory;
 import manager.LaneManager;
+import manager.VehicleSpawnManager;
 import model.SimulationConfig;
 import model.intersection.IntersectionType;
 import model.trafficlight.LightColor;
 import model.trafficlight.TrafficLight;
-
-import controller.TrafficController;
-import manager.VehicleSpawnManager;
-import model.vehicle.Vehicle;
 import model.vehicle.Ambulance;
 import model.vehicle.FireTruck;
+import model.vehicle.Vehicle;
 import system.emergency.EmergencyVehicleSystem;
+import util.Direction;
 import view.renderer.EnvironmentRenderer;
 import view.renderer.RoadRenderer;
 import view.renderer.TrafficLightRenderer;
 import view.renderer.VehicleRenderer;
 
-import javax.swing.JPanel;
-import javax.swing.Timer;
-import java.awt.*;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
-import java.util.ArrayList;
-import util.Direction;
-import java.util.List;
-
 /**
  * SimulationPanel — panel chính chứa game loop và tất cả render.
- *
- * Thay đổi so với phiên bản cũ (Bước 1 + 3):
- *
- * [Bước 1 — IntersectionLayout]
- *   - applyConfig() gọi LaneManager.setLayout() để inject layout mới.
- *   - drawTrafficLights() lấy vị trí đèn từ layout.getLightPositions()
- *     thay vì hardcode (520,250) và (250,520).
- *   - handleTrafficLightClick() dùng trafficLightRenderer.getBounds()
- *     thay vì hardcode Rectangle.
- *
- * [Bước 3 — LightDisplayMode]
- *   - drawTrafficLights() truyền config.getLightDisplayMode() (enum)
- *     thay vì config.getLightType() (String).
- *
- * Mọi logic khác (game loop, spawn, smart lights, FPS, stats) giữ nguyên.
  */
 public class SimulationPanel extends JPanel {
 
     private Timer timer;
-
     private TrafficLight verticalLight;
     private TrafficLight horizontalLight;
+    private LightColor prevVerticalColor = LightColor.GREEN;
 
+    // Thêm field:
+    private long lastUpdateTime = System.currentTimeMillis();
     private TrafficLightRenderer trafficLightRenderer;
-    private List<Vehicle>        vehicles;
-    private VehicleRenderer      vehicleRenderer;
-    private RoadRenderer         roadRenderer;
-    private EnvironmentRenderer  environmentRenderer;
-    private TrafficController    trafficController;
-    private SimulationConfig     config;
-    private boolean              manualMode;
-    private VehicleSpawnManager  vehicleSpawnManager;
-
-    private int    spawnCounter = 0;
-    private int    fps          = 0;
-    private long   lastFpsTime  = System.currentTimeMillis();
-    private int    frameCount   = 0;
-    private String jamLevel     = "LOW";
-
-    // Flash cho xe cứu thương
-    private boolean flash        = false;
-    private int     flashCounter = 0;
+    private List<Vehicle> vehicles;
+    private VehicleRenderer vehicleRenderer;
+    private RoadRenderer roadRenderer;
+    private EnvironmentRenderer environmentRenderer;
+    private TrafficController trafficController;
+    private SimulationConfig config;
+    private boolean manualMode;
+    private VehicleSpawnManager vehicleSpawnManager;
+    private int spawnCounter = 0;
+    private int fps = 0;
+    private long lastFpsTime = System.currentTimeMillis();
+    private int frameCount = 0;
+    private String jamLevel = "LOW";
+    private boolean flash = false;
+    private int flashCounter = 0;
 
     private EmergencyVehicleSystem emergencyVehicleSystem;
-    private boolean                simulationStarted = false;
+    private boolean simulationStarted = false;
+    private boolean emergencyOverride = false;
+    
+    // Thêm field vào class SimulationPanel
+    private long lastEmergencyTriggerMs = 0;
+    private static final long EMERGENCY_COOLDOWN_MS = 8_000; // 8 giây cooldown
 
     // ─────────────────────────────────────────────────────────────
     // CONSTRUCTOR
     // ─────────────────────────────────────────────────────────────
-
     public SimulationPanel(SimulationConfig config) {
-        this.config    = config;
-        manualMode     = config.getTrafficMode().equals("MANUAL");
-
+        this.config = config;
+        manualMode = config.getTrafficMode().equals("MANUAL");
         setBackground(Color.GRAY);
 
-        roadRenderer        = new RoadRenderer();
+        roadRenderer = new RoadRenderer();
         environmentRenderer = new EnvironmentRenderer();
-        vehicles            = new ArrayList<>();
-        vehicleRenderer     = new VehicleRenderer();
+        vehicles = new ArrayList<>();
+        vehicleRenderer = new VehicleRenderer();
+        verticalLight = new TrafficLight(LightColor.GREEN, 12_000);
+        horizontalLight = new TrafficLight(LightColor.RED, 15_000);
 
-        verticalLight   = new TrafficLight(LightColor.GREEN, 300);
-        horizontalLight = new TrafficLight(LightColor.RED,   300);
-
-        trafficLightRenderer  = new TrafficLightRenderer();
-        trafficController     = new TrafficController();
-        vehicleSpawnManager   = new VehicleSpawnManager(vehicles);
+        trafficLightRenderer = new TrafficLightRenderer();
+        trafficController = new TrafficController();
+        vehicleSpawnManager = new VehicleSpawnManager(vehicles);
         emergencyVehicleSystem = new EmergencyVehicleSystem();
 
         startGameLoop();
@@ -112,18 +96,14 @@ public class SimulationPanel extends JPanel {
     }
 
     // ─────────────────────────────────────────────────────────────
-    // APPLY CONFIG — gọi khi user nhấn START
+    // APPLY CONFIG
     // ─────────────────────────────────────────────────────────────
-
     public void applyConfig(SimulationConfig newConfig) {
         simulationStarted = true;
-        this.config       = newConfig;
-        this.manualMode   = newConfig.getTrafficMode().equals("MANUAL");
+        this.config = newConfig;
+        this.manualMode = newConfig.getTrafficMode().equals("MANUAL");
 
-        // [Bước 1] Inject layout mới vào LaneManager — tất cả system tự động dùng
-        IntersectionLayout layout = IntersectionLayoutFactory.create(
-                newConfig.getIntersectionType()
-        );
+        IntersectionLayout layout = IntersectionLayoutFactory.create(newConfig.getIntersectionType());
         LaneManager.setLayout(layout);
 
         vehicles.clear();
@@ -131,8 +111,9 @@ public class SimulationPanel extends JPanel {
 
         verticalLight.setColor(LightColor.GREEN);
         horizontalLight.setColor(LightColor.RED);
-        verticalLight.setTimer(300);
-        horizontalLight.setTimer(300);
+        verticalLight.setTimerMs(12_000);   // 12 giây GREEN
+        horizontalLight.setTimerMs(15_000); // 15 giây RED (chờ vertical xong)
+        prevVerticalColor = LightColor.GREEN; // Đặt lại trạng thái ban đầu
 
         repaint();
     }
@@ -140,7 +121,6 @@ public class SimulationPanel extends JPanel {
     // ─────────────────────────────────────────────────────────────
     // GAME LOOP
     // ─────────────────────────────────────────────────────────────
-
     private void startGameLoop() {
         timer = new Timer(16, e -> {
             updateSimulation();
@@ -151,24 +131,20 @@ public class SimulationPanel extends JPanel {
 
     private void updateSimulation() {
         if (!simulationStarted) return;
+        long now = System.currentTimeMillis();
+        long deltaMs = now - lastUpdateTime;
+        lastUpdateTime = now;
 
-        vehicles.removeIf(vehicle ->
-                !config.getIntersectionType()
-                        .getDirections()
-                        .contains(vehicle.getDirection())
-        );
+        vehicles.removeIf(vehicle -> !config.getIntersectionType().getDirections().contains(vehicle.getDirection()));
 
-        trafficController.updateVehicles(
-                vehicles, verticalLight, horizontalLight,
-                config.getIntersectionType()
-        );
+        trafficController.updateVehicles(vehicles, verticalLight, horizontalLight, config.getIntersectionType());
 
         if (!manualMode) {
-            verticalLight.update();
-            syncLights();
+            verticalLight.update(deltaMs); // truyền deltaMs thay vì không có arg
+            syncLights(deltaMs);
             updateSmartLights();
         }
-
+        
         vehicleSpawnManager.removeOutsideVehicles();
         emergencyVehicleSystem.updateEmergencyVehicles(vehicles);
         handleAutoSpawn();
@@ -180,7 +156,6 @@ public class SimulationPanel extends JPanel {
     // ─────────────────────────────────────────────────────────────
     // PAINT
     // ─────────────────────────────────────────────────────────────
-
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
@@ -215,43 +190,28 @@ public class SimulationPanel extends JPanel {
         }
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // VẼ ĐÈN — [Bước 1 + 3] dùng layout positions và enum mode
-    // ─────────────────────────────────────────────────────────────
-
     private void drawTrafficLights(Graphics2D g2d) {
         IntersectionLayout layout = LaneManager.getLayout();
         List<java.awt.Point> positions = layout.getLightPositions();
 
-        // Đèn 0: đèn dọc (vertical) — luôn hiển thị
         if (positions.size() > 0) {
             java.awt.Point p = positions.get(0);
-            trafficLightRenderer.render(
-                    g2d, verticalLight, p.x, p.y,
-                    config.getLightDisplayMode()   // [Bước 3] enum thay vì String
-            );
+            trafficLightRenderer.render(g2d, verticalLight, p.x, p.y, config.getLightDisplayMode());
         }
 
-        // Đèn 1: đèn ngang (horizontal) — chỉ hiển thị khi không phải THREE_WAY
-        if (positions.size() > 1
-                && config.getIntersectionType() != IntersectionType.THREE_WAY) {
+        if (positions.size() > 1 && config.getIntersectionType() != IntersectionType.THREE_WAY) {
             java.awt.Point p = positions.get(1);
-            trafficLightRenderer.render(
-                    g2d, horizontalLight, p.x, p.y,
-                    config.getLightDisplayMode()
-            );
+            trafficLightRenderer.render(g2d, horizontalLight, p.x, p.y, config.getLightDisplayMode());
         }
     }
 
     // ─────────────────────────────────────────────────────────────
-    // CLICK DETECTION — [Bước 1 + 3] dùng getBounds() từ renderer
+    // CLICK DETECTION
     // ─────────────────────────────────────────────────────────────
-
     private void handleTrafficLightClick(int mouseX, int mouseY) {
-        IntersectionLayout layout    = LaneManager.getLayout();
+        IntersectionLayout layout = LaneManager.getLayout();
         List<java.awt.Point> positions = layout.getLightPositions();
 
-        // Kiểm tra click vào đèn nào (dùng getBounds từ renderer)
         for (java.awt.Point p : positions) {
             Rectangle bounds = trafficLightRenderer.getBounds(p.x, p.y);
             if (bounds.contains(mouseX, mouseY)) {
@@ -274,33 +234,49 @@ public class SimulationPanel extends JPanel {
         }
         verticalLight.setTimer(300);
         horizontalLight.setTimer(300);
+        prevVerticalColor = verticalLight.getColor(); // Khóa trạng thái
     }
 
     // ─────────────────────────────────────────────────────────────
-    // SYNC LIGHTS — giữ nguyên
+    // SYNC LIGHTS — Giải quyết triệt để mất Vàng và loạn Số
     // ─────────────────────────────────────────────────────────────
-
-    private void syncLights() {
-        switch (verticalLight.getColor()) {
-            case GREEN:
-                horizontalLight.setColor(LightColor.RED);
-                break;
-            case YELLOW:
-                horizontalLight.setColor(LightColor.RED);
-                break;
-            case RED:
-                if (horizontalLight.getColor() != LightColor.GREEN) {
-                    horizontalLight.setColor(LightColor.GREEN);
-                    horizontalLight.setTimer(300);
-                }
-                break;
+    private void syncLights(long deltaMs) {
+        if (emergencyOverride) {
+            emergencyOverride = false;
+            prevVerticalColor = verticalLight.getColor();
+            return;
         }
+
+        LightColor vColor = verticalLight.getColor();
+
+        if (vColor != prevVerticalColor) {
+            if (vColor == LightColor.GREEN) {
+                horizontalLight.setColor(LightColor.RED);
+                horizontalLight.setTimerMs(verticalLight.getTimerMs() + 3_000);
+            } else if (vColor == LightColor.YELLOW) {
+                horizontalLight.setTimerMs(verticalLight.getTimerMs());
+            } else if (vColor == LightColor.RED) {
+                horizontalLight.setColor(LightColor.GREEN);
+                horizontalLight.setTimerMs(12_000);
+            }
+        }
+
+        if (horizontalLight.getColor() != LightColor.RED) {
+            horizontalLight.update(deltaMs); // dùng deltaMs thực tế
+        } else {
+            if (vColor == LightColor.GREEN) {
+                horizontalLight.setTimerMs(verticalLight.getTimerMs() + 3_000);
+            } else if (vColor == LightColor.YELLOW) {
+                horizontalLight.setTimerMs(verticalLight.getTimerMs());
+            }
+        }
+
+        prevVerticalColor = vColor;
     }
 
     // ─────────────────────────────────────────────────────────────
-    // SPAWN — giữ nguyên
+    // SPAWN
     // ─────────────────────────────────────────────────────────────
-
     private void spawnVehicles() {
         vehicles.clear();
         List<Direction> directions = config.getIntersectionType().getDirections();
@@ -316,10 +292,7 @@ public class SimulationPanel extends JPanel {
     }
 
     private void spawnQueue(Direction dir, int amount) {
-        vehicleSpawnManager.spawnTrafficQueue(
-                dir, amount,
-                config.getIntersectionType().getDirections()
-        );
+        vehicleSpawnManager.spawnTrafficQueue(dir, amount, config.getIntersectionType().getDirections());
     }
 
     private void handleAutoSpawn() {
@@ -345,9 +318,7 @@ public class SimulationPanel extends JPanel {
 
         List<Direction> directions = config.getIntersectionType().getDirections();
         Direction direction = directions.get((int)(Math.random() * directions.size()));
-        vehicleSpawnManager.spawnTrafficQueue(
-                direction, queueSize, directions
-        );
+        vehicleSpawnManager.spawnTrafficQueue(direction, queueSize, directions);
     }
 
     private int getSpawnInterval() {
@@ -359,63 +330,70 @@ public class SimulationPanel extends JPanel {
     }
 
     // ─────────────────────────────────────────────────────────────
-    // SMART LIGHTS — giữ nguyên
+    // SMART LIGHTS
     // ─────────────────────────────────────────────────────────────
-
     private void updateSmartLights() {
-        int verticalCount   = trafficController.countVehiclesByDirection(
-                vehicles, Direction.NORTH, Direction.SOUTH);
-        int horizontalCount = trafficController.countVehiclesByDirection(
-                vehicles, Direction.EAST, Direction.WEST);
+        int verticalCount = trafficController.countVehiclesByDirection(vehicles, Direction.NORTH, Direction.SOUTH);
+        int horizontalCount = trafficController.countVehiclesByDirection(vehicles, Direction.EAST, Direction.WEST);
 
         if (verticalCount > horizontalCount + 3) {
-            if (verticalLight.getColor() == LightColor.GREEN)
-                verticalLight.setTimer(Math.max(verticalLight.getTimer(), 400));
+            if (verticalLight.getColor() == LightColor.GREEN && verticalLight.getTimerMs() > 5_000) {
+                verticalLight.setTimerMs(Math.max(verticalLight.getTimerMs(), 8_000));
+            }
         }
         if (horizontalCount > verticalCount + 3) {
-            if (horizontalLight.getColor() == LightColor.GREEN)
-                horizontalLight.setTimer(Math.max(horizontalLight.getTimer(), 400));
+            if (horizontalLight.getColor() == LightColor.GREEN && horizontalLight.getTimerMs() > 5_000) {
+                horizontalLight.setTimerMs(Math.max(horizontalLight.getTimerMs(), 8_000));
+            }
         }
 
-        for (Vehicle vehicle : vehicles) {
-            boolean emergency =
-                    vehicle instanceof Ambulance
-                    || vehicle instanceof FireTruck;
-            if (!emergency) continue;
+        // ── EMERGENCY: chỉ trigger 1 lần, có cooldown ──
+        long now = System.currentTimeMillis();
+        if (now - lastEmergencyTriggerMs < EMERGENCY_COOLDOWN_MS) return; // đang cooldown
 
+        boolean hasNSEmergency = false;
+        boolean hasEWEmergency = false;
+
+        for (Vehicle vehicle : vehicles) {
+            if (!(vehicle instanceof Ambulance) && !(vehicle instanceof FireTruck)) continue;
             switch (vehicle.getDirection()) {
-                case NORTH: case SOUTH:
-                    if (verticalLight.getColor() == LightColor.RED) {
-                        forceVerticalGreen();
-                        verticalLight.setTimer(400);
-                    }
-                    break;
-                case EAST: case WEST:
-                    if (horizontalLight.getColor() == LightColor.RED) {
-                        forceHorizontalGreen();
-                        horizontalLight.setTimer(400);
-                    }
-                    break;
+                case NORTH: case SOUTH: hasNSEmergency = true; break;
+                case EAST:  case WEST:  hasEWEmergency = true; break;
             }
+        }
+
+        // Ưu tiên N/S nếu cả hai hướng đều có xe cứu thương
+        if (hasNSEmergency && verticalLight.getColor() == LightColor.RED) {
+            forceVerticalGreen();
+            lastEmergencyTriggerMs = now;
+        } else if (hasEWEmergency && horizontalLight.getColor() == LightColor.RED) {
+            forceHorizontalGreen();
+            lastEmergencyTriggerMs = now;
         }
     }
 
+    // SỬA LỖI: Khi xe cứu thương ép đèn, phải reset cờ `prevVerticalColor` để hệ thống ko bắt lỗi lệch nhịp
     private void forceVerticalGreen() {
+        emergencyOverride = true;
         verticalLight.setColor(LightColor.GREEN);
+        verticalLight.setTimerMs(6_700);           // ~6.7 giây
         horizontalLight.setColor(LightColor.RED);
-        verticalLight.setTimer(400);
+        horizontalLight.setTimerMs(6_700 + 3_000); // GREEN + YELLOW
+        prevVerticalColor = LightColor.RED;
     }
 
     private void forceHorizontalGreen() {
+        emergencyOverride = true;
         horizontalLight.setColor(LightColor.GREEN);
+        horizontalLight.setTimerMs(6_700);
         verticalLight.setColor(LightColor.RED);
-        horizontalLight.setTimer(400);
+        verticalLight.setTimerMs(6_700 + 3_000);
+        prevVerticalColor = LightColor.GREEN;
     }
 
     // ─────────────────────────────────────────────────────────────
-    // STATS / FPS / FLASH — giữ nguyên
+    // STATS / FPS / FLASH
     // ─────────────────────────────────────────────────────────────
-
     private void updateFlash() {
         flashCounter++;
         if (flashCounter >= 20) {
@@ -428,15 +406,15 @@ public class SimulationPanel extends JPanel {
         frameCount++;
         long current = System.currentTimeMillis();
         if (current - lastFpsTime >= 1000) {
-            fps         = frameCount;
-            frameCount  = 0;
+            fps = frameCount;
+            frameCount = 0;
             lastFpsTime = current;
         }
     }
 
     private void updateTrafficJam() {
         int stopped = trafficController.countStoppedVehicles(vehicles);
-        int total   = vehicles.size();
+        int total = vehicles.size();
         if (total == 0) { jamLevel = "LOW"; return; }
         double ratio = (double) stopped / total;
         if (ratio > 0.6)      jamLevel = "HIGH";
@@ -451,11 +429,11 @@ public class SimulationPanel extends JPanel {
         g2d.setFont(new Font("Arial", Font.BOLD, 16));
 
         int y = 50;
-        g2d.drawString("Vehicle Count: " + vehicles.size(),          40, y); y += 30;
-        g2d.drawString("FPS: "           + fps,                      40, y); y += 30;
-        g2d.drawString("Density: "       + config.getTrafficDensity(),40, y); y += 30;
-        g2d.drawString("Vertical: "      + verticalLight.getColor(), 40, y); y += 30;
-        g2d.drawString("Horizontal: "    + horizontalLight.getColor(),40, y); y += 30;
-        g2d.drawString("Traffic Jam: "   + jamLevel,                 40, y);
+        g2d.drawString("Vehicle Count: " + vehicles.size(), 40, y); y += 30;
+        g2d.drawString("FPS: " + fps, 40, y); y += 30;
+        g2d.drawString("Density: " + config.getTrafficDensity(), 40, y); y += 30;
+        g2d.drawString("Vertical: " + verticalLight.getColor(), 40, y); y += 30;
+        g2d.drawString("Horizontal: " + horizontalLight.getColor(), 40, y); y += 30;
+        g2d.drawString("Traffic Jam: " + jamLevel, 40, y);
     }
 }

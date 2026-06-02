@@ -1,11 +1,9 @@
 package system.vehicle;
 
 import java.util.List;
-
 import model.intersection.IntersectionType;
 import model.trafficlight.TrafficLight;
 import model.vehicle.Vehicle;
-
 import system.collision.CollisionSystem;
 import system.movement.LaneAlignmentSystem;
 import system.movement.LaneChangeSystem;
@@ -45,25 +43,25 @@ public class VehicleUpdatePipeline {
             IntersectionType type
     ) {
 
-                    // cooldown Ä‘á»•i lane
-            if (vehicle.getLaneChangeCooldown() > 0) {
-                vehicle.setLaneChangeCooldown(
-                        vehicle.getLaneChangeCooldown() - 1
-                );
-            }
+        // cooldown đổi lane
+        if (vehicle.getLaneChangeCooldown() > 0) {
+            vehicle.setLaneChangeCooldown(
+                    vehicle.getLaneChangeCooldown() - 1
+            );
+        }
 
-            // xá»­ lÃ½ ráº½ TRÆ¯á»šC â€“ khÃ´ng reset stopped náº¿u Ä‘ang turning
-            turningSystem.updateTurning(vehicle, type);
+        // xử lý rẽ TRƯỚC – không reset stopped nếu đang turning
+        turningSystem.updateTurning(vehicle, type);
 
-            if (vehicle.isTurning()) {
-                collisionSystem.maintainDistance(vehicle, vehicles);
-                return;
-            }
+        if (vehicle.isTurning()) {
+            collisionSystem.maintainDistance(vehicle, vehicles);
+            return;
+        }
 
-            // reset stopped CHá»ˆ khi khÃ´ng Ä‘ang ráº½
-            vehicle.setStopped(false);
+        // reset stopped CHỈ khi không đang rẽ
+        vehicle.setStopped(false);
 
-        // kiá»ƒm tra Ä‘Ã¨n giao thÃ´ng
+        // kiểm tra đèn giao thông
         trafficRuleSystem.checkTrafficLight(
                 vehicle,
                 verticalLight,
@@ -71,24 +69,24 @@ public class VehicleUpdatePipeline {
                 vehicles
         );
 
-        // xá»­ lÃ½ khoáº£ng cÃ¡ch xe
+        // xử lý khoảng cách xe
         collisionSystem.maintainDistance(
                 vehicle,
                 vehicles
         );
 
-        // náº¿u Ä‘ang stop thÃ¬ dá»«ng update movement
+        // nếu đang stop thì dừng update movement
         if (vehicle.isStopped()) {
             return;
         }
 
-        // Ä‘á»•i lane
+        // đổi lane
         laneChangeSystem.updateLaneChanging(vehicle);
 
-        // cÄƒn giá»¯a lane
+        // căn giữa lane
         laneAlignmentSystem.alignToLane(vehicle);
 
-        // movement chÃ­nh
+        // movement chính
         movementSystem.move(vehicle);
     }
 }
