@@ -34,43 +34,20 @@ public abstract class Vehicle {
     protected boolean changingLane;
     protected Lane targetLane;
     private int laneChangeCooldown = 0;
-    public Vehicle(
-        double x,
-        double y,
-        Direction direction
-) {
-
-    this.x = x;
-    this.y = y;
-
-    this.direction = direction;
-    this.lane = Lane.RIGHT;
-    switch (direction) {
-
-    case EAST:
-
-        angle = 0;
-        break;
-
-    case SOUTH:
-
-        angle = 90;
-        break;
-
-    case WEST:
-
-        angle = 180;
-        break;
-
-    case NORTH:
-
-        angle = -90;
-        break;
-    case NORTHEAST:
-    angle = -45;
-    break;
-}
-}
+    public Vehicle(double x, double y, Direction direction) {
+        this.x = x;
+        this.y = y;
+        this.direction = direction;
+        this.lane = Lane.RIGHT;
+        
+        switch (direction) {
+            case EAST:      angle = 0;   break;
+            case SOUTH:     angle = 90;  break;
+            case WEST:      angle = 180; break;
+            case NORTH:     angle = -90; break;
+            case NORTHEAST: angle = -18; break; // FIX: Đồng bộ góc 342 độ với Render
+        }
+    }
 
     public abstract void move();
 

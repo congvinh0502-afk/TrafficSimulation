@@ -91,13 +91,12 @@ public class VehicleSpawnManager {
 
     private Vehicle createRandom(Direction direction) {
         java.awt.Point spawn = LaneManager.getLayout().getSpawnPoint(direction);
-        int type = (int)(Math.random() * 5);
+        // Bây giờ chỉ random ra các xe bình thường (Car, Motorbike, Bicycle)
+        int type = (int)(Math.random() * 3);
         switch (type) {
             case 0: return new Car      (spawn.x, spawn.y, direction);
             case 1: return new Motorbike(spawn.x, spawn.y, direction);
-            case 2: return new Bicycle  (spawn.x, spawn.y, direction);
-            case 3: return new Ambulance(spawn.x, spawn.y, direction);
-            default:return new FireTruck(spawn.x, spawn.y, direction);
+            default:return new Bicycle  (spawn.x, spawn.y, direction);
         }
     }
 
@@ -125,14 +124,14 @@ public class VehicleSpawnManager {
                 vehicle.setY(LaneManager.getLaneCenterY(vehicle.getDirection(), lane));
                 break;
             case NORTHEAST:
-                // hướng chéo — lệch nhẹ theo làn
-                if (lane == Lane.LEFT) {
-                    vehicle.setX(vehicle.getX() - 30);
-                    vehicle.setY(vehicle.getY() - 30);
-                } else {
-                    vehicle.setX(vehicle.getX() + 30);
-                    vehicle.setY(vehicle.getY() + 30);
-                }
+                // Dùng lượng giác để offset xe vào đúng tâm làn của góc -18 độ (342 độ)
+                double angleRad = Math.toRadians(-18);
+                // Phóng theo pháp tuyến của đường chéo
+                double normalAngle = angleRad + Math.PI / 2; 
+                double laneOffset = (lane == Lane.LEFT) ? -20 : 20; // Lệch sang trái/phải 20px
+                
+                vehicle.setX(vehicle.getX() + laneOffset * Math.cos(normalAngle));
+                vehicle.setY(vehicle.getY() + laneOffset * Math.sin(normalAngle));
                 break;
         }
     }
@@ -186,5 +185,28 @@ public class VehicleSpawnManager {
             if (Math.sqrt(dx*dx + dy*dy) < 150) return false;
         }
         return true;
+    }
+    private Vehicle createEmergency(Direction direction) {
+        java.awt.Point spawn = LaneManager.getLayout().getSpawnPoint(direction);
+        // Random 50/50 giữa Xe cứu thương và Xe cứu hỏa
+        if (Math.random() < 0.5) {
+            return new Ambulance(spawn.x, spawn.y, direction);
+        } else {
+            return new FireTruck(spawn.x, spawn.y, direction);
+        }
+    }
+
+    public void spawnEmergencyVehicle(List<Direction> availableDirections) {
+        Direction direction = availableDirections.get(
+                (int)(Math.random() * availableDirections.size())
+        );
+        java.awt.Point spawn = LaneManager.getLayout().getSpawnPoint(direction);
+
+        // Kiểm tra xem vị trí đó có đang bị chiếm không
+        if (!canSpawn(spawn.x, spawn.y)) return;
+
+        Vehicle vehicle = createEmergency(direction);
+        setupVehicle(vehicle, availableDirections);
+        vehicles.add(vehicle);
     }
 }

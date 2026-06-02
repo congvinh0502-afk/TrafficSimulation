@@ -62,6 +62,9 @@ public class SimulationPanel extends JPanel {
     // Thêm field vào class SimulationPanel
     private long lastEmergencyTriggerMs = 0;
     private static final long EMERGENCY_COOLDOWN_MS = 8_000; // 8 giây cooldown
+    
+    private long lastEmergencySpawnTime = System.currentTimeMillis();
+    private long nextEmergencyInterval = getRandomEmergencyInterval();
 
     // ─────────────────────────────────────────────────────────────
     // CONSTRUCTOR
@@ -134,7 +137,13 @@ public class SimulationPanel extends JPanel {
         long now = System.currentTimeMillis();
         long deltaMs = now - lastUpdateTime;
         lastUpdateTime = now;
-
+        
+        if (now - lastEmergencySpawnTime >= nextEmergencyInterval) {
+            vehicleSpawnManager.spawnEmergencyVehicle(config.getIntersectionType().getDirections());
+            lastEmergencySpawnTime = now;
+            nextEmergencyInterval = getRandomEmergencyInterval(); // Reset lại thời gian cho lần spawn tiếp theo
+        }
+        
         vehicles.removeIf(vehicle -> !config.getIntersectionType().getDirections().contains(vehicle.getDirection()));
 
         trafficController.updateVehicles(vehicles, verticalLight, horizontalLight, config.getIntersectionType());
@@ -435,5 +444,9 @@ public class SimulationPanel extends JPanel {
         g2d.drawString("Vertical: " + verticalLight.getColor(), 40, y); y += 30;
         g2d.drawString("Horizontal: " + horizontalLight.getColor(), 40, y); y += 30;
         g2d.drawString("Traffic Jam: " + jamLevel, 40, y);
+    }
+    // Hàm trả về ngẫu nhiên khoảng thời gian từ 5000ms (5s) đến 10000ms (10s)
+    private long getRandomEmergencyInterval() {
+        return 5000 + (long)(Math.random() * 5000);
     }
 }
