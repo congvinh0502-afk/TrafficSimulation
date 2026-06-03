@@ -9,7 +9,7 @@
 6. (*) khoảng cách `direction` của `lane` hiện tại đang sử dụng "north", "south",..... Đề xuất thay đổi bằng vector [Minh]
 6. (*) các phương tiện hiện đang teleport ở ngã rẽ, chưa tìm thấy nguyên nhân [Minh]
 7. (\) 5-way: bố cục các làn không cân xứng, cây mọc trên đường [Hương]
-8. (-) xe di chuyển trên 3-way như 4-way {Hương}
+8. (-) xe di chuyển trên 3-way như 4-way, 3-way lỗi xe chạy trên cỏ {Hương}
 9. (*) xe di chuyển không thẳng [Hương]
 10.(-) cho xe chay cham lai [toan]
 11.(/) bo sung them am thanh cho cac loai xe [toan]
