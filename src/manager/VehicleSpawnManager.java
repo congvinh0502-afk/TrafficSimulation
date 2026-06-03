@@ -1,17 +1,21 @@
 package manager;
 
-import model.vehicle.*;
+import java.util.ArrayList;
+import java.util.List;
+
+import config.Constants;
+import model.vehicle.Ambulance;
+import model.vehicle.Bicycle;
+import model.vehicle.Car;
+import model.vehicle.FireTruck;
+import model.vehicle.Motorbike;
+import model.vehicle.Vehicle;
 import strategy.driver.AggressiveDriver;
 import strategy.driver.DriverBehavior;
 import strategy.driver.NormalDriver;
 import util.Direction;
 import util.Lane;
 import util.TurnType;
-import config.Constants;
-
-import java.util.ArrayList;
-import java.util.List;
-
 /**
  * Quản lý việc spawn và xóa phương tiện trên bản đồ.
  *
@@ -200,6 +204,10 @@ public class VehicleSpawnManager {
                     || v.getY() > Constants.REMOVE_THRESHOLD_MAX) {
                 toRemove.add(v);
             }
+        }
+         // ← THÊM: tắt tiếng trước khi xóa
+        for (Vehicle v : toRemove) {
+            SoundManager.getInstance().onVehicleRemoved(v);
         }
         vehicles.removeAll(toRemove);
     }

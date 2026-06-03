@@ -1,5 +1,8 @@
 package view.scene;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import camera.Camera;
 import config.Constants;
 import controller.TrafficController;
@@ -9,13 +12,23 @@ import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
-import javafx.scene.control.*;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
+import javafx.scene.control.Menu;
+import javafx.scene.control.MenuButton;
+import javafx.scene.control.MenuItem;
+import javafx.scene.control.RadioMenuItem;
+import javafx.scene.control.SeparatorMenuItem;
+import javafx.scene.control.ToggleGroup;
 import javafx.scene.input.KeyCode;
-import javafx.scene.layout.*;
+import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.stage.Stage;
+import manager.SoundManager;
 import manager.VehicleSpawnManager;
 import model.SimulationConfig;
 import model.intersection.IntersectionType;
@@ -28,9 +41,6 @@ import util.TrafficDensity;
 import view.renderer.EnvironmentRenderer;
 import view.renderer.TrafficLightRenderer;
 import view.renderer.VehicleRenderer;
-
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Màn hình mô phỏng (JavaFX).
@@ -98,6 +108,8 @@ public class SimulationScene {
 
     private final Stage primaryStage;
     private AnimationTimer gameTimer;
+    // Thêm vào khu vực "Trạng thái HUD / thống kê"
+    private boolean isPaused = false;
 
     // ==========================================================
     // Constructor
@@ -181,15 +193,13 @@ public class SimulationScene {
         Button pauseBtn = new Button("⏸ Pause");
         styleControlBtn(pauseBtn, "#37474F");
         pauseBtn.setOnAction(e -> {
-            if (gameTimer != null) {
-                // Toggle pause
-                if (pauseBtn.getText().startsWith("⏸")) {
-                    gameTimer.stop();
-                    pauseBtn.setText("▶ Resume");
-                } else {
-                    gameTimer.start();
-                    pauseBtn.setText("⏸ Pause");
-                }
+            isPaused = !isPaused;
+            if (isPaused) {
+                SoundManager.getInstance().muteAll();  // tắt tiếng ngay
+                pauseBtn.setText("▶ Resume");
+            } else {
+                pauseBtn.setText("⏸ Pause");
+                // tiếng tự phục hồi ở frame tiếp theo qua updateVehicleSound()
             }
         });
 
@@ -199,7 +209,6 @@ public class SimulationScene {
         bar.getChildren().addAll(menuBtn, pauseBtn, settingsBtn);
         return bar;
     }
-
     private MenuButton buildSettingsMenu() {
         MenuButton btn = new MenuButton("⚙ Settings");
         btn.setStyle("-fx-background-color: #455A64; -fx-text-fill: white; " +
@@ -281,8 +290,10 @@ public class SimulationScene {
         gameTimer = new AnimationTimer() {
             @Override
             public void handle(long now) {
-                updateSimulation();
-                render();
+                if (!isPaused) {
+                    updateSimulation();   // logic + sound
+                }
+                render();                 // vẫn render để UI không đơ
                 updateFPS(now);
             }
         };

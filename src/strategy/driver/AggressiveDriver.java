@@ -1,10 +1,10 @@
 package strategy.driver;
 
+import java.util.List;
+
 import model.trafficlight.LightColor;
 import model.trafficlight.TrafficLight;
 import model.vehicle.Vehicle;
-
-import java.util.List;
 
 /**
  * Lái xe hung hăng — tốc độ cao, thường xuyên vượt đèn đỏ.
@@ -16,7 +16,7 @@ import java.util.List;
  */
 public class AggressiveDriver implements DriverBehavior {
 
-    private static final int SPEED = 7;
+    private static final int SPEED = 2;
     private static final double STOP_PROBABILITY = 0.4; // xác suất dừng khi đèn đỏ
 
     @Override

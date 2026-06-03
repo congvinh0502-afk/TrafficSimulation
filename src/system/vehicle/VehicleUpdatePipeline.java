@@ -1,17 +1,18 @@
 package system.vehicle;
 
+import java.util.List;
+
 import config.Constants;
+import manager.SoundManager;
 import model.intersection.IntersectionType;
 import model.trafficlight.TrafficLight;
 import model.vehicle.Vehicle;
 import system.collision.CollisionSystem;
 import system.movement.LaneAlignmentSystem;
 import system.movement.LaneChangeSystem;
-import system.movement.TurningSystem;
+import system.movement.TurningSystem;          // ← THÊM
 import system.movement.VehicleMovementSystem;
 import system.traffic.TrafficRuleSystem;
-
-import java.util.List;
 
 /**
  * Pipeline cập nhật trạng thái xe mỗi frame.
@@ -27,17 +28,19 @@ import java.util.List;
  *   <li>Cập nhật đổi làn.</li>
  *   <li>Căn giữa làn (bao gồm post-turn alignment).</li>
  *   <li>Di chuyển (áp dụng gia tốc + vectơ).</li>
+ *   <li>Cập nhật âm thanh theo trạng thái xe.</li>   ← THÊM
  * </ol>
  * </p>
  */
 public class VehicleUpdatePipeline {
 
-    private final TurningSystem       turningSystem;
-    private final TrafficRuleSystem   trafficRuleSystem;
-    private final CollisionSystem     collisionSystem;
-    private final LaneChangeSystem    laneChangeSystem;
-    private final LaneAlignmentSystem laneAlignmentSystem;
+    private final TurningSystem         turningSystem;
+    private final TrafficRuleSystem     trafficRuleSystem;
+    private final CollisionSystem       collisionSystem;
+    private final LaneChangeSystem      laneChangeSystem;
+    private final LaneAlignmentSystem   laneAlignmentSystem;
     private final VehicleMovementSystem movementSystem;
+    private final SoundManager          soundManager;   // ← THÊM
 
     public VehicleUpdatePipeline() {
         turningSystem       = new TurningSystem();
@@ -46,6 +49,7 @@ public class VehicleUpdatePipeline {
         laneChangeSystem    = new LaneChangeSystem();
         laneAlignmentSystem = new LaneAlignmentSystem();
         movementSystem      = new VehicleMovementSystem();
+        soundManager        = SoundManager.getInstance();  // ← THÊM
     }
 
     public void update(Vehicle vehicle,
@@ -67,6 +71,7 @@ public class VehicleUpdatePipeline {
         turningSystem.updateTurning(vehicle, type);
         if (vehicle.isTurning()) {
             collisionSystem.maintainDistance(vehicle, vehicles);
+            soundManager.updateVehicleSound(vehicle);   // ← âm thanh khi đang rẽ
             return;
         }
 
@@ -77,7 +82,10 @@ public class VehicleUpdatePipeline {
         collisionSystem.maintainDistance(vehicle, vehicles);
 
         // 6. Nếu bị dừng thì không tiếp tục
-        if (vehicle.isStopped()) return;
+        if (vehicle.isStopped()) {
+            soundManager.updateVehicleSound(vehicle);   // ← dừng âm thanh khi xe dừng
+            return;
+        }
 
         // 7. Đổi làn
         laneChangeSystem.updateLaneChanging(vehicle);
@@ -87,5 +95,8 @@ public class VehicleUpdatePipeline {
 
         // 9. Di chuyển (gia tốc + vectơ)
         movementSystem.move(vehicle);
+
+        // 10. Cập nhật âm thanh theo trạng thái xe   ← THÊM
+        soundManager.updateVehicleSound(vehicle);
     }
 }
