@@ -1,10 +1,10 @@
 package strategy.driver;
 
+import java.util.List;
+
 import model.trafficlight.LightColor;
 import model.trafficlight.TrafficLight;
 import model.vehicle.Vehicle;
-
-import java.util.List;
 
 /**
  * Lái xe bình thường — tuân thủ hoàn toàn luật giao thông.
@@ -15,7 +15,7 @@ import java.util.List;
  */
 public class NormalDriver implements DriverBehavior {
 
-    private static final int SPEED = 4;
+    private static final int SPEED = 1;
 
     @Override
     public boolean shouldStop(Vehicle self, List<Vehicle> vehicles, TrafficLight relevantLight) {
