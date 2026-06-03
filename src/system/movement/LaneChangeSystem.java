@@ -82,7 +82,7 @@ public class LaneChangeSystem {
      * <li>Đang rẽ.</li>
      * <li>Đang trong thời gian cooldown.</li>
      * <li>Có xe trong làn đích cách dưới
-     * {@link Constants#LANE_CHANGE_SAFE_DIST}.</li>
+     * {@link Constants#LANE_CHANGE_SAFE_DISTANCE}.</li>
      * </ul>
      * </p>
      *
@@ -106,7 +106,7 @@ public class LaneChangeSystem {
             if (other.getDirection() != current.getDirection())
                 continue;
             if (other.getLane() == targetLane
-                    && distance(current, other) < Constants.LANE_CHANGE_SAFE_DIST) {
+                    && distance(current, other) < Constants.LANE_CHANGE_SAFE_DISTANCE) {
                 return false;
             }
         }
