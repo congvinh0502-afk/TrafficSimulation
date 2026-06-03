@@ -43,45 +43,66 @@ public class EnvironmentRenderer {
         base.drawGrass(gc);
         road.renderThreeWay(gc);
 
+        // Góc Tây-Bắc
         nature.drawParkWithPond(gc, 15, 15, 240, 225);
-        building.drawLuxuryHouse(gc, 50, 600);
-        building.drawLuxuryHouse(gc, 155, 650);
-        nature.drawTreeRow(gc, 20, 560, 230, false);
 
+        // Góc Tây-Nam (dưới giao lộ, phần cỏ phía dưới trục dọc bị bịt)
+        building.drawLuxuryHouse(gc, 50, 560);
+        building.drawLuxuryHouse(gc, 155, 610);
+        nature.drawTreeRow(gc, 20, 540, 240, false);
+
+        // Góc Đông-Bắc
         parking.drawParkingLotWithCars(gc, 580, 40, 340, 180);
         building.drawModernFactory(gc, 960, 30);
-        building.drawLuxuryHouse(gc, 600, 580);
-        building.drawLuxuryHouse(gc, 760, 580);
-        building.drawSkyscraper(gc, 940, 580);
-        nature.drawTreeRow(gc, 545, 20, 760, false);
+
+        // Góc Đông-Nam
+        building.drawLuxuryHouse(gc, 560, 560);
+        building.drawLuxuryHouse(gc, 700, 560);
+        building.drawSkyscraper(gc, 880, 560);
+
+        // Cây dọc bên phải đường ngang (phần trên và dưới giao lộ)
+        nature.drawTreeRow(gc, 545, 20, 250, false); // phần trên
+        nature.drawTreeRow(gc, 545, 540, 250, false); // phần dưới
+
+        // Bịt vùng cỏ dưới trục dọc bằng cây
+        nature.drawTreeRow(gc, 305, 520, 190, false);
     }
 
     public void renderFiveWay(GraphicsContext gc) {
         base.drawGrass(gc);
         road.renderFiveWay(gc);
 
-        int cx=400, cy=400;
-        nature.drawPineTree(gc, cx-18, cy-58);
-        nature.drawBeautifulTree(gc, cx-18, cy+28);
-        nature.drawBushTree(gc, cx-58, cy-18);
-        nature.drawPineTree(gc, cx+28, cy-18);
+        // 5 nhánh 72° tỏa từ tâm (400,400), bùng binh r=170px
+        // Góc: 270°=N, 342°=NE, 54°=SE, 126°=SW, 198°=NW
+        // Các góc tự do nằm giữa các nhánh:
+        // Giữa N(270°) và NE(342°) → ~306°, hướng phải-trên
+        // Giữa NE(342°) và SE(54°) → ~18°, hướng phải
+        // Giữa SE(54°) và SW(126°)→ ~90°, hướng dưới
+        // Giữa SW(126°) và NW(198°)→ ~162°, hướng trái-dưới
+        // Giữa NW(198°) và N(270°) → ~234°, hướng trái-trên
 
+        // Góc phải-trên (giữa N và NE, ~306°): tòa nhà cao tầng
+        building.drawSkyscraper(gc, 560, 30);
+
+        // Góc phải (~18°, Đông xa): bãi đỗ xe
+        parking.drawParkingLotWithCars(gc, 800, 310, 360, 170);
+
+        // Góc dưới (~90°, Nam xa): nhà máy + nhà hàng
+        building.drawModernFactory(gc, 480, 620);
+        building.drawLuxuryRestaurant(gc, 630, 650);
+
+        // Góc trái-dưới (~162°): công viên
+        nature.drawParkWithPond(gc, 20, 530, 230, 220);
+
+        // Góc trái-trên (~234°): nhà phố + cây
         building.drawSkyscraper(gc, 30, 30);
-        building.drawLuxuryHouse(gc, 160, 40);
-        building.drawLuxuryHouse(gc, 155, 140);
-        nature.drawTreeRow(gc, 30, 205, 230, true);
+        building.drawLuxuryHouse(gc, 155, 35);
+        building.drawLuxuryHouse(gc, 150, 145);
+        nature.drawTreeRow(gc, 30, 210, 210, true);
 
-        building.drawLuxuryHouse(gc, 560, 40);
-        parking.drawParkingLotWithCars(gc, 850, 30, 320, 175);
-        nature.drawTreeRow(gc, 555, 205, 300, true);
-
-        nature.drawParkWithPond(gc, 15, 560, 240, 220);
-
-        building.drawModernFactory(gc, 590, 615);
-        building.drawLuxuryRestaurant(gc, 730, 650);
-        building.drawLuxuryHouse(gc, 870, 600);
-        nature.drawTreeRow(gc, 555, 540, 625, true);
-        nature.drawTreeRow(gc, 545, 565, 215, false);
+        // Cây trang trí xa trục đường (góc SE và SW)
+        nature.drawTreeRow(gc, 620, 560, 500, true); // hàng ngang phía dưới
+        nature.drawTreeRow(gc, 830, 20, 520, false); // hàng dọc phía phải
 
         base.drawStreetLights(gc);
     }

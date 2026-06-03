@@ -264,48 +264,52 @@ public class IntersectionLayout {
      * <p>Logic này KHÔNG phụ thuộc vào fourWay — được tính độc lập.</p>
      */
     public static IntersectionLayout threeWay(int cx, int cy) {
-        int lw     = Constants.LANE_WIDTH;
-        int half   = lw / 2;
-        int tzPad  = 15;
+        int lw = Constants.LANE_WIDTH;
+        int half = lw / 2;
+        int tzPad = 15;
         int recPad = 50;
-        int buf    = 70;
+        int buf = 70;
 
         Map<Direction, Arm> arms = new LinkedHashMap<>();
 
-        // NORTH: giống fourWay — làn phải bên phải trục dọc
+        // NORTH (đi lên, y giảm): spawn từ phía TRÊN giao lộ (y âm/nhỏ),
+        // vì đường dọc chỉ có từ trên xuống tâm — không có nhánh xuống.
+        // Xe NORTH đi từ trên xuống tâm rồi rẽ EAST hoặc WEST.
         int nRightX = cx + half;
-        int nLeftX  = cx + half + lw;
+        int nLeftX = cx + half + lw;
         arms.put(Direction.NORTH, new Arm(Direction.NORTH,
-                nLeftX,  0,
+                nLeftX, 0,
                 nRightX, 0,
-                nRightX, Constants.SPAWN_OFFSCREEN_POSITIVE));
+                nRightX, Constants.SPAWN_OFFSCREEN_NEGATIVE)); // spawn từ trên, đi xuống
 
-        // EAST: giống fourWay
+        // EAST (đi phải, x tăng): spawn từ trái màn hình, full width
         int eRightY = cy - half;
-        int eLeftY  = cy - half - lw;
+        int eLeftY = cy - half - lw;
         arms.put(Direction.EAST, new Arm(Direction.EAST,
                 0, eLeftY,
                 0, eRightY,
                 Constants.SPAWN_OFFSCREEN_NEGATIVE, eRightY));
 
-        // WEST: giống fourWay
+        // WEST (đi trái, x giảm): spawn từ phải màn hình, full width
         int wRightY = cy + half;
-        int wLeftY  = cy + half + lw;
+        int wLeftY = cy + half + lw;
         arms.put(Direction.WEST, new Arm(Direction.WEST,
                 0, wLeftY,
                 0, wRightY,
                 Constants.SPAWN_OFFSCREEN_POSITIVE, wRightY));
 
-        // Turn zone bao phủ vùng giao nhau của trục dọc và ngang
+        // Turn zone: vùng kích hoạt rẽ tại giao điểm trục dọc và ngang
         TurnZone tz = new TurnZone(
                 cx - lw - tzPad, cx + lw + tzPad,
                 cy - lw - tzPad, cy + lw + tzPad);
 
+        // recoverLeft/Right/Top/Bottom: vùng reset trạng thái xe sau giao lộ
+        // recoverTop phải đủ xa để xe NORTH không bị reset sớm khi còn trên đường
         return new IntersectionLayout(cx, cy, arms, tz,
                 cx - lw - recPad, cx + lw + recPad,
-                cy - lw - recPad, cy + lw + recPad,
-                cx - lw - buf,    cx + lw + buf,
-                cy - lw - buf,    cy + lw + buf);
+                cy - lw - recPad, cy + lw + recPad, // recoverTop = cy-lw-recPad (~250)
+                cx - lw - buf, cx + lw + buf,
+                cy - lw - buf, cy + lw + buf);
     }
 
     // =========================================================
@@ -332,61 +336,108 @@ public class IntersectionLayout {
      *
      * <p>Spawn: xe NORTHEAST xuất phát từ góc SW, ngoài màn hình.</p>
      */
+    /**
+     * Ngã năm đối xứng: 5 nhánh cách đều nhau 72°.
+     *
+     * <p>
+     * Góc các nhánh (0° = phải, tăng CW theo canvas):
+     * <ul>
+     * <li>Nhánh 0: 270° → NORTH (thẳng lên)</li>
+     * <li>Nhánh 1: 342° → NE (~phải-trên)</li>
+     * <li>Nhánh 2: 54° → SE (~phải-dưới)</li>
+     * <li>Nhánh 3: 126° → SW (~trái-dưới)</li>
+     * <li>Nhánh 4: 198° → NW (~trái-trên)</li>
+     * </ul>
+     * </p>
+     *
+     * <p>
+     * Mỗi nhánh có 2 làn (RIGHT = chiều xe đến, LEFT = chiều xe đi ra).
+     * Spawn cách tâm 650px theo hướng ngược lại của nhánh.
+     * </p>
+     *
+     * <p>
+     * Map từ góc sang Direction gần nhất để tương thích hệ thống cũ:
+     * </p>
+     * 
+     * <pre>
+     *   270° → NORTH
+     *   342° → NORTHEAST  (góc gần nhất có sẵn)
+     *   54°  → EAST        (tạm dùng, xe đi hướng SE)
+     *   126° → SOUTH       (tạm dùng, xe đi hướng SW)
+     *   198° → WEST        (tạm dùng, xe đi hướng NW)
+     * </pre>
+     * 
+     * TODO: Bước 2 — thay Direction enum bằng ArmAngle(double) để xe
+     * di chuyển chính xác theo góc 72°.
+     */
     public static IntersectionLayout fiveWay(int cx, int cy) {
-        int lw     = Constants.LANE_WIDTH;
-        int half   = lw / 2;
-        int tzPad  = 15;
-        int recPad = 50;
-        int buf    = 70;
+        int lw = Constants.LANE_WIDTH;
+        int half = lw / 2;
+        int tzPad = 20;
+        int recPad = 80;
+        int buf = 90;
+
+        // Bán kính bùng binh — xe cần vào vùng này mới trigger rẽ
+        int roundaboutR = 170;
 
         Map<Direction, Arm> arms = new LinkedHashMap<>();
 
-        // --- 4 hướng chính (tính độc lập, không copy từ fourWay) ---
-        addCardinalArms(arms, cx, cy);
+        // 5 góc nhánh (độ, 0°=phải, CW). Nhánh 0 = NORTH = 270°
+        double[] branchAngles = { 270, 342, 54, 126, 198 };
 
-        // --- NORTHEAST ---
-        // Hướng di chuyển: (1, -1)/√2 (x tăng, y giảm → phải-trên trong canvas)
-        // Vuông góc CW (sang phải khi nhìn theo hướng đi):
-        //   rotate (1,-1) 90° CW = (-1, -1) → normalize → (-1/√2, -1/√2)
-        // => offset "sang phải" trong hệ canvas là về phía (-x, -y)
-        double sq2 = Math.sqrt(2.0);
+        // Direction map tương ứng (tạm thời dùng Direction gần nhất)
+        Direction[] dirs = {
+                Direction.NORTH,
+                Direction.NORTHEAST,
+                Direction.EAST,
+                Direction.SOUTH,
+                Direction.WEST
+        };
 
-        // Làn RIGHT: tâm + half * (-1/√2, -1/√2)
-        int neRightX = cx + (int) Math.round(-half / sq2);
-        int neRightY = cy + (int) Math.round(-half / sq2);
+        double spawnDist = 700.0;
 
-        // Làn LEFT: tâm + (half + lw) * (-1/√2, -1/√2)
-        int neLeftX = cx + (int) Math.round(-(half + lw) / sq2);
-        int neLeftY = cy + (int) Math.round(-(half + lw) / sq2);
+        for (int i = 0; i < 5; i++) {
+            double angleDeg = branchAngles[i];
+            double rad = Math.toRadians(angleDeg);
 
-        // Spawn từ góc SW, khoảng cách đủ xa ngoài màn hình
-        // Hướng ngược NORTHEAST là SW: (-1/√2, 1/√2)
-        // spawnDist = khoảng cách từ tâm đến điểm spawn
-        double spawnDist = 650.0;
-        double neSpawnX = cx - spawnDist / sq2;
-        double neSpawnY = cy + spawnDist / sq2;
+            // Vector hướng nhánh (từ tâm ra ngoài)
+            double dx = Math.cos(rad); // x tăng sang phải
+            double dy = Math.sin(rad); // y tăng xuống (canvas)
 
-        arms.put(Direction.NORTHEAST, new Arm(Direction.NORTHEAST,
-                neLeftX,  neLeftY,
-                neRightX, neRightY,
-                neSpawnX, neSpawnY));
+            // Vector vuông góc sang PHẢI khi nhìn theo hướng đi (CW 90°)
+            // rotate(dx,dy) 90° CW → (dy, -dx)
+            double perpX = dy;
+            double perpY = -dx;
 
-        // Turn zone: bùng binh lớn hơn ngã tư thường để xe chéo có không gian
-        // Dùng padding lớn hơn vì xe từ 5 hướng hội tụ
-        int tzPad5 = 20;
+            // Làn RIGHT: offset nửa làn sang phải
+            int rightX = cx + (int) Math.round(perpX * half);
+            int rightY = cy + (int) Math.round(perpY * half);
+
+            // Làn LEFT: offset 1.5 làn sang phải (= half + lw)
+            int leftX = cx + (int) Math.round(perpX * (half + lw));
+            int leftY = cy + (int) Math.round(perpY * (half + lw));
+
+            // Spawn: từ bên ngoài màn hình, đi ngược chiều nhánh vào
+            double spawnX = cx - dx * spawnDist;
+            double spawnY = cy - dy * spawnDist;
+
+            arms.put(dirs[i], new Arm(dirs[i],
+                    leftX, leftY,
+                    rightX, rightY,
+                    spawnX, spawnY));
+        }
+
+        // TurnZone = hình tròn bùng binh, xấp xỉ bằng bounding box
         TurnZone tz = new TurnZone(
-                cx - lw - tzPad5, cx + lw + tzPad5,
-                cy - lw - tzPad5, cy + lw + tzPad5);
+                cx - roundaboutR, cx + roundaboutR,
+                cy - roundaboutR, cy + roundaboutR);
 
-        // Vùng recover và check rộng hơn ngã tư vì có đường chéo
-        int recPad5 = 60;
-        int buf5    = 80;
-
+        // Vùng recover và check rộng hơn vì 5 nhánh tỏa nhiều hướng
         return new IntersectionLayout(cx, cy, arms, tz,
-                cx - lw - recPad5, cx + lw + recPad5,
-                cy - lw - recPad5, cy + lw + recPad5,
-                cx - lw - buf5,    cx + lw + buf5,
-                cy - lw - buf5,    cy + lw + buf5);
+                cx - roundaboutR - recPad, cx + roundaboutR + recPad,
+                cy - roundaboutR - recPad, cy + roundaboutR + recPad,
+                cx - roundaboutR - buf, cx + roundaboutR + buf,
+                cy - roundaboutR - buf, cy + roundaboutR + buf);
     }
 
     // =========================================================

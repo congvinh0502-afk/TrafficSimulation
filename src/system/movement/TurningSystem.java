@@ -24,24 +24,68 @@ public class TurningSystem {
     // ==========================================================
 
     public void handleTurning(Vehicle vehicle, IntersectionLayout layout) {
-        if (vehicle.hasTurned()) return;
+        if (vehicle.hasTurned())
+            return;
 
-        double hw = vehicle.getWidth()  / 2;
+        double hw = vehicle.getWidth() / 2;
         double hh = vehicle.getHeight() / 2;
 
-        if (!layout.getTurnZone().contains(vehicle.getX(), vehicle.getY(), hw, hh)) return;
+        if (!layout.getTurnZone().contains(vehicle.getX(), vehicle.getY(), hw, hh))
+            return;
 
         switch (vehicle.getTurnType()) {
             case LEFT: {
                 Direction target = DirectionHelper.getLeftDirection(vehicle.getDirection());
-                if (!layout.hasDirection(target)) return;
-                initiateTurnLeft(vehicle);
+                if (!layout.hasDirection(target)) {
+                    // Hướng rẽ trái không tồn tại — fallback sang phải
+                    Direction fallback = DirectionHelper.getRightDirection(vehicle.getDirection());
+                    if (!layout.hasDirection(fallback))
+                        return;
+                    initiateTurnRight(vehicle);
+                    vehicle.setTurnType(util.TurnType.RIGHT);
+                } else {
+                    initiateTurnLeft(vehicle);
+                }
                 break;
             }
             case RIGHT: {
                 Direction target = DirectionHelper.getRightDirection(vehicle.getDirection());
-                if (!layout.hasDirection(target)) return;
-                initiateTurnRight(vehicle);
+                if (!layout.hasDirection(target)) {
+                    // Hướng rẽ phải không tồn tại — fallback sang trái
+                    Direction fallback = DirectionHelper.getLeftDirection(vehicle.getDirection());
+                    if (!layout.hasDirection(fallback))
+                        return;
+                    initiateTurnLeft(vehicle);
+                    vehicle.setTurnType(util.TurnType.LEFT);
+                } else {
+                    initiateTurnRight(vehicle);
+                }
+                break;
+            }
+            case STRAIGHT: {
+                // Kiểm tra hướng đối diện có tồn tại không
+                Direction opposite = vehicle.getDirection().opposite();
+                if (!layout.hasDirection(opposite)) {
+                    // Không thể đi thẳng (3-way không có nhánh đối diện)
+                    // Rẽ ngẫu nhiên sang trái hoặc phải
+                    Direction left = DirectionHelper.getLeftDirection(vehicle.getDirection());
+                    Direction right = DirectionHelper.getRightDirection(vehicle.getDirection());
+                    boolean canLeft = layout.hasDirection(left);
+                    boolean canRight = layout.hasDirection(right);
+                    if (canLeft && canRight) {
+                        if (Math.random() < 0.5)
+                            initiateTurnLeft(vehicle);
+                        else
+                            initiateTurnRight(vehicle);
+                    } else if (canLeft)
+                        initiateTurnLeft(vehicle);
+                    else if (canRight)
+                        initiateTurnRight(vehicle);
+                    else
+                        return;
+                } else {
+                    return; // đi thẳng bình thường
+                }
                 break;
             }
             default:
