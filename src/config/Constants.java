@@ -89,11 +89,11 @@ public final class Constants {
     // =========================================================
     public static final double TURN_FINISH_TOLERANCE    = 5.0;
     public static final double ROTATE_SPEED             = 2.5;
-    public static final double TURNING_SPEED_FACTOR     = 0.35;
+    public static final double TURNING_SPEED_FACTOR     = 0.2;
     public static final double LANE_ALIGN_SMOOTH_FACTOR = 0.12;
     public static final double LANE_ALIGN_MAX_SMOOTH    = 2.0;
     public static final double LANE_CHANGE_SMOOTH       = 0.7;
-    public static final double LANE_CHANGE_SNAP_THRESH  = 3.0;
+    public static final double LANE_CHANGE_SNAP_THRESHOLD = 3.0;
     public static final double POST_TURN_ALIGN_FACTOR   = 0.18;
     public static final double POST_TURN_SNAP_THRESHOLD = 2.5;
 

@@ -7,3 +7,4 @@
 (+) thêm hệ thống di chuyển góc quay phóng to, thu nhỏ màn hình [Minh]
 (*) khoảng cách `direction` của `lane` hiện tại đang sử dụng "north", "south",..... Đề xuất thay đổi bằng vector [Minh]
 (*) các phương tiện hiện đang teleport ở ngã rẽ, chưa tìm thấy nguyên nhân [Minh]
+(-) cho các xe chạy chậm lại [toàn]
