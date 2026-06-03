@@ -12,6 +12,7 @@
 8. (-) xe di chuyển trên 3-way như 4-way, 3-way lỗi xe chạy trên cỏ {Hương}
 9. (*) xe di chuyển không thẳng [Hương]
 10.(-) cho xe chay cham lai [toan]
+<<<<<<< HEAD
 11.(/) bo sung them am thanh cho cac loai xe [toan]
 12.(-) 3-way và 5-way đang bị phụ thuộc vào logic phát triển của 4-way -> lỗi, cần fix lại logic intersect {Hương}
 13.(-) 5-way đang là 4 nhánh vuông + 1 nhánh chéo -> 5 nhánh đều {Hương}
