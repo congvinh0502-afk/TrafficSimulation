@@ -4,46 +4,44 @@ import config.Constants;
 import model.vehicle.Vehicle;
 
 /**
- * Hệ thống di chuyển chính của xe mỗi frame.
+ * Hệ thống di chuyển chính — áp dụng gia tốc mỗi frame.
  *
- * <p>
- * Trước khi gọi {@link Vehicle#move()}, reset trạng thái bị kẹt
- * cho xe đã ra khỏi vùng giao lộ ({@link #recoverAfterIntersection}).
- * Điều này đảm bảo xe không bị đóng băng sau khi rẽ xong.
+ * <p>Thứ tự:
+ * <ol>
+ *   <li>Nếu xe bị stopped → reset gia tốc về 0, dừng.</li>
+ *   <li>Áp dụng gia tốc: {@code speed = clamp(speed + acc, 0, maxSpeed)}.</li>
+ *   <li>Kiểm tra ra khỏi vùng giao lộ để reset trạng thái.</li>
+ *   <li>Gọi {@code vehicle.move()} — dịch chuyển theo vectơ.</li>
+ * </ol>
  * </p>
  */
 public class VehicleMovementSystem {
 
-    /**
-     * Di chuyển xe một bước nếu không bị dừng.
-     * Trước tiên kiểm tra xe đã thoát khỏi vùng giao lộ chưa.
-     *
-     * @param vehicle xe cần cập nhật
-     */
     public void move(Vehicle vehicle) {
-        recoverAfterIntersection(vehicle);
-        if (!vehicle.isStopped()) {
-            vehicle.move();
+        if (vehicle.isStopped()) {
+            vehicle.setSpeed(Math.max(0, vehicle.getSpeed() - Constants.MAX_BRAKE_DECEL));
+            return;
         }
+
+        // Áp dụng gia tốc (clamp [0, maxSpeed])
+        double newSpeed = vehicle.getSpeed() + vehicle.getAcceleration();
+        newSpeed = Math.max(0, Math.min(vehicle.getMaxSpeed(), newSpeed));
+        vehicle.setSpeed(newSpeed);
+
+        recoverAfterIntersection(vehicle);
+        vehicle.move();
     }
 
     /**
-     * Reset trạng thái kẹt khi xe đã hoàn toàn ra khỏi vùng giao lộ.
-     *
-     * <p>
-     * Vùng giao lộ mở rộng ({@link Constants#RECOVER_LEFT} ..
-     * {@link Constants#RECOVER_RIGHT}) cho phép xe kết thúc animation
-     * rẽ trước khi bị reset, tránh snap sai vị trí.
-     * </p>
+     * Reset trạng thái kẹt khi xe đã ra khỏi vùng giao lộ.
      */
     private void recoverAfterIntersection(Vehicle vehicle) {
         boolean outside = vehicle.getX() < Constants.RECOVER_LEFT
-                || vehicle.getX() > Constants.RECOVER_RIGHT
-                || vehicle.getY() < Constants.RECOVER_TOP
-                || vehicle.getY() > Constants.RECOVER_BOTTOM;
+                       || vehicle.getX() > Constants.RECOVER_RIGHT
+                       || vehicle.getY() < Constants.RECOVER_TOP
+                       || vehicle.getY() > Constants.RECOVER_BOTTOM;
 
-        if (!outside)
-            return;
+        if (!outside) return;
 
         vehicle.setStopped(false);
         vehicle.setChangingLane(false);
