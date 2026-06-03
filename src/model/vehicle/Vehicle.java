@@ -1,3 +1,4 @@
+
 package model.vehicle;
 
 import util.Direction;
@@ -34,6 +35,11 @@ public abstract class Vehicle {
     protected boolean changingLane;
     protected Lane targetLane;
     private int laneChangeCooldown = 0;
+
+    // Offset lách vượt xe trong cùng lane (CollisionSystem set, LaneAlignmentSystem đọc)
+    // Tách riêng khỏi targetX/Y để không xung đột với TurningSystem
+    private double overtakeOffsetX = 0;
+    private double overtakeOffsetY = 0;
     public Vehicle(double x, double y, Direction direction) {
         this.x = x;
         this.y = y;
@@ -45,7 +51,7 @@ public abstract class Vehicle {
             case SOUTH:     angle = 90;  break;
             case WEST:      angle = 180; break;
             case NORTH:     angle = -90; break;
-            case NORTHEAST: angle = -18; break; // FIX: Đồng bộ góc 342 độ với Render
+            case NORTHEAST: angle = -18; break; // FIX: Äá»“ng bá»™ gÃ³c 342 Ä‘á»™ vá»›i Render
         }
     }
 
@@ -204,5 +210,11 @@ public void setSpeed(double speed) {
 public double getSpeed() {
     return speed;
 }
+
+public double getOvertakeOffsetX() { return overtakeOffsetX; }
+public void   setOvertakeOffsetX(double v) { this.overtakeOffsetX = v; }
+
+public double getOvertakeOffsetY() { return overtakeOffsetY; }
+public void   setOvertakeOffsetY(double v) { this.overtakeOffsetY = v; }
 
 }

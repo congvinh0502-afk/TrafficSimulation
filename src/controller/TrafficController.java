@@ -10,12 +10,17 @@ import system.vehicle.VehicleUpdatePipeline;
 
 import util.Direction;
 
+/**
+ * TrafficController – điều phối cập nhật xe.
+ *
+ * FIX: Gọi pipeline.updateAll() thay vì loop pipeline.update() thủ công,
+ *      để EmergencyVehicleSystem được chạy một lần trước toàn bộ xe.
+ */
 public class TrafficController {
 
     private VehicleUpdatePipeline pipeline;
 
     public TrafficController() {
-
         pipeline = new VehicleUpdatePipeline();
     }
 
@@ -25,17 +30,8 @@ public class TrafficController {
             TrafficLight horizontalLight,
             IntersectionType type
     ) {
-
-        for (Vehicle vehicle : vehicles) {
-
-            pipeline.update(
-                    vehicle,
-                    vehicles,
-                    verticalLight,
-                    horizontalLight,
-                    type
-            );
-        }
+        // FIX: dùng updateAll() để EmergencyVehicleSystem chạy trước
+        pipeline.updateAll(vehicles, verticalLight, horizontalLight, type);
     }
 
     public int countVehiclesByDirection(
