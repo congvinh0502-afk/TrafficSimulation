@@ -1,7 +1,7 @@
 package system.traffic;
 
 import config.Constants;
-import math.Vector2D;
+import model.intersection.IntersectionLayout;
 import model.trafficlight.LightColor;
 import model.trafficlight.TrafficLight;
 import model.vehicle.Vehicle;
@@ -11,16 +11,8 @@ import util.Direction;
 import java.util.List;
 
 /**
- * Hệ thống quy tắc giao thông — đèn đỏ gây phanh dần, không dừng ngay.
- *
- * <p>Thay đổi so với phiên bản cũ:
- * <ul>
- *   <li>Khi tiến vào vùng đèn đỏ, đặt {@code acceleration} âm tỉ lệ
- *       với khoảng cách còn lại đến vạch dừng.</li>
- *   <li>Chỉ khi đã đủ gần (speed ≈ 0 và gần vạch) mới set stopped=true.</li>
- *   <li>THREE_WAY không có đèn ngang — không áp dụng đèn ngang.</li>
- * </ul>
- * </p>
+ * Hệ thống quy tắc giao thông.
+ * Dùng IntersectionLayout để lấy vùng check và stop line chính xác.
  */
 public class TrafficRuleSystem {
 
@@ -33,72 +25,61 @@ public class TrafficRuleSystem {
     public void checkTrafficLight(Vehicle vehicle,
                                   TrafficLight verticalLight,
                                   TrafficLight horizontalLight,
-                                  List<Vehicle> vehicles) {
+                                  List<Vehicle> vehicles,
+                                  IntersectionLayout layout) {
         if (vehicle.isTurning()) return;
 
-        Direction dir     = vehicle.getDirection();
-        TrafficLight light = selectLight(dir, verticalLight, horizontalLight);
+        Direction dir = vehicle.getDirection();
+        // Chỉ áp dụng đèn ngang nếu layout có hướng EAST/WEST
+        TrafficLight light = selectLight(dir, verticalLight, horizontalLight, layout);
         if (light == null) return;
 
-        double distToStop = distanceToStopLine(vehicle, dir);
-
-        if (distToStop > Constants.BRAKE_START_DISTANCE) {
-            // Xa đèn — không ảnh hưởng từ đèn
-            return;
-        }
+        double distToStop = distanceToStopLine(vehicle, dir, layout);
+        if (distToStop > Constants.BRAKE_START_DISTANCE) return;
 
         boolean mustStop   = shouldStopForLight(vehicle, vehicles, light);
-        boolean blockedInt = !collisionSystem.canEnterIntersection(vehicle, vehicles);
+        boolean blockedInt = !collisionSystem.canEnterIntersection(vehicle, vehicles, layout);
 
         if (mustStop || blockedInt) {
             if (distToStop <= 0 || vehicle.getSpeed() < 0.3) {
-                // Đã đến vạch dừng hoặc gần như dừng
                 vehicle.setStopped(true);
                 vehicle.setAcceleration(0);
             } else {
-                // Giảm tốc dần tỉ lệ khoảng cách
-                double ratio  = Math.max(0, Math.min(1, 1.0 - distToStop / Constants.BRAKE_START_DISTANCE));
-                double decel  = -Constants.MAX_BRAKE_DECEL * (0.3 + 0.7 * ratio);
-                vehicle.setAcceleration(decel);
+                double ratio = Math.max(0, Math.min(1, 1.0 - distToStop / Constants.BRAKE_START_DISTANCE));
+                vehicle.setAcceleration(-Constants.MAX_BRAKE_DECEL * (0.3 + 0.7 * ratio));
             }
         }
-        // else: acceleration không bị thay đổi ở đây
-        // (CollisionSystem hoặc VehicleMovementSystem quản lý acceleration bình thường)
     }
 
-    // --------------------------------------------------------
-    // Tiện ích nội bộ
     // --------------------------------------------------------
 
     private TrafficLight selectLight(Direction dir,
                                      TrafficLight vertical,
-                                     TrafficLight horizontal) {
+                                     TrafficLight horizontal,
+                                     IntersectionLayout layout) {
         switch (dir) {
-            case NORTH: case SOUTH:   return vertical;
-            case EAST:  case WEST:    return horizontal;
-            default:                  return null; // NORTHEAST không có đèn
+            case NORTH: case SOUTH: return vertical;
+            case EAST:  case WEST:
+                // Chỉ dùng đèn ngang nếu layout có hướng EAST và WEST
+                return (layout.hasDirection(Direction.EAST) && layout.hasDirection(Direction.WEST))
+                        ? horizontal : null;
+            default: return null;
         }
     }
 
-    private boolean shouldStopForLight(Vehicle vehicle,
-                                        List<Vehicle> vehicles,
-                                        TrafficLight light) {
+    private boolean shouldStopForLight(Vehicle vehicle, List<Vehicle> vehicles, TrafficLight light) {
         if (vehicle.getBehavior() != null) {
             return vehicle.getBehavior().shouldStop(vehicle, vehicles, light);
         }
         return light.getColor() == LightColor.RED;
     }
 
-    /**
-     * Khoảng cách px từ mũi xe đến vạch dừng.
-     * Giá trị âm nghĩa là đã qua vạch.
-     */
-    private double distanceToStopLine(Vehicle vehicle, Direction dir) {
-        int cl = Constants.INTERSECTION_CHECK_LEFT;
-        int cr = Constants.INTERSECTION_CHECK_RIGHT;
-        int ct = Constants.INTERSECTION_CHECK_TOP;
-        int cb = Constants.INTERSECTION_CHECK_BOTTOM;
+    private double distanceToStopLine(Vehicle vehicle, Direction dir, IntersectionLayout layout) {
         int off = Constants.STOP_SENSOR_OFFSET;
+        int cl  = layout.getCheckLeft();
+        int cr  = layout.getCheckRight();
+        int ct  = layout.getCheckTop();
+        int cb  = layout.getCheckBottom();
 
         switch (dir) {
             case SOUTH: return ct - (vehicle.getY() + off);

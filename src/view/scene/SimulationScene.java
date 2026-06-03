@@ -31,6 +31,7 @@ import javafx.stage.Stage;
 import manager.SoundManager;
 import manager.VehicleSpawnManager;
 import model.SimulationConfig;
+import model.intersection.IntersectionLayout;
 import model.intersection.IntersectionType;
 import model.trafficlight.LightColor;
 import model.trafficlight.TrafficLight;
@@ -44,30 +45,17 @@ import view.renderer.VehicleRenderer;
 
 /**
  * Màn hình mô phỏng (JavaFX).
- *
- * <p>Tính năng:
- * <ul>
- *   <li>AnimationTimer 60fps thay cho Swing Timer.</li>
- *   <li>Canvas + Camera (scroll = zoom, drag = pan, R = reset).</li>
- *   <li>HUD thống kê góc trên-trái.</li>
- *   <li>Nút "⚙ Settings" mở dropdown chỉnh sửa khi đang chạy.</li>
- *   <li>Nút "← Menu" quay về menu bất cứ lúc nào.</li>
- * </ul>
- * </p>
+ * Nay dùng IntersectionLayout thay vì IntersectionType cho logic xe.
  */
 public class SimulationScene {
 
-    // --------------------------------------------------------
-    // Scene + Camera
-    // --------------------------------------------------------
     private final Scene  scene;
     private final Canvas canvas;
     private final Camera camera = new Camera();
 
-    // --------------------------------------------------------
-    // Dữ liệu mô phỏng
-    // --------------------------------------------------------
-    private SimulationConfig config;
+    private final SimulationConfig config;
+    private final IntersectionLayout layout;   // ← layout chính xác cho loại giao lộ
+
     private final List<Vehicle> vehicles = new ArrayList<>();
 
     private TrafficLight verticalLight;
@@ -77,16 +65,10 @@ public class SimulationScene {
     private final VehicleSpawnManager    spawnManager;
     private final EmergencyVehicleSystem emergencySystem;
 
-    // --------------------------------------------------------
-    // Renderer
-    // --------------------------------------------------------
-    private final EnvironmentRenderer  envRenderer   = new EnvironmentRenderer();
-    private final TrafficLightRenderer lightRenderer = new TrafficLightRenderer();
+    private final EnvironmentRenderer  envRenderer    = new EnvironmentRenderer();
+    private final TrafficLightRenderer lightRenderer  = new TrafficLightRenderer();
     private final VehicleRenderer      vehicleRenderer = new VehicleRenderer();
 
-    // --------------------------------------------------------
-    // Trạng thái HUD / thống kê
-    // --------------------------------------------------------
     private int    spawnCounter = 0;
     private int    fps          = 0;
     private int    frameCount   = 0;
@@ -95,20 +77,12 @@ public class SimulationScene {
     private boolean flash       = false;
     private int    flashCounter = 0;
 
-    // --------------------------------------------------------
-    // Runtime settings (dropdown)
-    // --------------------------------------------------------
     private int    runtimeVehicleCount;
     private TrafficDensity runtimeDensity;
 
-    // --------------------------------------------------------
-    // UI overlay elements
-    // --------------------------------------------------------
     private Label hudLabel;
-
     private final Stage primaryStage;
     private AnimationTimer gameTimer;
-    // Thêm vào khu vực "Trạng thái HUD / thống kê"
     private boolean isPaused = false;
 
     // ==========================================================
@@ -116,20 +90,21 @@ public class SimulationScene {
     // ==========================================================
 
     public SimulationScene(Stage primaryStage, SimulationConfig config) {
-        this.primaryStage         = primaryStage;
-        this.config               = config;
-        this.runtimeVehicleCount  = config.getVehicleCount();
-        this.runtimeDensity       = config.getTrafficDensity();
+        this.primaryStage        = primaryStage;
+        this.config              = config;
+        this.runtimeVehicleCount = config.getVehicleCount();
+        this.runtimeDensity      = config.getTrafficDensity();
 
-        // Khởi đèn
+        // Tạo layout từ loại giao lộ — tâm mặc định (400,400)
+        this.layout = config.getIntersectionType().createLayout();
+
         verticalLight   = new TrafficLight(LightColor.GREEN, Constants.LIGHT_GREEN_DURATION);
         horizontalLight = new TrafficLight(LightColor.RED,   Constants.LIGHT_RED_DURATION);
 
         trafficController = new TrafficController();
-        spawnManager      = new VehicleSpawnManager(vehicles);
+        spawnManager      = new VehicleSpawnManager(vehicles, layout);
         emergencySystem   = new EmergencyVehicleSystem();
 
-        // Xây UI
         canvas = new Canvas(Constants.WINDOW_WIDTH, Constants.WINDOW_HEIGHT);
         StackPane root = buildUI();
 
@@ -144,39 +119,32 @@ public class SimulationScene {
     }
 
     // ==========================================================
-    // Xây giao diện
+    // UI
     // ==========================================================
 
     private StackPane buildUI() {
         StackPane root = new StackPane();
-
-        // --- Tầng 1: Canvas mô phỏng ---
         canvas.widthProperty().bind(root.widthProperty());
         canvas.heightProperty().bind(root.heightProperty());
         root.getChildren().add(canvas);
 
-        // --- Tầng 2: Overlay (HUD + controls) ---
         BorderPane overlay = new BorderPane();
         overlay.setPickOnBounds(false);
 
-        // HUD góc trên-trái
         hudLabel = new Label();
         hudLabel.setFont(Font.font("Monospaced", FontWeight.BOLD, 13));
         hudLabel.setTextFill(Color.WHITE);
-        hudLabel.setStyle("-fx-background-color: rgba(0,0,0,0.65); " +
-                "-fx-background-radius: 10; -fx-padding: 12;");
+        hudLabel.setStyle("-fx-background-color: rgba(0,0,0,0.65); -fx-background-radius: 10; -fx-padding: 12;");
         hudLabel.setMouseTransparent(true);
         BorderPane.setMargin(hudLabel, new Insets(16));
         overlay.setLeft(hudLabel);
 
-        // Thanh nút góc trên-phải
         HBox topRight = buildTopRightBar();
         BorderPane.setMargin(topRight, new Insets(16));
         overlay.setRight(topRight);
 
         overlay.setPickOnBounds(false);
         root.getChildren().add(overlay);
-
         return root;
     }
 
@@ -184,37 +152,26 @@ public class SimulationScene {
         HBox bar = new HBox(10);
         bar.setAlignment(Pos.TOP_RIGHT);
 
-        // --- Nút quay về menu ---
         Button menuBtn = new Button("← Menu");
         styleControlBtn(menuBtn, "#C62828");
         menuBtn.setOnAction(e -> returnToMenu());
 
-        // --- Nút tạm dừng ---
         Button pauseBtn = new Button("⏸ Pause");
         styleControlBtn(pauseBtn, "#37474F");
         pauseBtn.setOnAction(e -> {
             isPaused = !isPaused;
-            if (isPaused) {
-                SoundManager.getInstance().muteAll();  // tắt tiếng ngay
-                pauseBtn.setText("▶ Resume");
-            } else {
-                pauseBtn.setText("⏸ Pause");
-                // tiếng tự phục hồi ở frame tiếp theo qua updateVehicleSound()
-            }
+            if (isPaused) { SoundManager.getInstance().muteAll(); pauseBtn.setText("▶ Resume"); }
+            else          { pauseBtn.setText("⏸ Pause"); }
         });
 
-        // --- Nút Settings (dropdown) ---
-        MenuButton settingsBtn = buildSettingsMenu();
-
-        bar.getChildren().addAll(menuBtn, pauseBtn, settingsBtn);
+        bar.getChildren().addAll(menuBtn, pauseBtn, buildSettingsMenu());
         return bar;
     }
+
     private MenuButton buildSettingsMenu() {
         MenuButton btn = new MenuButton("⚙ Settings");
-        btn.setStyle("-fx-background-color: #455A64; -fx-text-fill: white; " +
-                "-fx-font-size: 13px; -fx-background-radius: 8; -fx-cursor: hand;");
+        btn.setStyle("-fx-background-color: #455A64; -fx-text-fill: white; -fx-font-size: 13px; -fx-background-radius: 8; -fx-cursor: hand;");
 
-        // -- Mật độ xe --
         Menu densityMenu = new Menu("Traffic Density");
         ToggleGroup dg = new ToggleGroup();
         for (TrafficDensity d : TrafficDensity.values()) {
@@ -226,7 +183,6 @@ public class SimulationScene {
         }
         btn.getItems().add(densityMenu);
 
-        // -- Số lượng xe --
         Menu countMenu = new Menu("Max Vehicles");
         for (int v : new int[]{10, 20, 30, 50, 80, 100}) {
             MenuItem item = new MenuItem(String.valueOf(v));
@@ -234,14 +190,12 @@ public class SimulationScene {
             countMenu.getItems().add(item);
         }
         btn.getItems().add(countMenu);
-
-        // -- Chế độ đèn (toggle manual/auto) --
         btn.getItems().add(new SeparatorMenuItem());
+
         MenuItem lightToggle = new MenuItem("Toggle Manual/Auto Light");
         lightToggle.setOnAction(e -> toggleLightMode());
         btn.getItems().add(lightToggle);
 
-        // -- Reset camera --
         MenuItem resetCam = new MenuItem("Reset Camera");
         resetCam.setOnAction(e -> camera.reset());
         btn.getItems().add(resetCam);
@@ -250,50 +204,37 @@ public class SimulationScene {
     }
 
     private void styleControlBtn(Button btn, String bg) {
-        btn.setStyle("-fx-background-color: " + bg + "; -fx-text-fill: white; " +
-                "-fx-font-size: 13px; -fx-font-weight: bold; " +
-                "-fx-background-radius: 8; -fx-cursor: hand;");
+        btn.setStyle("-fx-background-color: " + bg + "; -fx-text-fill: white; -fx-font-size: 13px; -fx-font-weight: bold; -fx-background-radius: 8; -fx-cursor: hand;");
     }
 
     // ==========================================================
-    // Sự kiện camera
+    // Camera
     // ==========================================================
 
     private void bindCameraEvents() {
-        // Scroll → zoom
         canvas.setOnScroll(camera::handleScroll);
-
-        // Drag → pan
-        canvas.setOnMousePressed(e -> camera.startDrag(e.getX(), e.getY()));
-        canvas.setOnMouseDragged(e -> camera.drag(e.getX(), e.getY()));
+        canvas.setOnMousePressed(e  -> camera.startDrag(e.getX(), e.getY()));
+        canvas.setOnMouseDragged(e  -> camera.drag(e.getX(), e.getY()));
         canvas.setOnMouseReleased(e -> camera.stopDrag());
-
-        // Click trái thủ công (MANUAL mode)
-        canvas.setOnMouseClicked(e -> {
-            if (config.getTrafficMode().equals("MANUAL")) {
+        canvas.setOnMouseClicked(e  -> {
+            if (config.getTrafficMode().equals("MANUAL"))
                 handleManualLightClick(camera.toWorldX(e.getX()), camera.toWorldY(e.getY()));
-            }
         });
     }
 
     private void bindKeyboard() {
-        scene.setOnKeyPressed(e -> {
-            if (e.getCode() == KeyCode.R) camera.reset();
-        });
+        scene.setOnKeyPressed(e -> { if (e.getCode() == KeyCode.R) camera.reset(); });
     }
 
     // ==========================================================
-    // Vòng lặp game
+    // Game loop
     // ==========================================================
 
     private void startGameLoop() {
         gameTimer = new AnimationTimer() {
-            @Override
-            public void handle(long now) {
-                if (!isPaused) {
-                    updateSimulation();   // logic + sound
-                }
-                render();                 // vẫn render để UI không đơ
+            @Override public void handle(long now) {
+                if (!isPaused) updateSimulation();
+                render();
                 updateFPS(now);
             }
         };
@@ -301,14 +242,14 @@ public class SimulationScene {
     }
 
     // ==========================================================
-    // Cập nhật logic
+    // Logic
     // ==========================================================
 
     private void updateSimulation() {
-        vehicles.removeIf(v -> !config.getIntersectionType().getDirections().contains(v.getDirection()));
+        // Xóa xe không thuộc hướng hợp lệ của layout này
+        vehicles.removeIf(v -> !layout.hasDirection(v.getDirection()));
 
-        trafficController.updateVehicles(vehicles, verticalLight, horizontalLight,
-                config.getIntersectionType());
+        trafficController.updateVehicles(vehicles, verticalLight, horizontalLight, layout);
 
         if (!config.getTrafficMode().equals("MANUAL")) {
             verticalLight.update();
@@ -331,11 +272,9 @@ public class SimulationScene {
         GraphicsContext gc = canvas.getGraphicsContext2D();
         double w = canvas.getWidth(), h = canvas.getHeight();
 
-        // Nền
         gc.setFill(Color.GRAY);
         gc.fillRect(0, 0, w, h);
 
-        // World (camera transform)
         camera.applyTransform(gc);
 
         switch (config.getIntersectionType()) {
@@ -346,38 +285,36 @@ public class SimulationScene {
 
         for (Vehicle v : vehicles) vehicleRenderer.render(gc, v, flash);
 
-        // Đèn giao thông (không hiện đèn ngang cho ngã ba)
-        lightRenderer.render(gc, verticalLight,   520, 250, config.getLightType());
-        if (config.getIntersectionType() != IntersectionType.THREE_WAY) {
-            lightRenderer.render(gc, horizontalLight, 250, 520, config.getLightType());
+        // Vị trí đèn dựa trên layout.cx/cy
+        int lcx = layout.getCx();
+        int lcy = layout.getCy();
+        int lw  = Constants.LANE_WIDTH;
+
+        lightRenderer.render(gc, verticalLight,
+                lcx + lw + 20, lcy - lw - 130, config.getLightType());
+
+        if (layout.hasDirection(Direction.EAST) && layout.hasDirection(Direction.WEST)) {
+            lightRenderer.render(gc, horizontalLight,
+                    lcx - lw - 70, lcy + lw + 20, config.getLightType());
         }
 
         camera.restoreTransform(gc);
-
-        // HUD (screen space — không qua camera)
         updateHUD();
     }
 
     private void updateHUD() {
         int stopped = trafficController.countStoppedVehicles(vehicles);
         hudLabel.setText(String.format(
-                "  Vehicles : %d / %d%n" +
-                "  Stopped  : %d%n" +
-                "  FPS      : %d%n" +
-                "  Jam      : %s%n" +
-                "  V-Light  : %s%n" +
-                "  H-Light  : %s%n" +
-                "  Zoom     : %.0f%%%n" +
-                "  [Scroll] Zoom  [Drag] Pan  [R] Reset",
-                vehicles.size(), runtimeVehicleCount,
-                stopped, fps, jamLevel,
+                "  Vehicles : %d / %d%n  Stopped  : %d%n  FPS      : %d%n" +
+                "  Jam      : %s%n  V-Light  : %s%n  H-Light  : %s%n" +
+                "  Zoom     : %.0f%%%n  [Scroll] Zoom  [Drag] Pan  [R] Reset",
+                vehicles.size(), runtimeVehicleCount, stopped, fps, jamLevel,
                 verticalLight.getColor(), horizontalLight.getColor(),
-                camera.getZoom() * 100
-        ));
+                camera.getZoom() * 100));
     }
 
     // ==========================================================
-    // Đèn giao thông
+    // Đèn
     // ==========================================================
 
     private void syncHorizontalLight() {
@@ -410,7 +347,7 @@ public class SimulationScene {
             switch (v.getDirection()) {
                 case NORTH: case SOUTH:
                     if (verticalLight.getColor()   == LightColor.RED) forceGreen(verticalLight, horizontalLight); break;
-                case EAST:  case WEST:
+                case EAST: case WEST:
                     if (horizontalLight.getColor() == LightColor.RED) forceGreen(horizontalLight, verticalLight); break;
                 default: break;
             }
@@ -418,12 +355,12 @@ public class SimulationScene {
     }
 
     private void forceGreen(TrafficLight target, TrafficLight other) {
-        target.setColor(LightColor.GREEN); target.setTimer(Constants.LIGHT_EMERGENCY_DURATION);
+        target.setColor(LightColor.GREEN);
+        target.setTimer(Constants.LIGHT_EMERGENCY_DURATION);
         other.setColor(LightColor.RED);
     }
 
     private void toggleLightMode() {
-        // Toggle vertical: xanh↔đỏ
         if (verticalLight.getColor() == LightColor.GREEN) {
             verticalLight.setColor(LightColor.RED);
             horizontalLight.setColor(LightColor.GREEN);
@@ -436,8 +373,11 @@ public class SimulationScene {
     }
 
     private void handleManualLightClick(double wx, double wy) {
-        boolean nearV = wx >= 510 && wx <= 560 && wy >= 240 && wy <= 360;
-        boolean nearH = wx >= 240 && wx <= 360 && wy >= 510 && wy <= 560;
+        int lcx = layout.getCx(), lcy = layout.getCy(), lw = Constants.LANE_WIDTH;
+        boolean nearV = wx >= lcx + lw + 10 && wx <= lcx + lw + 80
+                     && wy >= lcy - lw - 140 && wy <= lcy - lw - 10;
+        boolean nearH = wx >= lcx - lw - 80 && wx <= lcx - lw - 10
+                     && wy >= lcy + lw + 10  && wy <= lcy + lw + 80;
         if (nearV || nearH) toggleLightMode();
     }
 
@@ -446,7 +386,7 @@ public class SimulationScene {
     // ==========================================================
 
     private void spawnInitialVehicles() {
-        List<Direction> dirs = config.getIntersectionType().getDirections();
+        List<Direction> dirs = layout.getDirections();
         for (int i = 0; i < runtimeVehicleCount; i++) spawnManager.spawnRandomVehicle(dirs);
     }
 
@@ -455,7 +395,7 @@ public class SimulationScene {
         if (spawnCounter >= spawnInterval()) {
             spawnCounter = 0;
             if (vehicles.size() < runtimeVehicleCount)
-                spawnManager.spawnRandomVehicle(config.getIntersectionType().getDirections());
+                spawnManager.spawnRandomVehicle(layout.getDirections());
         }
     }
 
@@ -482,32 +422,25 @@ public class SimulationScene {
     private void updateFPS(long now) {
         frameCount++;
         if (now - lastFpsTime >= 1_000_000_000L) {
-            fps = frameCount;
-            frameCount = 0;
-            lastFpsTime = now;
+            fps = frameCount; frameCount = 0; lastFpsTime = now;
         }
     }
 
     private void updateFlash() {
         if (++flashCounter >= Constants.FLASH_INTERVAL_FRAMES) {
-            flash = !flash;
-            flashCounter = 0;
+            flash = !flash; flashCounter = 0;
         }
     }
 
     // ==========================================================
-    // Quay về menu
+    // Menu
     // ==========================================================
 
     private void returnToMenu() {
         if (gameTimer != null) gameTimer.stop();
-        MenuScene menu = new MenuScene(primaryStage);
-        primaryStage.setScene(menu.getScene());
+        SoundManager.getInstance().muteAll();
+        primaryStage.setScene(new MenuScene(primaryStage).getScene());
     }
-
-    // ==========================================================
-    // Getter
-    // ==========================================================
 
     public Scene getScene() { return scene; }
 }

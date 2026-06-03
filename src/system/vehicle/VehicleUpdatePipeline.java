@@ -4,33 +4,19 @@ import java.util.List;
 
 import config.Constants;
 import manager.SoundManager;
-import model.intersection.IntersectionType;
+import model.intersection.IntersectionLayout;
 import model.trafficlight.TrafficLight;
 import model.vehicle.Vehicle;
 import system.collision.CollisionSystem;
 import system.movement.LaneAlignmentSystem;
 import system.movement.LaneChangeSystem;
-import system.movement.TurningSystem;          // ← THÊM
+import system.movement.TurningSystem;
 import system.movement.VehicleMovementSystem;
 import system.traffic.TrafficRuleSystem;
 
 /**
  * Pipeline cập nhật trạng thái xe mỗi frame.
- *
- * <p>Thứ tự xử lý (quan trọng — thay đổi sẽ gây lỗi):
- * <ol>
- *   <li>Reset stopped = false, đặt gia tốc về mặc định.</li>
- *   <li>Giảm cooldown đổi làn.</li>
- *   <li>Xử lý rẽ (nếu đang rẽ → kiểm tra khoảng cách rồi thoát sớm).</li>
- *   <li>Kiểm tra đèn → có thể đặt gia tốc âm.</li>
- *   <li>Kiểm tra xe phía trước → có thể đặt gia tốc âm / dừng.</li>
- *   <li>Nếu stopped → bỏ qua bước còn lại.</li>
- *   <li>Cập nhật đổi làn.</li>
- *   <li>Căn giữa làn (bao gồm post-turn alignment).</li>
- *   <li>Di chuyển (áp dụng gia tốc + vectơ).</li>
- *   <li>Cập nhật âm thanh theo trạng thái xe.</li>   ← THÊM
- * </ol>
- * </p>
+ * Nhận IntersectionLayout thay vì IntersectionType.
  */
 public class VehicleUpdatePipeline {
 
@@ -40,7 +26,7 @@ public class VehicleUpdatePipeline {
     private final LaneChangeSystem      laneChangeSystem;
     private final LaneAlignmentSystem   laneAlignmentSystem;
     private final VehicleMovementSystem movementSystem;
-    private final SoundManager          soundManager;   // ← THÊM
+    private final SoundManager          soundManager;
 
     public VehicleUpdatePipeline() {
         turningSystem       = new TurningSystem();
@@ -49,54 +35,52 @@ public class VehicleUpdatePipeline {
         laneChangeSystem    = new LaneChangeSystem();
         laneAlignmentSystem = new LaneAlignmentSystem();
         movementSystem      = new VehicleMovementSystem();
-        soundManager        = SoundManager.getInstance();  // ← THÊM
+        soundManager        = SoundManager.getInstance();
     }
 
     public void update(Vehicle vehicle,
                        List<Vehicle> vehicles,
                        TrafficLight verticalLight,
                        TrafficLight horizontalLight,
-                       IntersectionType type) {
+                       IntersectionLayout layout) {
 
-        // 1. Reset trạng thái mỗi frame
+        // 1. Reset
         vehicle.setStopped(false);
         vehicle.setAcceleration(Constants.DEFAULT_ACCELERATION);
 
-        // 2. Giảm cooldown đổi làn
-        if (vehicle.getLaneChangeCooldown() > 0) {
+        // 2. Cooldown đổi làn
+        if (vehicle.getLaneChangeCooldown() > 0)
             vehicle.setLaneChangeCooldown(vehicle.getLaneChangeCooldown() - 1);
-        }
 
-        // 3. Xử lý rẽ
-        turningSystem.updateTurning(vehicle, type);
+        // 3. Rẽ
+        turningSystem.updateTurning(vehicle, layout);
         if (vehicle.isTurning()) {
             collisionSystem.maintainDistance(vehicle, vehicles);
-            soundManager.updateVehicleSound(vehicle);   // ← âm thanh khi đang rẽ
+            soundManager.updateVehicleSound(vehicle);
             return;
         }
 
-        // 4. Kiểm tra đèn giao thông → gia tốc âm khi gần đèn đỏ
-        trafficRuleSystem.checkTrafficLight(vehicle, verticalLight, horizontalLight, vehicles);
+        // 4. Đèn
+        trafficRuleSystem.checkTrafficLight(vehicle, verticalLight, horizontalLight, vehicles, layout);
 
-        // 5. Kiểm tra xe phía trước → gia tốc âm / dừng
+        // 5. Giữ khoảng cách
         collisionSystem.maintainDistance(vehicle, vehicles);
 
-        // 6. Nếu bị dừng thì không tiếp tục
         if (vehicle.isStopped()) {
-            soundManager.updateVehicleSound(vehicle);   // ← dừng âm thanh khi xe dừng
+            soundManager.updateVehicleSound(vehicle);
             return;
         }
 
-        // 7. Đổi làn
-        laneChangeSystem.updateLaneChanging(vehicle);
+        // 6. Đổi làn
+        laneChangeSystem.updateLaneChanging(vehicle, layout);
 
-        // 8. Căn giữa làn (kể cả post-turn alignment)
-        laneAlignmentSystem.alignToLane(vehicle);
+        // 7. Căn làn
+        laneAlignmentSystem.alignToLane(vehicle, layout);
 
-        // 9. Di chuyển (gia tốc + vectơ)
-        movementSystem.move(vehicle);
+        // 8. Di chuyển
+        movementSystem.move(vehicle, layout);
 
-        // 10. Cập nhật âm thanh theo trạng thái xe   ← THÊM
+        // 9. Âm thanh
         soundManager.updateVehicleSound(vehicle);
     }
 }
