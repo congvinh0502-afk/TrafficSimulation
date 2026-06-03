@@ -5,7 +5,7 @@ import java.awt.*;
 public class RoadRenderer {
 
     // =========================================================
-    // FOUR WAY (NGÃ TƯ)
+    // FOUR WAY (NGÃƒ TÆ¯)
     // =========================================================
     public void renderFourWay(Graphics2D g2d) {
         Graphics2D g = (Graphics2D) g2d.create();
@@ -22,41 +22,41 @@ public class RoadRenderer {
         g.fillRect(0, 500, 1200, 5);
 
         // ==========================================
-        // VẠCH PHÂN LÀN NGÃ 4 (Vạch liền sát nút giao)
+        // Váº CH PHÃ‚N LÃ€N NGÃƒ 4 (Váº¡ch liá»n sÃ¡t nÃºt giao)
         // ==========================================
         g.setColor(Color.WHITE);
 
-        // --- HƯỚNG TÂY (Đi từ trái sang phải) ---
+        // --- HÆ¯á»šNG TÃ‚Y (Äi tá»« trÃ¡i sang pháº£i) ---
         g.fillRect(190, 395, 80, 10);
         for (int i = 0; i < 190; i += 40) {
             g.fillRoundRect(i, 395, 20, 10, 4, 4);
         }
 
-        // --- HƯỚNG ĐÔNG (Đi từ phải sang trái) ---
+        // --- HÆ¯á»šNG ÄÃ”NG (Äi tá»« pháº£i sang trÃ¡i) ---
         g.fillRect(530, 395, 80, 10);
         for (int i = 620; i < 1200; i += 40) {
             g.fillRoundRect(i, 395, 20, 10, 4, 4);
         }
 
-        // --- HƯỚNG BẮC (Đi từ trên xuống Nam) ---
+        // --- HÆ¯á»šNG Báº®C (Äi tá»« trÃªn xuá»‘ng Nam) ---
         g.fillRect(395, 190, 10, 80);
         for (int i = 0; i < 190; i += 40) {
             g.fillRoundRect(395, i, 10, 20, 4, 4);
         }
 
-        // --- HƯỚNG NAM (Đi từ dưới lên Bắc) ---
+        // --- HÆ¯á»šNG NAM (Äi tá»« dÆ°á»›i lÃªn Báº¯c) ---
         g.fillRect(395, 530, 10, 80);
         for (int i = 620; i < 800; i += 40) {
             g.fillRoundRect(395, i, 10, 20, 4, 4);
         }
 
-        // Vạch trên (Xe từ Bắc đi xuống Nam - Làn phải nằm bên trái màn hình)
+        // Váº¡ch trÃªn (Xe tá»« Báº¯c Ä‘i xuá»‘ng Nam - LÃ n pháº£i náº±m bÃªn trÃ¡i mÃ n hÃ¬nh)
         g.fillRect(300, 270, 100, 6);
-        // Vạch dưới (Xe từ Nam đi lên Bắc - Làn phải nằm bên phải màn hình)
+        // Váº¡ch dÆ°á»›i (Xe tá»« Nam Ä‘i lÃªn Báº¯c - LÃ n pháº£i náº±m bÃªn pháº£i mÃ n hÃ¬nh)
         g.fillRect(400, 524, 100, 6);
-        // Vạch trái (Xe từ Tây sang Đông - Làn phải nằm bên dưới màn hình)
+        // Váº¡ch trÃ¡i (Xe tá»« TÃ¢y sang ÄÃ´ng - LÃ n pháº£i náº±m bÃªn dÆ°á»›i mÃ n hÃ¬nh)
         g.fillRect(270, 400, 6, 100);
-        // Vạch phải (Xe từ Đông sang Tây - Làn phải nằm bên trên màn hình)
+        // Váº¡ch pháº£i (Xe tá»« ÄÃ´ng sang TÃ¢y - LÃ n pháº£i náº±m bÃªn trÃªn mÃ n hÃ¬nh)
         g.fillRect(524, 300, 6, 100);
 
         drawHorizontalZebra(g, 300, 280);
@@ -70,19 +70,19 @@ public class RoadRenderer {
     }
 
     // =========================================================
-    // THREE WAY (NGÃ BA CHỮ T HƯỚNG XUỐNG)
+    // THREE WAY (NGÃƒ BA CHá»® T HÆ¯á»šNG XUá»NG)
     // =========================================================
     public void renderThreeWay(Graphics2D g2d) {
         Graphics2D g = (Graphics2D) g2d.create();
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         
         g.setColor(new Color(55, 55, 55));
-        // Trục ngang (EAST, WEST)
+        // Trá»¥c ngang (EAST, WEST)
         g.fillRect(0, 300, 1200, 200);
-        // Trục dọc từ dưới lên (NORTH)
+        // Trá»¥c dá»c tá»« dÆ°á»›i lÃªn (NORTH)
         g.fillRect(300, 500, 200, 300);
 
-        // Mép đường
+        // MÃ©p Ä‘Æ°á»ng
         g.setColor(new Color(40, 40, 40));
         g.fillRect(0, 295, 1200, 5);
         g.fillRect(0, 500, 295, 5);
@@ -91,50 +91,50 @@ public class RoadRenderer {
         g.fillRect(500, 500, 5, 300);
 
         // ==========================================
-        // 3. VẠCH PHÂN LÀN (Vạch liền sát nút giao, đứt nét ở xa)
+        // 3. Váº CH PHÃ‚N LÃ€N (Váº¡ch liá»n sÃ¡t nÃºt giao, Ä‘á»©t nÃ©t á»Ÿ xa)
         // ==========================================
         g.setColor(Color.WHITE);
 
-        // --- HƯỚNG TÂY (Đi từ trái sang phải) ---
-        // Vạch liền dài 80px đâm thẳng vào vạch dừng (x = 270)
+        // --- HÆ¯á»šNG TÃ‚Y (Äi tá»« trÃ¡i sang pháº£i) ---
+        // Váº¡ch liá»n dÃ i 80px Ä‘Ã¢m tháº³ng vÃ o váº¡ch dá»«ng (x = 270)
         g.fillRect(190, 395, 80, 10);
-        // Vạch đứt nét ở xa (từ 0 đến 190)
+        // Váº¡ch Ä‘á»©t nÃ©t á»Ÿ xa (tá»« 0 Ä‘áº¿n 190)
         for (int i = 0; i < 190; i += 40) {
             g.fillRoundRect(i, 395, 20, 10, 4, 4);
         }
 
-        // --- HƯỚNG ĐÔNG (Đi từ phải sang trái) ---
-        // Vạch liền dài 80px bắt đầu từ vạch dừng (x = 530) kéo ra xa
+        // --- HÆ¯á»šNG ÄÃ”NG (Äi tá»« pháº£i sang trÃ¡i) ---
+        // Váº¡ch liá»n dÃ i 80px báº¯t Ä‘áº§u tá»« váº¡ch dá»«ng (x = 530) kÃ©o ra xa
         g.fillRect(530, 395, 80, 10);
-        // Vạch đứt nét ở xa (từ 620 đến 1200)
+        // Váº¡ch Ä‘á»©t nÃ©t á»Ÿ xa (tá»« 620 Ä‘áº¿n 1200)
         for (int i = 620; i < 1200; i += 40) {
             g.fillRoundRect(i, 395, 20, 10, 4, 4);
         }
 
-        // --- HƯỚNG NAM (Đi từ dưới lên Bắc) ---
-        // Vạch liền dài 80px bắt đầu từ vạch dừng (y = 530) kéo xuống
+        // --- HÆ¯á»šNG NAM (Äi tá»« dÆ°á»›i lÃªn Báº¯c) ---
+        // Váº¡ch liá»n dÃ i 80px báº¯t Ä‘áº§u tá»« váº¡ch dá»«ng (y = 530) kÃ©o xuá»‘ng
         g.fillRect(395, 530, 10, 80);
-        // Vạch đứt nét ở xa (từ 620 đến 800)
+        // Váº¡ch Ä‘á»©t nÃ©t á»Ÿ xa (tá»« 620 Ä‘áº¿n 800)
         for (int i = 620; i < 800; i += 40) {
             g.fillRoundRect(395, i, 10, 20, 4, 4);
         }
 
         // ==========================================
-        // 1. VẠCH NGƯỜI ĐI BỘ (Sát mép ngã tư)
+        // 1. Váº CH NGÆ¯á»œI ÄI Bá»˜ (SÃ¡t mÃ©p ngÃ£ tÆ°)
         // ==========================================
-        // Hướng Nam (Dưới)
+        // HÆ°á»›ng Nam (DÆ°á»›i)
         drawHorizontalZebra(g, 300, 490);
         
 
         // ==========================================
-        // 2. VẠCH DỪNG XE (Lùi lại phía sau, nửa làn phải)
+        // 2. Váº CH Dá»ªNG XE (LÃ¹i láº¡i phÃ­a sau, ná»­a lÃ n pháº£i)
         // ==========================================
         g.setColor(Color.WHITE);
-        // Vạch dưới (Hướng Nam) - Nằm sau vạch đi bộ
+        // Váº¡ch dÆ°á»›i (HÆ°á»›ng Nam) - Náº±m sau váº¡ch Ä‘i bá»™
         g.fillRect(400, 524, 100, 6); 
-        // Vạch trái (Hướng Tây) - Nằm sau vạch đi bộ
+        // Váº¡ch trÃ¡i (HÆ°á»›ng TÃ¢y) - Náº±m sau váº¡ch Ä‘i bá»™
         g.fillRect(270, 400, 6, 100); 
-        // Vạch phải (Hướng Đông) - Nằm sau vạch đi bộ
+        // Váº¡ch pháº£i (HÆ°á»›ng ÄÃ´ng) - Náº±m sau váº¡ch Ä‘i bá»™
         g.fillRect(524, 300, 6, 100);
         
         
@@ -163,11 +163,11 @@ public class RoadRenderer {
         Graphics2D g = (Graphics2D) g2d.create();
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         
-        final int cx = 400;
+        final int cx = 500;
         final int cy = 400;
-        final int roadW = 100;
-        final int armLen = 1200; // Thay 700 thành 1200 để đường đâm xuyên qua map
-        final int islandR = 72;
+        final int roadW = 130;
+        final int armLen = 1200; // Thay 700 thÃ nh 1200 Ä‘á»ƒ Ä‘Æ°á»ng Ä‘Ã¢m xuyÃªn qua map
+        final int islandR = 80; // THAY DOI
 
         double[] angles = {
             Math.toRadians(270),   // NORTH
@@ -205,34 +205,34 @@ public class RoadRenderer {
         g.translate(cx, cy);
         g.rotate(angle + Math.PI / 2);
 
-        // Tọa độ vạch dừng (Giữa đường là 45, mép cỏ là 68)
-        int stopY = islandR + 45; 
-        int cornerY = islandR + 68; 
+        // Äáº·t tá»a Ä‘á»™ váº¡ch dá»«ng ngang hoÃ n toÃ n vá»›i chÃ³p cá» (68)
+        int stopY = islandR + 99; // FIX: 68→99, vach cham dung goc co (dist=179)
 
-        // 1. VẠCH DỪNG XE XIÊN (Nối từ giữa tim đường lên chóp bãi cỏ)
+        // 1. Váº CH Dá»ªNG XE NGANG
         g.setColor(Color.WHITE);
         g.setStroke(new BasicStroke(4f));
-        g.drawLine(0, stopY, roadW, cornerY);
+        // Váº½ váº¡ch ngang ná»‘i tá»« tim Ä‘Æ°á»ng (0) tháº³ng sang mÃ©p pháº£i (roadW)
+        g.drawLine(0, stopY, roadW, stopY);
 
-        // 2. VẠCH PHÂN LÀN (Liền sát ngã tư, đứt ở xa)
+        // 2. Váº CH PHÃ‚N LÃ€N (Liá»n sÃ¡t ngÃ£ tÆ°, Ä‘á»©t á»Ÿ xa)
         g.setColor(Color.WHITE);
         
-        // Vạch liền cấm lấn làn dài 80px đâm thẳng vào vạch dừng
+        // Váº¡ch liá»n cáº¥m láº¥n lÃ n Ä‘Ã¢m tháº³ng vÃ o váº¡ch dá»«ng
         g.fillRect(-5, stopY, 10, 80); 
         
-        // Vạch đứt nét tự động chạy dài theo chiều dài đường (armLen = 1200)
+        // Váº¡ch Ä‘á»©t nÃ©t tá»± Ä‘á»™ng cháº¡y dÃ i theo chiá»u dÃ i Ä‘Æ°á»ng
         for (int y = stopY + 90; y < armLen - 20; y += 40) {
             g.fillRoundRect(-5, y, 10, 20, 4, 4);
         }
 
         g.dispose();
-    } // Kết thúc hàm drawFiveWayArmMarkings
+    } // Káº¿t thÃºc hÃ m drawFiveWayArmMarkings
 
     private void drawFiveWayIsland(Graphics2D g2d, int cx, int cy, int islandR) {
         Graphics2D g = (Graphics2D) g2d.create();
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-        int outerR = islandR + 28; 
+        int outerR = islandR + 35; // THAY DOI: +28 → +35, vong xoay rong hon
         g.setColor(new Color(55, 55, 55));
         g.fillOval(cx - outerR, cy - outerR, outerR * 2, outerR * 2);
 
@@ -257,3 +257,5 @@ public class RoadRenderer {
         g.dispose();
     }
 }
+
+

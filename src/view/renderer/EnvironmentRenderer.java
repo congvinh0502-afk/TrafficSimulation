@@ -3,16 +3,16 @@ package view.renderer;
 import java.awt.*;
 
 /**
- * EnvironmentRenderer â€“ Äiá»u phá»‘i toÃ n bá»™ cáº£nh quan mÃ´i trÆ°á»ng.
+ * EnvironmentRenderer Ã¢â‚¬â€œ Ã„ÂiÃ¡Â»Âu phÃ¡Â»â€˜i toÃƒÂ n bÃ¡Â»â„¢ cÃ¡ÂºÂ£nh quan mÃƒÂ´i trÃ†Â°Ã¡Â»Âng.
  *
- * PhÃ¢n cÃ´ng module:
- *   RoadRenderer      â†’ váº½ lÃ²ng Ä‘Æ°á»ng, váº¡ch káº», váº¡ch dá»«ng, bÃ¹ng binh
- *   BuildingRenderer  â†’ váº½ cÃ¡c loáº¡i cÃ´ng trÃ¬nh (skyscraper, factory, luxuryHouse, restaurant)
- *   NatureRenderer    â†’ váº½ cÃ¢y (3 kiá»ƒu), hÃ ng cÃ¢y, cÃ´ng viÃªn há»“ nÆ°á»›c
- *   ParkingRenderer   â†’ váº½ bÃ£i Ä‘á»— xe cÃ³ xe Ä‘áº­u
- *   BaseRenderer      â†’ váº½ ná»n cá», Ä‘Ã¨n Ä‘Æ°á»ng
+ * PhÃƒÂ¢n cÃƒÂ´ng module:
+ *   RoadRenderer      Ã¢â€ â€™ vÃ¡ÂºÂ½ lÃƒÂ²ng Ã„â€˜Ã†Â°Ã¡Â»Âng, vÃ¡ÂºÂ¡ch kÃ¡ÂºÂ», vÃ¡ÂºÂ¡ch dÃ¡Â»Â«ng, bÃƒÂ¹ng binh
+ *   BuildingRenderer  Ã¢â€ â€™ vÃ¡ÂºÂ½ cÃƒÂ¡c loÃ¡ÂºÂ¡i cÃƒÂ´ng trÃƒÂ¬nh (skyscraper, factory, luxuryHouse, restaurant)
+ *   NatureRenderer    Ã¢â€ â€™ vÃ¡ÂºÂ½ cÃƒÂ¢y (3 kiÃ¡Â»Æ’u), hÃƒÂ ng cÃƒÂ¢y, cÃƒÂ´ng viÃƒÂªn hÃ¡Â»â€œ nÃ†Â°Ã¡Â»â€ºc
+ *   ParkingRenderer   Ã¢â€ â€™ vÃ¡ÂºÂ½ bÃƒÂ£i Ã„â€˜Ã¡Â»â€” xe cÃƒÂ³ xe Ã„â€˜Ã¡ÂºÂ­u
+ *   BaseRenderer      Ã¢â€ â€™ vÃ¡ÂºÂ½ nÃ¡Â»Ân cÃ¡Â»Â, Ã„â€˜ÃƒÂ¨n Ã„â€˜Ã†Â°Ã¡Â»Âng
  *
- * EnvironmentRenderer KHÃ”NG tá»± copy logic váº½ â€“ chá»‰ gá»i cÃ¡c module trÃªn.
+ * EnvironmentRenderer KHÃƒâ€NG tÃ¡Â»Â± copy logic vÃ¡ÂºÂ½ Ã¢â‚¬â€œ chÃ¡Â»â€° gÃ¡Â»Âi cÃƒÂ¡c module trÃƒÂªn.
  */
 public class EnvironmentRenderer {
 
@@ -23,31 +23,31 @@ public class EnvironmentRenderer {
     private final BaseRenderer      base     = new BaseRenderer();
 
     // =========================================================
-    // FOUR WAY â€“ NgÃ£ tÆ°: khu Ä‘Ã´ thá»‹ há»—n há»£p
-    //   â€¢ GÃ³c TL : NhÃ  cao táº§ng (skyscraper) + cá»¥m biá»‡t thá»±
-    //   â€¢ GÃ³c TR : BÃ£i Ä‘á»— xe lá»›n + nhÃ  mÃ¡y
-    //   â€¢ GÃ³c DL : CÃ´ng viÃªn há»“ nÆ°á»›c
-    //   â€¢ GÃ³c DR : Cá»¥m nhÃ  á»Ÿ + hÃ ng cÃ¢y Ä‘a dáº¡ng
+    // FOUR WAY Ã¢â‚¬â€œ NgÃƒÂ£ tÃ†Â°: khu Ã„â€˜ÃƒÂ´ thÃ¡Â»â€¹ hÃ¡Â»â€”n hÃ¡Â»Â£p
+    //   Ã¢â‚¬Â¢ GÃƒÂ³c TL : NhÃƒÂ  cao tÃ¡ÂºÂ§ng (skyscraper) + cÃ¡Â»Â¥m biÃ¡Â»â€¡t thÃ¡Â»Â±
+    //   Ã¢â‚¬Â¢ GÃƒÂ³c TR : BÃƒÂ£i Ã„â€˜Ã¡Â»â€” xe lÃ¡Â»â€ºn + nhÃƒÂ  mÃƒÂ¡y
+    //   Ã¢â‚¬Â¢ GÃƒÂ³c DL : CÃƒÂ´ng viÃƒÂªn hÃ¡Â»â€œ nÃ†Â°Ã¡Â»â€ºc
+    //   Ã¢â‚¬Â¢ GÃƒÂ³c DR : CÃ¡Â»Â¥m nhÃƒÂ  Ã¡Â»Å¸ + hÃƒÂ ng cÃƒÂ¢y Ã„â€˜a dÃ¡ÂºÂ¡ng
     // =========================================================
     public void renderFourWay(Graphics2D g2d) {
         base.drawGrass(g2d);
         road.renderFourWay(g2d);
 
-        // --- GÃ“C TRÃŠN BÃŠN TRÃI: NhÃ  cao táº§ng + biá»‡t thá»± ---
+        // --- GÃƒâ€œC TRÃƒÅ N BÃƒÅ N TRÃƒÂI: NhÃƒÂ  cao tÃ¡ÂºÂ§ng + biÃ¡Â»â€¡t thÃ¡Â»Â± ---
         building.drawSkyscraper(g2d, 30, 30);
         building.drawLuxuryHouse(g2d, 160, 40);
         building.drawLuxuryHouse(g2d, 155, 140);
         nature.drawTreeRow(g2d, 30, 200, 230, true);
 
-        // --- GÃ“C TRÃŠN BÃŠN PHáº¢I: BÃ£i Ä‘á»— xe + nhÃ  mÃ¡y ---
+        // --- GÃƒâ€œC TRÃƒÅ N BÃƒÅ N PHÃ¡ÂºÂ¢I: BÃƒÂ£i Ã„â€˜Ã¡Â»â€” xe + nhÃƒÂ  mÃƒÂ¡y ---
         building.drawModernFactory(g2d, 580, 40);
         parking.drawParkingLotWithRealCars(g2d, 740, 30, 340, 180);
         nature.drawTreeRow(g2d, 560, 205, 640, true);
 
-        // --- GÃ“C DÆ¯á»šI BÃŠN TRÃI: CÃ´ng viÃªn há»“ nÆ°á»›c ---
+        // --- GÃƒâ€œC DÃ†Â¯Ã¡Â»Å¡I BÃƒÅ N TRÃƒÂI: CÃƒÂ´ng viÃƒÂªn hÃ¡Â»â€œ nÃ†Â°Ã¡Â»â€ºc ---
         nature.drawParkWithPond(g2d, 15, 560, 240, 220);
 
-        // --- GÃ“C DÆ¯á»šI BÃŠN PHáº¢I: Khu nhÃ  á»Ÿ + hÃ ng cÃ¢y Ä‘a dáº¡ng ---
+        // --- GÃƒâ€œC DÃ†Â¯Ã¡Â»Å¡I BÃƒÅ N PHÃ¡ÂºÂ¢I: Khu nhÃƒÂ  Ã¡Â»Å¸ + hÃƒÂ ng cÃƒÂ¢y Ã„â€˜a dÃ¡ÂºÂ¡ng ---
         nature.drawTreeRow(g2d, 550, 540, 630, true);
         nature.drawTreeRow(g2d, 545, 560, 220, false);
         building.drawLuxuryHouse(g2d, 600, 600);
@@ -58,22 +58,22 @@ public class EnvironmentRenderer {
     }
 
     // =========================================================
-    // THREE WAY â€“ NgÃ£ ba: khu ngoáº¡i Ã´ yÃªn tÄ©nh
-    //   â€¢ GÃ³c TL : CÃ´ng viÃªn há»“ nÆ°á»›c
-    //   â€¢ GÃ³c BL : Cá»¥m biá»‡t thá»± nhá»
-    //   â€¢ VÃ¹ng pháº£i: BÃ£i Ä‘á»— xe + nhÃ  á»Ÿ + hÃ ng cÃ¢y dÃ i
+    // THREE WAY Ã¢â‚¬â€œ NgÃƒÂ£ ba: khu ngoÃ¡ÂºÂ¡i ÃƒÂ´ yÃƒÂªn tÃ„Â©nh
+    //   Ã¢â‚¬Â¢ GÃƒÂ³c TL : CÃƒÂ´ng viÃƒÂªn hÃ¡Â»â€œ nÃ†Â°Ã¡Â»â€ºc
+    //   Ã¢â‚¬Â¢ GÃƒÂ³c BL : CÃ¡Â»Â¥m biÃ¡Â»â€¡t thÃ¡Â»Â± nhÃ¡Â»Â
+    //   Ã¢â‚¬Â¢ VÃƒÂ¹ng phÃ¡ÂºÂ£i: BÃƒÂ£i Ã„â€˜Ã¡Â»â€” xe + nhÃƒÂ  Ã¡Â»Å¸ + hÃƒÂ ng cÃƒÂ¢y dÃƒÂ i
     // =========================================================
     public void renderThreeWay(Graphics2D g2d) {
         base.drawGrass(g2d);
         road.renderThreeWay(g2d);
 
-        // Cáº£nh quan bÃªn trÃ¡i
+        // CÃ¡ÂºÂ£nh quan bÃƒÂªn trÃƒÂ¡i
         nature.drawParkWithPond(g2d, 15, 15, 240, 225);
         building.drawLuxuryHouse(g2d, 50, 600);
         building.drawLuxuryHouse(g2d, 155, 650);
         nature.drawTreeRow(g2d, 20, 560, 230, false);
 
-        // VÃ¹ng Ä‘áº¥t bÃªn pháº£i
+        // VÃƒÂ¹ng Ã„â€˜Ã¡ÂºÂ¥t bÃƒÂªn phÃ¡ÂºÂ£i
         parking.drawParkingLotWithRealCars(g2d, 580, 40, 340, 180);
         building.drawModernFactory(g2d, 960, 30);
         building.drawLuxuryHouse(g2d, 600, 580);
@@ -83,12 +83,12 @@ public class EnvironmentRenderer {
     }
 
     // =========================================================
-    // FIVE WAY â€“ NgÃ£ nÄƒm / bÃ¹ng binh: trung tÃ¢m Ä‘Ã´ thá»‹ sÃ´i Ä‘á»™ng
-    //   â€¢ GÃ³c TL : NhÃ  cao táº§ng + biá»‡t thá»±
-    //   â€¢ GÃ³c TR : BÃ£i Ä‘á»— xe lá»›n + biá»‡t thá»±
-    //   â€¢ GÃ³c DL : CÃ´ng viÃªn há»“ nÆ°á»›c
-    //   â€¢ GÃ³c DR : NhÃ  mÃ¡y + nhÃ  hÃ ng + khu nhÃ  á»Ÿ
-    //   â€¢ BÃ¹ng binh: 4 cÃ¢y trang trÃ­ trung tÃ¢m
+    // FIVE WAY Ã¢â‚¬â€œ NgÃƒÂ£ nÃ„Æ’m / bÃƒÂ¹ng binh: trung tÃƒÂ¢m Ã„â€˜ÃƒÂ´ thÃ¡Â»â€¹ sÃƒÂ´i Ã„â€˜Ã¡Â»â„¢ng
+    //   Ã¢â‚¬Â¢ GÃƒÂ³c TL : NhÃƒÂ  cao tÃ¡ÂºÂ§ng + biÃ¡Â»â€¡t thÃ¡Â»Â±
+    //   Ã¢â‚¬Â¢ GÃƒÂ³c TR : BÃƒÂ£i Ã„â€˜Ã¡Â»â€” xe lÃ¡Â»â€ºn + biÃ¡Â»â€¡t thÃ¡Â»Â±
+    //   Ã¢â‚¬Â¢ GÃƒÂ³c DL : CÃƒÂ´ng viÃƒÂªn hÃ¡Â»â€œ nÃ†Â°Ã¡Â»â€ºc
+    //   Ã¢â‚¬Â¢ GÃƒÂ³c DR : NhÃƒÂ  mÃƒÂ¡y + nhÃƒÂ  hÃƒÂ ng + khu nhÃƒÂ  Ã¡Â»Å¸
+    //   Ã¢â‚¬Â¢ BÃƒÂ¹ng binh: 4 cÃƒÂ¢y trang trÃƒÂ­ trung tÃƒÂ¢m
     // =========================================================
     public void renderFiveWay(Graphics2D g2d) {
         Graphics2D g = (Graphics2D) g2d.create();
@@ -97,31 +97,31 @@ public class EnvironmentRenderer {
         base.drawGrass(g);
         road.renderFiveWay(g);
 
-        // CÃ¢y trang trÃ­ trÃªn Ä‘áº£o bÃ¹ng binh trung tÃ¢m (tÃ¢m 400,400)
-        int cx = 400, cy = 400;
+        // CÃƒÂ¢y trang trÃƒÂ­ trÃƒÂªn Ã„â€˜Ã¡ÂºÂ£o bÃƒÂ¹ng binh trung tÃƒÂ¢m (tÃƒÂ¢m 400,400)
+        int cx = 500, cy = 400; // THAY DOI: 400 → 500
         nature.drawPineTree(g, cx - 18, cy - 58);
         nature.drawBeautifulTree(g, cx - 18, cy + 28);
         nature.drawBushTree(g, cx - 58, cy - 18);
         nature.drawPineTree(g, cx + 28, cy - 18);
 
-        // --- GÃ“C TRÃŠN BÃŠN TRÃI ---
+        // --- GÃƒâ€œC TRÃƒÅ N BÃƒÅ N TRÃƒÂI ---
         building.drawSkyscraper(g, 30, 30);
         building.drawLuxuryHouse(g, 160, 40);
         building.drawLuxuryHouse(g, 155, 140);
         nature.drawTreeRow(g, 30, 205, 230, true);
 
-        // --- GÃ“C TRÃŠN BÃŠN PHáº¢I (Ä‘áº©y xa Ä‘á»ƒ nhÆ°á»ng Ä‘Æ°á»ng chÃ©o) ---
+        // --- GÃƒâ€œC TRÃƒÅ N BÃƒÅ N PHÃ¡ÂºÂ¢I (Ã„â€˜Ã¡ÂºÂ©y xa Ã„â€˜Ã¡Â»Æ’ nhÃ†Â°Ã¡Â»Âng Ã„â€˜Ã†Â°Ã¡Â»Âng chÃƒÂ©o) ---
         building.drawLuxuryHouse(g, 560, 40);
-        parking.drawParkingLotWithRealCars(g, 850, 30, 320, 175);
-        nature.drawTreeRow(g, 555, 205, 300, true);
+        parking.drawParkingLotWithRealCars(g, 875, 295, 300, 150); // THAY DOI
+        nature.drawTreeRow(g, 875, 270, 300, true); // THAY DOI
 
-        // --- GÃ“C DÆ¯á»šI BÃŠN TRÃI ---
+        // --- GÃƒâ€œC DÃ†Â¯Ã¡Â»Å¡I BÃƒÅ N TRÃƒÂI ---
         nature.drawParkWithPond(g, 15, 560, 240, 220);
 
-        // --- GÃ“C DÆ¯á»šI BÃŠN PHáº¢I ---
-        building.drawModernFactory(g, 590, 615);
-        building.drawLuxuryRestaurant(g, 730, 650);
-        building.drawLuxuryHouse(g, 870, 600);
+        // --- GÃƒâ€œC DÃ†Â¯Ã¡Â»Å¡I BÃƒÅ N PHÃ¡ÂºÂ¢I ---
+        building.drawModernFactory(g, 580, 700); // THAY DOI
+        building.drawLuxuryRestaurant(g, 600, 730); // THAY DOI
+        building.drawLuxuryHouse(g, 700, 775); // THAY DOI
         nature.drawTreeRow(g, 555, 540, 625, true);
         nature.drawTreeRow(g, 545, 565, 215, false);
 
@@ -129,3 +129,5 @@ public class EnvironmentRenderer {
         g.dispose();
     }
 }
+
+
