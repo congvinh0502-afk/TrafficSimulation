@@ -1,213 +1,310 @@
 package model.vehicle;
 
 import config.Constants;
-import math.Vector2D;
 import strategy.driver.DriverBehavior;
 import util.Direction;
 import util.Lane;
 import util.TurnType;
 
 /**
- * Lớp cơ sở cho tất cả phương tiện.
+ * Lớp cơ sở trừu tượng cho tất cả phương tiện.
  *
- * <p>Thay đổi so với phiên bản cũ:
+ * <p>
+ * Quản lý:
  * <ul>
- *   <li>{@link #acceleration} — gia tốc px/frame².
- *       {@code speed = clamp(speed + acceleration, 0, maxSpeed)} mỗi frame.</li>
- *   <li>{@link #directionVector} — vectơ hướng toán học;
- *       {@code move()} tính toán dựa trên vectơ này.</li>
- *   <li>{@link #postTurnAligning} — sau khi rẽ xong, xe alignment dần
- *       thay vì snap tức thì (fix teleport).</li>
+ * <li>Vị trí và góc hiển thị ({@code x, y, angle})</li>
+ * <li>Trạng thái di chuyển ({@code stopped, turning, changingLane})</li>
+ * <li>Chiến lược lái ({@link DriverBehavior})</li>
+ * <li>Thông tin làn đường và loại rẽ</li>
  * </ul>
+ * </p>
+ *
+ * <p>
+ * Các lớp con phải implement {@link #move()} — định nghĩa
+ * cách xe dịch chuyển theo {@code direction} mỗi frame.
+ * </p>
+ *
+ * <p>
+ * Lớp này chỉ chứa dữ liệu và logic di chuyển đơn giản.
+ * Toàn bộ logic phức tạp (rẽ, đổi làn, va chạm, đèn) nằm
+ * trong package {@code system.*}.
  * </p>
  */
 public abstract class Vehicle {
 
-    // --------------------------------------------------------
+    // ----------------------------------------------------------
     // Vị trí và kích thước
-    // --------------------------------------------------------
+    // ----------------------------------------------------------
     protected double x;
     protected double y;
     protected double width;
     protected double height;
 
-    // --------------------------------------------------------
-    // Chuyển động — vectơ + vật lý
-    // --------------------------------------------------------
-    protected double    speed;
-    protected double    maxSpeed;
-    protected double    acceleration;
+    // ----------------------------------------------------------
+    // Chuyển động
+    // ----------------------------------------------------------
+    protected double speed;
     protected Direction direction;
-    protected Vector2D  directionVector;
-    protected boolean   stopped;
+    protected boolean stopped;
 
-    // --------------------------------------------------------
-    // Góc hiển thị
-    // --------------------------------------------------------
+    // ----------------------------------------------------------
+    // Góc hiển thị (để xoay hình ảnh xe)
+    // ----------------------------------------------------------
     protected double angle;
     protected double targetAngle;
 
-    // --------------------------------------------------------
+    // ----------------------------------------------------------
     // Rẽ
-    // --------------------------------------------------------
-    protected boolean   turning;
-    protected boolean   turned;
-    protected Direction targetDirection;
-    protected TurnType  turnType;
+    // ----------------------------------------------------------
+    protected boolean turning;
+    protected boolean turned; // đã rẽ trong giao lộ này rồi
+    protected Direction targetDirection; // hướng đích sau khi rẽ xong
+    protected TurnType turnType;
 
-    // --------------------------------------------------------
-    // Alignment sau rẽ (fix teleport)
-    // --------------------------------------------------------
-    protected boolean postTurnAligning;
-
-    // --------------------------------------------------------
+    // ----------------------------------------------------------
     // Làn đường
-    // --------------------------------------------------------
-    protected Lane    lane;
+    // ----------------------------------------------------------
+    protected Lane lane;
     protected boolean changingLane;
-    protected Lane    targetLane;
-    private   int     laneChangeCooldown;
+    protected Lane targetLane;
+    private int laneChangeCooldown;
 
-    // --------------------------------------------------------
-    // Vị trí đích (dùng khi alignment)
-    // --------------------------------------------------------
+    // ----------------------------------------------------------
+    // Target vị trí (dùng cho alignment sau rẽ)
+    // ----------------------------------------------------------
     protected double targetX;
     protected double targetY;
 
-    // --------------------------------------------------------
-    // Chiến lược lái
-    // --------------------------------------------------------
+    // ----------------------------------------------------------
+    // Chiến lược lái xe
+    // ----------------------------------------------------------
     protected DriverBehavior behavior;
 
     // ==========================================================
     // Constructor
     // ==========================================================
 
+    /**
+     * Khởi tạo xe tại vị trí (x, y) với hướng cho trước.
+     * Góc ban đầu được thiết lập phù hợp với hướng.
+     *
+     * @param x         tọa độ X ban đầu
+     * @param y         tọa độ Y ban đầu
+     * @param direction hướng di chuyển ban đầu
+     */
     protected Vehicle(double x, double y, Direction direction) {
-        this.x               = x;
-        this.y               = y;
-        this.direction       = direction;
-        this.directionVector = direction.toVector();
-        this.lane            = Lane.RIGHT;
-        this.angle           = direction.toAngleDeg();
-        this.acceleration    = Constants.DEFAULT_ACCELERATION;
+        this.x = x;
+        this.y = y;
+        this.direction = direction;
+        this.lane = Lane.RIGHT;
+        this.angle = initialAngle(direction);
+    }
+
+    /** Tính góc xoay ban đầu tương ứng với hướng di chuyển. */
+    private static double initialAngle(Direction direction) {
+        switch (direction) {
+            case EAST:
+                return Constants.ANGLE_EAST;
+            case SOUTH:
+                return Constants.ANGLE_SOUTH;
+            case WEST:
+                return Constants.ANGLE_WEST;
+            case NORTH:
+                return Constants.ANGLE_NORTH;
+            case NORTHEAST:
+                return Constants.ANGLE_NORTHEAST;
+            default:
+                return 0;
+        }
     }
 
     // ==========================================================
-    // Di chuyển
+    // Phương thức trừu tượng
     // ==========================================================
 
     /**
-     * Di chuyển xe một bước.
-     *
-     * <p>Luồng:
-     * <ol>
-     *   <li>Tính tốc độ mới = clamp(speed + acceleration, 0, maxSpeed).</li>
-     *   <li>Dịch chuyển theo {@link #directionVector}.</li>
-     * </ol>
-     * </p>
+     * Dịch chuyển xe một bước theo {@code direction} và {@code speed}.
+     * Gọi mỗi frame nếu xe không bị dừng.
      */
-    public void move() {
-        if (stopped) return;
-
-        // Áp dụng gia tốc
-        speed = Math.max(0, Math.min(maxSpeed, speed + acceleration));
-
-        // Di chuyển theo vectơ hướng
-        x += directionVector.x * speed;
-        y += directionVector.y * speed;
-    }
+    public abstract void move();
 
     // ==========================================================
     // Getter / Setter — vị trí
     // ==========================================================
 
-    public double getX()      { return x; }
-    public double getY()      { return y; }
-    public double getWidth()  { return width; }
-    public double getHeight() { return height; }
-    public void setX(double x) { this.x = x; }
-    public void setY(double y) { this.y = y; }
+    public double getX() {
+        return x;
+    }
+
+    public double getY() {
+        return y;
+    }
+
+    public double getWidth() {
+        return width;
+    }
+
+    public double getHeight() {
+        return height;
+    }
+
+    public void setX(double x) {
+        this.x = x;
+    }
+
+    public void setY(double y) {
+        this.y = y;
+    }
 
     // ==========================================================
     // Getter / Setter — chuyển động
     // ==========================================================
 
-    public double getSpeed()  { return speed; }
-    public void setSpeed(double speed) { this.speed = speed; }
-
-    public double getMaxSpeed()  { return maxSpeed; }
-    public void setMaxSpeed(double s) { this.maxSpeed = s; }
-
-    public double getAcceleration() { return acceleration; }
-    public void setAcceleration(double a) { this.acceleration = a; }
-
-    public Direction getDirection()  { return direction; }
-    public void setDirection(Direction d) {
-        this.direction       = d;
-        this.directionVector = d.toVector();
+    public double getSpeed() {
+        return speed;
     }
 
-    public Vector2D getDirectionVector() { return directionVector; }
+    public void setSpeed(double speed) {
+        this.speed = speed;
+    }
 
-    public boolean isStopped()           { return stopped; }
-    public void setStopped(boolean s)    { this.stopped = s; }
+    public Direction getDirection() {
+        return direction;
+    }
+
+    public void setDirection(Direction d) {
+        this.direction = d;
+    }
+
+    public boolean isStopped() {
+        return stopped;
+    }
+
+    public void setStopped(boolean stopped) {
+        this.stopped = stopped;
+    }
 
     // ==========================================================
     // Getter / Setter — góc
     // ==========================================================
 
-    public double getAngle()           { return angle; }
-    public void setAngle(double a)     { this.angle = a; }
-    public double getTargetAngle()     { return targetAngle; }
-    public void setTargetAngle(double a){ this.targetAngle = a; }
+    public double getAngle() {
+        return angle;
+    }
+
+    public void setAngle(double angle) {
+        this.angle = angle;
+    }
+
+    public double getTargetAngle() {
+        return targetAngle;
+    }
+
+    public void setTargetAngle(double a) {
+        this.targetAngle = a;
+    }
 
     // ==========================================================
     // Getter / Setter — rẽ
     // ==========================================================
 
-    public boolean   isTurning()          { return turning; }
-    public void      setTurning(boolean b){ this.turning = b; }
-    public boolean   hasTurned()          { return turned; }
-    public void      setTurned(boolean b) { this.turned = b; }
-    public Direction getTargetDirection() { return targetDirection; }
-    public void      setTargetDirection(Direction d){ this.targetDirection = d; }
-    public TurnType  getTurnType()        { return turnType; }
-    public void      setTurnType(TurnType t){ this.turnType = t; }
+    public boolean isTurning() {
+        return turning;
+    }
 
-    // ==========================================================
-    // Getter / Setter — alignment sau rẽ
-    // ==========================================================
+    public void setTurning(boolean turning) {
+        this.turning = turning;
+    }
 
-    public boolean isPostTurnAligning()          { return postTurnAligning; }
-    public void    setPostTurnAligning(boolean b) { this.postTurnAligning = b; }
+    public boolean hasTurned() {
+        return turned;
+    }
+
+    public void setTurned(boolean turned) {
+        this.turned = turned;
+    }
+
+    public Direction getTargetDirection() {
+        return targetDirection;
+    }
+
+    public void setTargetDirection(Direction d) {
+        this.targetDirection = d;
+    }
+
+    public TurnType getTurnType() {
+        return turnType;
+    }
+
+    public void setTurnType(TurnType turnType) {
+        this.turnType = turnType;
+    }
 
     // ==========================================================
     // Getter / Setter — làn đường
     // ==========================================================
 
-    public Lane    getLane()                       { return lane; }
-    public void    setLane(Lane l)                 { this.lane = l; }
-    public boolean isChangingLane()                { return changingLane; }
-    public void    setChangingLane(boolean b)      { this.changingLane = b; }
-    public Lane    getTargetLane()                 { return targetLane; }
-    public void    setTargetLane(Lane l)           { this.targetLane = l; }
-    public int     getLaneChangeCooldown()         { return laneChangeCooldown; }
-    public void    setLaneChangeCooldown(int c)    { this.laneChangeCooldown = c; }
+    public Lane getLane() {
+        return lane;
+    }
+
+    public void setLane(Lane lane) {
+        this.lane = lane;
+    }
+
+    public boolean isChangingLane() {
+        return changingLane;
+    }
+
+    public void setChangingLane(boolean b) {
+        this.changingLane = b;
+    }
+
+    public Lane getTargetLane() {
+        return targetLane;
+    }
+
+    public void setTargetLane(Lane targetLane) {
+        this.targetLane = targetLane;
+    }
+
+    public int getLaneChangeCooldown() {
+        return laneChangeCooldown;
+    }
+
+    public void setLaneChangeCooldown(int cooldown) {
+        this.laneChangeCooldown = cooldown;
+    }
 
     // ==========================================================
-    // Getter / Setter — vị trí đích
+    // Getter / Setter — target position
     // ==========================================================
 
-    public double getTargetX()     { return targetX; }
-    public void   setTargetX(double tx){ this.targetX = tx; }
-    public double getTargetY()     { return targetY; }
-    public void   setTargetY(double ty){ this.targetY = ty; }
+    public double getTargetX() {
+        return targetX;
+    }
+
+    public void setTargetX(double tx) {
+        this.targetX = tx;
+    }
+
+    public double getTargetY() {
+        return targetY;
+    }
+
+    public void setTargetY(double ty) {
+        this.targetY = ty;
+    }
 
     // ==========================================================
     // Getter / Setter — chiến lược lái
     // ==========================================================
 
-    public DriverBehavior getBehavior()            { return behavior; }
-    public void           setBehavior(DriverBehavior b){ this.behavior = b; }
+    public DriverBehavior getBehavior() {
+        return behavior;
+    }
+
+    public void setBehavior(DriverBehavior b) {
+        this.behavior = b;
+    }
 }

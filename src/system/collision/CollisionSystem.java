@@ -1,21 +1,21 @@
 package system.collision;
 
 import config.Constants;
-import math.Vector2D;
 import model.vehicle.Vehicle;
 import system.movement.LaneChangeSystem;
 
 import java.util.List;
 
 /**
- * Hệ thống va chạm và khoảng cách an toàn.
+ * Hệ thống xử lý va chạm và khoảng cách giữa xe.
  *
- * <p>Hai lớp kiểm tra:
+ * <p>
+ * Hai chức năng chính:
  * <ol>
- *   <li><b>Hitbox overlap</b> — phát hiện xe thực sự chạm nhau
- *       (dùng {@link Hitbox} AABB, song song với hệ thống khoảng cách).</li>
- *   <li><b>Khoảng cách an toàn + gia tốc</b> — khi xe phía trước đủ gần,
- *       đặt gia tốc âm để giảm tốc dần (không dừng ngay lập tức).</li>
+ * <li>{@link #maintainDistance} — giữ khoảng cách an toàn với xe phía trước;
+ * thử đổi làn nếu bị chặn, không thì dừng lại.</li>
+ * <li>{@link #canEnterIntersection} — kiểm tra vùng giao lộ phía trước
+ * có trống không trước khi cho xe tiến vào.</li>
  * </ol>
  * </p>
  */
@@ -28,81 +28,67 @@ public class CollisionSystem {
     }
 
     // ==========================================================
-    // Khoảng cách + gia tốc
+    // Giữ khoảng cách an toàn
     // ==========================================================
 
     /**
-     * Kiểm tra xe phía trước, đặt gia tốc âm khi gần.
-     * Nếu không thể tăng tốc: thử đổi làn; không được thì dừng.
+     * Kiểm tra xe phía trước và quyết định dừng hay đổi làn.
      *
-     * @param current  xe đang xử lý
-     * @param vehicles toàn bộ xe
+     * <p>
+     * Bỏ qua nếu xe đang rẽ hoặc đổi làn.
+     * Khoảng cách an toàn = 2× chiều rộng xe hiện tại.
+     * </p>
+     *
+     * @param current  xe cần kiểm tra
+     * @param vehicles toàn bộ xe trên bản đồ
      */
     public void maintainDistance(Vehicle current, List<Vehicle> vehicles) {
         if (current.isTurning() || current.isChangingLane()) {
             return;
         }
 
-        Vehicle leader = findLeader(current, vehicles);
+        double safeDistance = current.getWidth() * 2.0;
 
-        if (leader == null) {
-            // Không có xe phía trước — gia tốc về maxSpeed
-            current.setAcceleration(Constants.DEFAULT_ACCELERATION);
-            current.setStopped(false);
-            return;
-        }
+        for (Vehicle other : vehicles) {
+            if (other == current || other.isTurning())
+                continue;
+            if (current.getDirection() != other.getDirection())
+                continue;
 
-        double gap = gapToLeader(current, leader);
-        double safeDistance = current.getWidth() * 2.2;
-        double brakeStart   = Constants.BRAKE_START_DISTANCE;
-
-        if (gap <= Constants.MIN_FOLLOW_DISTANCE) {
-            // Quá gần — dừng hẳn
-            current.setStopped(true);
-            current.setAcceleration(0);
-        } else if (gap < safeDistance) {
-            // Trong vùng phanh khẩn — gia tốc âm mạnh
-            double ratio = 1.0 - (gap / safeDistance);
-            double decel = -Constants.MAX_BRAKE_DECEL * ratio;
-            current.setAcceleration(decel);
-
-            // Nếu quá chậm, thử đổi làn
-            if (current.getSpeed() < current.getMaxSpeed() * 0.3) {
-                if (!laneChangeSystem.tryChangeLane(current, vehicles)) {
-                    if (current.getSpeed() < 0.5) {
-                        current.setStopped(true);
-                    }
+            if (isBlockedByVehicleAhead(current, other, safeDistance)) {
+                boolean changed = laneChangeSystem.tryChangeLane(current, vehicles);
+                if (!changed) {
+                    current.setStopped(true);
                 }
+                return;
             }
-        } else if (gap < brakeStart) {
-            // Vùng tiếp cận — giảm tốc nhẹ
-            double ratio = (brakeStart - gap) / (brakeStart - safeDistance);
-            current.setAcceleration(-Constants.MAX_BRAKE_DECEL * 0.4 * ratio);
-        } else {
-            // Đường thoáng — tăng tốc
-            current.setAcceleration(Constants.DEFAULT_ACCELERATION);
         }
     }
 
-    // ==========================================================
-    // Hitbox — phát hiện overlap thực sự
-    // ==========================================================
-
     /**
-     * Phát hiện xe nào đang thực sự chồng lên {@code current}.
-     * Dùng làm cảnh báo / tách xe sau sự cố.
-     *
-     * @param current  xe đang kiểm tra
-     * @param vehicles toàn bộ xe
-     * @return {@code true} nếu có overlap
+     * Kiểm tra {@code other} có đang chặn phía trước {@code current} không.
      */
-    public boolean hasOverlap(Vehicle current, List<Vehicle> vehicles) {
-        Hitbox hb = Hitbox.of(current);
-        for (Vehicle other : vehicles) {
-            if (other == current) continue;
-            if (Hitbox.of(other).intersects(hb)) return true;
+    private boolean isBlockedByVehicleAhead(Vehicle current, Vehicle other, double safeDistance) {
+        switch (current.getDirection()) {
+            case SOUTH:
+                return Math.abs(current.getX() - other.getX()) < Constants.SAME_FILE_TOLERANCE
+                        && other.getY() > current.getY()
+                        && other.getY() - current.getY() < safeDistance;
+            case NORTH:
+                return Math.abs(current.getX() - other.getX()) < Constants.SAME_FILE_TOLERANCE
+                        && other.getY() < current.getY()
+                        && current.getY() - other.getY() < safeDistance;
+            case EAST:
+                return Math.abs(current.getY() - other.getY()) < Constants.SAME_FILE_TOLERANCE
+                        && other.getX() > current.getX()
+                        && other.getX() - current.getX() < safeDistance;
+            case WEST:
+                return Math.abs(current.getY() - other.getY()) < Constants.SAME_FILE_TOLERANCE
+                        && other.getX() < current.getX()
+                        && current.getX() - other.getX() < safeDistance;
+            default:
+                return false;
         }
-        return false;
     }
 
     // ==========================================================
@@ -110,90 +96,56 @@ public class CollisionSystem {
     // ==========================================================
 
     /**
-     * Trả về {@code true} nếu vùng giao lộ phía trước trống.
+     * Trả về {@code true} nếu không có xe nào đang chiếm vùng
+     * giao lộ phía trước xe này.
+     *
+     * @param vehicle  xe muốn vào giao lộ
+     * @param vehicles toàn bộ xe trên bản đồ
+     * @return {@code true} nếu giao lộ trống
      */
     public boolean canEnterIntersection(Vehicle vehicle, List<Vehicle> vehicles) {
         for (Vehicle other : vehicles) {
-            if (other == vehicle) continue;
-            if (isBlockingIntersection(vehicle, other)) return false;
+            if (other == vehicle)
+                continue;
+            if (isBlockingIntersection(vehicle, other))
+                return false;
         }
         return true;
     }
 
-    // ==========================================================
-    // Helpers nội bộ
-    // ==========================================================
-
     /**
-     * Tìm xe đi cùng hướng gần nhất phía trước.
+     * Kiểm tra {@code other} có đang cản đường vào giao lộ của {@code vehicle}
+     * không.
      */
-    private Vehicle findLeader(Vehicle current, List<Vehicle> vehicles) {
-        Vector2D dir = current.getDirectionVector();
-        double closestDot = Double.MAX_VALUE;
-        Vehicle leader = null;
-
-        for (Vehicle other : vehicles) {
-            if (other == current) continue;
-            if (other.isTurning()) continue;
-            if (other.getDirection() != current.getDirection()) continue;
-
-            // Khoảng cách dọc theo hướng di chuyển
-            double dx = other.getX() - current.getX();
-            double dy = other.getY() - current.getY();
-            double forward = dx * dir.x + dy * dir.y; // projection
-
-            if (forward <= 0) continue; // phía sau
-
-            // Khoảng cách ngang (lateral offset)
-            double lateral = Math.abs(dx * (-dir.y) + dy * dir.x);
-            if (lateral > Constants.SAME_FILE_TOLERANCE * 1.5) continue;
-
-            if (forward < closestDot) {
-                closestDot = forward;
-                leader = other;
-            }
-        }
-        return leader;
-    }
-
-    /**
-     * Khoảng cách trống (gap) từ mũi xe hiện tại đến đuôi xe leader.
-     */
-    private double gapToLeader(Vehicle current, Vehicle leader) {
-        Vector2D dir = current.getDirectionVector();
-        double dx = leader.getX() - current.getX();
-        double dy = leader.getY() - current.getY();
-        double centerDist = dx * dir.x + dy * dir.y;
-        // Trừ nửa kích thước mỗi xe
-        double halfLen = (current.getWidth() + leader.getWidth()) / 2;
-        return Math.max(0, centerDist - halfLen);
-    }
-
     private boolean isBlockingIntersection(Vehicle vehicle, Vehicle other) {
-        int cl = Constants.INTERSECTION_CHECK_LEFT;
-        int cr = Constants.INTERSECTION_CHECK_RIGHT;
-        int ct = Constants.INTERSECTION_CHECK_TOP;
-        int cb = Constants.INTERSECTION_CHECK_BOTTOM;
-        int la = Constants.LOOKAHEAD_DISTANCE;
-        int to = Constants.SAME_LANE_TOLERANCE;
+        int checkLeft = Constants.INTERSECTION_CHECK_LEFT;
+        int checkRight = Constants.INTERSECTION_CHECK_RIGHT;
+        int checkTop = Constants.INTERSECTION_CHECK_TOP;
+        int checkBottom = Constants.INTERSECTION_CHECK_BOTTOM;
+        int lookahead = Constants.LOOKAHEAD_DISTANCE;
+        int tolerance = Constants.SAME_LANE_TOLERANCE;
 
         switch (vehicle.getDirection()) {
             case SOUTH:
-                return Math.abs(other.getX() - vehicle.getX()) < to
-                    && other.getY() > ct && other.getY() < cb
-                    && other.getY() - vehicle.getY() < la;
+                return Math.abs(other.getX() - vehicle.getX()) < tolerance
+                        && other.getY() > checkTop
+                        && other.getY() < checkBottom
+                        && other.getY() - vehicle.getY() < lookahead;
             case NORTH:
-                return Math.abs(other.getX() - vehicle.getX()) < to
-                    && other.getY() > ct && other.getY() < cb
-                    && vehicle.getY() - other.getY() < la;
+                return Math.abs(other.getX() - vehicle.getX()) < tolerance
+                        && other.getY() > checkTop
+                        && other.getY() < checkBottom
+                        && vehicle.getY() - other.getY() < lookahead;
             case EAST:
-                return Math.abs(other.getY() - vehicle.getY()) < to
-                    && other.getX() > cl && other.getX() < cr
-                    && other.getX() - vehicle.getX() < la;
+                return Math.abs(other.getY() - vehicle.getY()) < tolerance
+                        && other.getX() > checkLeft
+                        && other.getX() < checkRight
+                        && other.getX() - vehicle.getX() < lookahead;
             case WEST:
-                return Math.abs(other.getY() - vehicle.getY()) < to
-                    && other.getX() > cl && other.getX() < cr
-                    && vehicle.getX() - other.getX() < la;
+                return Math.abs(other.getY() - vehicle.getY()) < tolerance
+                        && other.getX() > checkLeft
+                        && other.getX() < checkRight
+                        && vehicle.getX() - other.getX() < lookahead;
             default:
                 return false;
         }

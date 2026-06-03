@@ -142,7 +142,6 @@ public class VehicleSpawnManager {
 
         vehicle.setBehavior(behavior);
         vehicle.setSpeed(behavior.getSpeed());
-        vehicle.setMaxSpeed(behavior.getSpeed());
     }
 
     // ----------------------------------------------------------
