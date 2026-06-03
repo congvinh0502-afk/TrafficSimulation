@@ -18,6 +18,8 @@ public class MainFrame extends JFrame {
     private ControlPanel    controlPanel;
 
     public MainFrame() {
+        // --- THÊM DÒNG NÀY ĐỂ LOAD ÂM THANH TRƯỚC KHI CHẠY ---
+        manager.SoundManager.init();
 
         setTitle("Smart City Traffic Simulation");
         setSize(1200, 800);

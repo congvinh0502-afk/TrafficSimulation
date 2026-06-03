@@ -161,10 +161,16 @@ public class VehicleSpawnManager {
     private void setupDriverBehavior(Vehicle vehicle) {
         if (vehicle instanceof Ambulance || vehicle instanceof FireTruck) return;
         if (vehicle instanceof Motorbike) return; // giữ AggressiveDriver từ constructor
+        
+        // Thêm dòng này để xe đạp luôn dùng NormalDriver, tránh bị buff tốc độ 
+        if (vehicle instanceof Bicycle) return; 
 
+        // Ô tô sẽ có 30% tỷ lệ vượt đèn đỏ (AggressiveDriver)
         DriverBehavior b = Math.random() < 0.3 ? new AggressiveDriver() : new NormalDriver();
         vehicle.setBehavior(b);
-        vehicle.setSpeed(b.getSpeed());
+        
+        // XÓA (hoặc comment) dòng bên dưới để giữ nguyên tốc độ gốc của xe
+        // vehicle.setSpeed(b.getSpeed()); 
     }
 
     // ─────────────────────────────────────────────────────────────

@@ -15,7 +15,7 @@ public class Car extends Vehicle {
         // [FIX D-05] XÃ³a "speed = 2" thá»«a (bá»‹ ghi Ä‘Ã¨ ngay bÃªn dÆ°á»›i).
         // XÃ³a "this.direction = direction" thá»«a (super() Ä‘Ã£ gÃ¡n rá»“i).
         behavior = new NormalDriver();
-        speed = behavior.getSpeed();
+        speed = 4.0;//behavior.getSpeed();
     }
 
     @Override

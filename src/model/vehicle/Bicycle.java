@@ -17,7 +17,7 @@ public class Bicycle extends Vehicle {
         // sau khi fix C-01 gá»i vehicle.getBehavior().shouldStop().
         // Xe Ä‘áº¡p dÃ¹ng NormalDriver; tá»‘c Ä‘á»™ láº¥y tá»« behavior Ä‘á»ƒ nháº¥t quÃ¡n.
         behavior = new NormalDriver();
-        speed = behavior.getSpeed(); // NormalDriver.getSpeed() = 4
+        speed = 2.5;//behavior.getSpeed(); // NormalDriver.getSpeed() = 4
 
         // Náº¿u muá»‘n xe Ä‘áº¡p cháº­m hÆ¡n Car, override láº¡i:
         // speed = 2;

@@ -18,7 +18,7 @@ public class Ambulance extends Vehicle {
 
         behavior = new EmergencyDriver();
 
-        speed = behavior.getSpeed();
+        speed = 6.0;//behavior.getSpeed();
     }
 
     @Override

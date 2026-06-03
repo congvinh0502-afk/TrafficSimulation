@@ -160,6 +160,23 @@ public class SimulationPanel extends JPanel {
         updateTrafficJam();
         updateFPS();
         updateFlash();
+        // ─── ĐOẠN CẬP NHẬT ÂM THANH ───
+        boolean hasAmbulance = false;
+        boolean hasFireTruck = false;
+        boolean anyTurning = false;
+        
+        for (Vehicle v : vehicles) {
+            if (v instanceof model.vehicle.Ambulance) hasAmbulance = true;
+            if (v instanceof model.vehicle.FireTruck) hasFireTruck = true;
+            
+            if ((v.isTurning() || v.isChangingLane()) && !(v instanceof model.vehicle.Bicycle)) {
+                anyTurning = true;
+            }
+        }
+        
+        manager.SoundManager.updateAmbulance(hasAmbulance);
+        manager.SoundManager.updateFireTruck(hasFireTruck);
+        manager.SoundManager.updateSignal(anyTurning);
     }
 
     // ─────────────────────────────────────────────────────────────

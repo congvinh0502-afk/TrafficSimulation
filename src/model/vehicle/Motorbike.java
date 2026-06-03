@@ -17,7 +17,7 @@ public class Motorbike extends Vehicle {
         // Motorbike dÃ¹ng AggressiveDriver (cháº¡y nhanh, hung hÄƒng hÆ¡n Car).
         // AggressiveDriver.getSpeed() = 7 â€” nháº¥t quÃ¡n vá»›i Car/Ambulance/FireTruck.
         behavior = new AggressiveDriver();
-        speed = behavior.getSpeed();
+        speed = 4.0;//behavior.getSpeed();
 
         this.width = 34;
         this.height = 16;

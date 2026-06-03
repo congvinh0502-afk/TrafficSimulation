@@ -62,10 +62,20 @@ public class CollisionSystem {
             }
 
             if (tooClose) {
-                // OVERTAKING LOGIC (VƯỢT XE): Thay vì dừng lại, thử chuyển làn trước
+                // OVERTAKING LOGIC
                 boolean canChange = laneChangeSystem.tryChangeLane(current, vehicles);
                 if (!canChange) {
-                    current.setStopped(true); 
+                    current.setStopped(true);
+                } else {
+                    // Phân loại âm thanh còi theo từng phương tiện
+                    if (current instanceof model.vehicle.Car) {
+                        manager.SoundManager.playCarHorn();
+                    } else if (current instanceof model.vehicle.Motorbike) {
+                        manager.SoundManager.playMotorbikeHorn();
+                    } else {
+                        // Dành cho xe đạp hoặc các xe khác
+                        manager.SoundManager.playGeneralHorn();
+                    }
                 }
                 return;
             }
