@@ -58,81 +58,101 @@ public class TrafficRuleSystem {
         TrafficLight relevantLight = null;
         boolean nearStopLine       = false;
 
+        // --- FIX 1: ĐẢO LẠI DẤU VÙNG QUÉT (NHẬN DIỆN XE TRƯỚC KHI CHẠM VẠCH) ---
         switch (direction) {
-
             case SOUTH: {
                 relevantLight = verticalLight;
                 int stopY = layout.getStopLineForDirection(Direction.SOUTH);
-                // xe đang tiếp cận từ trên xuống → tiến về stopY
-                nearStopLine = vehicle.getY() + vehicle.getHeight() >= stopY
-                            && vehicle.getY() < stopY + 130;
+                nearStopLine = (vehicle.getY() + vehicle.getHeight() <= stopY + 5) 
+                            && (vehicle.getY() + vehicle.getHeight() >= stopY - 150);
                 break;
             }
-
             case NORTH: {
                 relevantLight = verticalLight;
                 int stopY = layout.getStopLineForDirection(Direction.NORTH);
-                // xe đang tiếp cận từ dưới lên → tiến về stopY (giảm y)
-                nearStopLine = vehicle.getY() <= stopY
-                            && vehicle.getY() > stopY - 140;
+                nearStopLine = (vehicle.getY() >= stopY - 5) 
+                            && (vehicle.getY() <= stopY + 150);
                 break;
             }
-
             case EAST: {
                 relevantLight = horizontalLight;
                 int stopX = layout.getStopLineForDirection(Direction.EAST);
-                nearStopLine = vehicle.getX() + vehicle.getWidth() >= stopX
-                            && vehicle.getX() < stopX + 130;
+                nearStopLine = (vehicle.getX() + vehicle.getWidth() <= stopX + 5) 
+                            && (vehicle.getX() + vehicle.getWidth() >= stopX - 150);
                 break;
             }
-
             case WEST: {
                 relevantLight = horizontalLight;
                 int stopX = layout.getStopLineForDirection(Direction.WEST);
-                nearStopLine = vehicle.getX() <= stopX
-                            && vehicle.getX() > stopX - 140;
+                nearStopLine = (vehicle.getX() >= stopX - 5) 
+                            && (vehicle.getX() <= stopX + 150);
                 break;
             }
-
             case NORTHEAST: {
-                // Hướng chéo — dùng đèn dọc (vertical) làm proxy
-                // nearStopLine: khi xe còn chưa chạm vào bounds ngã rẽ
                 relevantLight = verticalLight;
                 Rectangle bounds = layout.getIntersectionBounds();
-                nearStopLine = !bounds.contains(
-                        (int) vehicle.getX(),
-                        (int) vehicle.getY()
-                ) && isApproachingIntersection(vehicle, bounds);
+                nearStopLine = !bounds.contains((int) vehicle.getX(), (int) vehicle.getY()) 
+                            && isApproachingIntersection(vehicle, bounds);
                 break;
             }
-
-            default:
-                break;
         }
 
         boolean mustStop = false;
 
         if (nearStopLine && relevantLight != null) {
             if (vehicle.getBehavior() != null) {
-                mustStop = vehicle.getBehavior().shouldStop(
-                        vehicle, vehicles, relevantLight
-                );
+                mustStop = vehicle.getBehavior().shouldStop(vehicle, vehicles, relevantLight);
             } else {
                 mustStop = relevantLight.getColor() == LightColor.RED;
             }
         }
 
-        // Chỉ check blocked khi xe đang ở vùng nearStopLine
         boolean blocked = nearStopLine
                 && !isInsideIntersection(vehicle)
                 && !collisionSystem.canEnterIntersection(vehicle, vehicles);
 
-        if (mustStop || blocked) {
+        vehicle.braking = false;
+
+        if (blocked) {
             vehicle.setStopped(true);
+            return;
+        }
+
+        // --- FIX 2: TĂNG LỰC PHANH VÀ KHÓA CHẶT TỌA ĐỘ VÀO MÉP VẠCH ---
+        if (mustStop) {
+            double dist = 0;
+            if (direction == Direction.NORTH) dist = vehicle.getY() - layout.getStopLineForDirection(Direction.NORTH);
+            else if (direction == Direction.SOUTH) dist = layout.getStopLineForDirection(Direction.SOUTH) - (vehicle.getY() + vehicle.getHeight());
+            else if (direction == Direction.EAST)  dist = layout.getStopLineForDirection(Direction.EAST) - (vehicle.getX() + vehicle.getWidth());
+            else if (direction == Direction.WEST)  dist = vehicle.getX() - layout.getStopLineForDirection(Direction.WEST);
+            else if (direction == Direction.NORTHEAST) dist = vehicle.getY() - layout.getStopLineForDirection(Direction.NORTH);
+
+            if (dist <= 1.5) { // Chỉ cần cách vạch 1.5 pixel là khóa bánh
+                vehicle.setSpeed(0);
+                vehicle.setStopped(true);
+                
+                // Nam châm hút chặt vào mép vạch, không thể nhích thêm 1 milimet nào
+                if (direction == Direction.NORTH) vehicle.setY(layout.getStopLineForDirection(Direction.NORTH));
+                else if (direction == Direction.SOUTH) vehicle.setY(layout.getStopLineForDirection(Direction.SOUTH) - vehicle.getHeight());
+                else if (direction == Direction.EAST) vehicle.setX(layout.getStopLineForDirection(Direction.EAST) - vehicle.getWidth());
+                else if (direction == Direction.WEST) vehicle.setX(layout.getStopLineForDirection(Direction.WEST));
+                
+            } else {
+                // Tăng hệ số hãm từ 0.15 lên 0.2 để xe phanh dứt khoát hơn, không trôi
+                double safeSpeed = Math.sqrt(2 * 0.2 * dist);
+                if (vehicle.getSpeed() > safeSpeed) {
+                    vehicle.setSpeed(Math.max(0, vehicle.getSpeed() - 0.45)); 
+                }
+                vehicle.braking = true; 
+                vehicle.setStopped(false); 
+            }
         } else {
             vehicle.setStopped(false);
         }
-    }
+    } 
+    // ─────────────────────────────────────────────────────────────
+    // PRIVATE HELPERS
+    // ─────────────────────────────────────────────────────────────
 
     // ─────────────────────────────────────────────────────────────
     // PRIVATE HELPERS

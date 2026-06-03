@@ -33,9 +33,9 @@ public class TurningSystem {
             return;
         }
 
-        // Lấy trigger bounds từ layout thay vì hardcode
+        // ĐỔI SANG INTERSECTION BOUNDS ĐỂ XE BO CUA NGAY TỪ MÉP VỈA HÈ
         IntersectionLayout layout = LaneManager.getLayout();
-        Rectangle trigger = layout.getTriggerBounds();
+        Rectangle trigger = layout.getIntersectionBounds();
 
         double hw = vehicle.getWidth()  / 2;
         double hh = vehicle.getHeight() / 2;
@@ -143,7 +143,7 @@ public class TurningSystem {
     // SMOOTH TURNING — giữ nguyên logic
     // ─────────────────────────────────────────────────────────────
 
-    public void smoothTurning(Vehicle vehicle) {
+    /*public void smoothTurning(Vehicle vehicle) {
         if (!vehicle.isTurning()) {
             return;
         }
@@ -159,6 +159,82 @@ public class TurningSystem {
 
         finishTurning(vehicle);
         updateVehicleAngle(vehicle);
+    }*/
+    public void smoothTurning(Vehicle vehicle) {
+        if (!vehicle.isTurning()) return;
+
+        // 1. TẠO QUỸ ĐẠO RẼ (Chỉ chạy 1 lần lúc bắt đầu rẽ)
+        if (!vehicle.isFollowingPath() && vehicle.getPath() == null) {
+            layout.IntersectionLayout layout = LaneManager.getLayout();
+            java.awt.Rectangle bounds = layout.getRecoverBounds();
+            
+            // Tìm điểm kết thúc (làn thoát) dựa vào Recover Bounds
+            double endX = vehicle.getX();
+            double endY = vehicle.getY();
+            
+            if (vehicle.getTargetDirection() == Direction.EAST) { endX = bounds.getMaxX(); endY = LaneManager.getLaneCenterY(Direction.EAST, util.Lane.RIGHT); }
+            if (vehicle.getTargetDirection() == Direction.WEST) { endX = bounds.getMinX(); endY = LaneManager.getLaneCenterY(Direction.WEST, util.Lane.RIGHT); }
+            if (vehicle.getTargetDirection() == Direction.SOUTH) { endX = LaneManager.getLaneCenterX(Direction.SOUTH, util.Lane.RIGHT); endY = bounds.getMaxY(); }
+            if (vehicle.getTargetDirection() == Direction.NORTH) { endX = LaneManager.getLaneCenterX(Direction.NORTH, util.Lane.RIGHT); endY = bounds.getMinY(); }
+
+            java.util.List<double[]> curvePath;
+
+            // Xử lý riêng biệt cho vòng xuyến Ngã 5
+            if (layout instanceof layout.FiveWayLayout) {
+                curvePath = util.PathBuilder.buildRoundaboutPath(
+                        vehicle.getX(), vehicle.getY(), endX, endY,
+                        layout.getCenterX(), layout.getCenterY(), 80.0
+                );
+            } else {
+                double dist = Math.hypot(endX - vehicle.getX(), endY - vehicle.getY());
+                
+                // DÙNG HẰNG SỐ 0.39: Quỹ đạo sẽ tạo thành một cung tròn hoàn hảo
+                double curveOffset = dist * 0.39; 
+
+                double c1X = vehicle.getX() + getDx(vehicle.getDirection()) * curveOffset;
+                double c1Y = vehicle.getY() + getDy(vehicle.getDirection()) * curveOffset;
+                double c2X = endX - getDx(vehicle.getTargetDirection()) * curveOffset;
+                double c2Y = endY - getDy(vehicle.getTargetDirection()) * curveOffset;
+
+                curvePath = util.PathBuilder.buildCubicPath(
+                        vehicle.getX(), vehicle.getY(), c1X, c1Y, c2X, c2Y, endX, endY, 30
+                );
+            }
+            vehicle.startFollowingPath(curvePath);
+        }
+
+        // 2. CẬP NHẬT GÓC ĐẦU XE ĐỂ RENDER CHUẨN XÁC
+        updateVehicleAngle(vehicle);
+
+        // 3. NẾU ĐI HẾT ĐƯỜNG CONG THÌ KẾT THÚC RẼ
+        if (!vehicle.isFollowingPath() && vehicle.getPath() != null) {
+            // Bắt buộc đổi Direction và Angle về hướng làn đường mới
+            vehicle.setDirection(vehicle.getTargetDirection());
+            vehicle.setAngle(vehicle.getTargetAngle());
+            
+            // Snap xe vào đúng mép đường (tránh bị lệch pixel)
+            vehicle.setLane(util.Lane.RIGHT);
+            recoverLane(vehicle);
+            
+            // Dọn dẹp và kết thúc trạng thái rẽ
+            vehicle.setTurning(false);
+            vehicle.setPath(null); 
+        }
+    }
+
+    // Copy thêm 2 hàm tiện ích nhỏ này xuống dưới cùng class TurningSystem
+    private double getDx(Direction dir) {
+        if (dir == Direction.EAST) return 1;
+        if (dir == Direction.WEST) return -1;
+        if (dir == Direction.NORTHEAST) return 0.31; 
+        return 0;
+    }
+
+    private double getDy(Direction dir) {
+        if (dir == Direction.SOUTH) return 1;
+        if (dir == Direction.NORTH) return -1;
+        if (dir == Direction.NORTHEAST) return -0.95;
+        return 0;
     }
 
     private void finishTurning(Vehicle vehicle) {
@@ -215,6 +291,10 @@ public class TurningSystem {
     // ─────────────────────────────────────────────────────────────
 
     public void updateVehicleAngle(Vehicle vehicle) {
+        // NẾU ĐANG CHẠY ĐƯỜNG CONG THÌ BỎ QUA BỘ QUAY CŨ
+        if (vehicle.isFollowingPath()) {
+            return; 
+        }
         double rotateSpeed = 2;
         double current     = vehicle.getAngle();
         double target      = vehicle.getTargetAngle();

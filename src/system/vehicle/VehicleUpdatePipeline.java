@@ -81,6 +81,10 @@ public class VehicleUpdatePipeline {
 
         if (vehicle.isTurning()) {
             collisionSystem.maintainDistance(vehicle, vehicles);
+            // --- THÊM BLOCK NÀY ĐỂ XE TIẾN LÊN THEO ĐƯỜNG CONG ---
+            if (!vehicle.isStopped()) {
+                vehicle.move(); 
+            }
             return;
         }
 

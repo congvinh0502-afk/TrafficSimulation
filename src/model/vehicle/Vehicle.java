@@ -40,6 +40,8 @@ public abstract class Vehicle {
     // Tách riêng khỏi targetX/Y để không xung đột với TurningSystem
     private double overtakeOffsetX = 0;
     private double overtakeOffsetY = 0;
+    
+    
     public Vehicle(double x, double y, Direction direction) {
         this.x = x;
         this.y = y;
@@ -217,4 +219,19 @@ public void   setOvertakeOffsetX(double v) { this.overtakeOffsetX = v; }
 public double getOvertakeOffsetY() { return overtakeOffsetY; }
 public void   setOvertakeOffsetY(double v) { this.overtakeOffsetY = v; }
 
+protected java.util.List<double[]> path;
+    protected boolean followingPath = false;
+    protected int currentPathIndex = 0;
+
+    public java.util.List<double[]> getPath() { return path; }
+    public void setPath(java.util.List<double[]> path) { this.path = path; }
+    public boolean isFollowingPath() { return followingPath; }
+    public void startFollowingPath(java.util.List<double[]> newPath) {
+        this.path = newPath;
+        this.currentPathIndex = 0;
+        this.followingPath = true;
+    }
+    // nhớ được tốc độ tối đa và trạng thái phanh
+    public double maxSpeed = -1; 
+    public boolean braking = false;
 }
