@@ -8,15 +8,9 @@
 5. (*) thêm hệ thống di chuyển góc quay phóng to, thu nhỏ màn hình [Minh]
 6. (*) khoảng cách `direction` của `lane` hiện tại đang sử dụng "north", "south",..... Đề xuất thay đổi bằng vector [Minh]
 6. (*) các phương tiện hiện đang teleport ở ngã rẽ, chưa tìm thấy nguyên nhân [Minh]
-<<<<<<< HEAD
-7. (\) cây trên mặt đường 5-way [Hương] {Hương}
-8. (\) các lối đi của 5-way căn không đều, trông rất chắp vá [Hương] {Hương}
-9. (*) xe di chuyển trên 3-way như 4-way [Hương]
-10. (*) xe di chuyển không thẳng [Hương]
-=======
-7. (*) cây trên mặt đường 5-way [Hương]
-8. (*) xe di chuyển trên 3-way như 4-way [Hương]
+7. (\) 5-way: bố cục các làn không cân xứng, cây mọc trên đường [Hương]
+8. (\) xe di chuyển trên 3-way như 4-way [Hương]
 9. (*) xe di chuyển không thẳng [Hương]
 10.(-) cho xe chay cham lai [toan]
 11.(/) bo sung them am thanh cho cac loai xe [toan]
->>>>>>> f0afb605c77c04f66244c3186ec444e3b7923deb
+12.(\) 3-way và 5-way đang bị phụ thuộc vào logic phát triển của 4-way -> lỗi, cần fix lại logic intersect [Hương]
