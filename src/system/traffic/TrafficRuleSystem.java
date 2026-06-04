@@ -99,12 +99,11 @@ public class TrafficRuleSystem {
                     return Double.MAX_VALUE;
             }
         } else {
-            // Toán học tính khoảng cách dừng xe bằng dot product cho góc chéo
             double dx = layout.getCx() - vehicle.getX();
             double dy = layout.getCy() - vehicle.getY();
             double rad = Math.toRadians(dir.toAngleDeg());
             double distToCenter = dx * Math.cos(rad) + dy * Math.sin(rad);
-            return distToCenter - (170 + 10);
+            return distToCenter - (170 + 5);
         }
     }
 }

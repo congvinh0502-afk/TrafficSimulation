@@ -124,8 +124,9 @@ public class RoadRenderer {
     // ==========================================================
 
     public void renderFiveWay(GraphicsContext gc) {
-        int cx = 400, cy = 400;
-        int roadHalfW = 50; // nửa chiều rộng mỗi nhánh (1 làn = 50px, 2 làn = 100px)
+        int cx = 600;
+        int cy = 400;
+        int roadHalfW = 100; // nửa chiều rộng mỗi nhánh (2 làn = 100px)
         int edgePad = 6; // độ rộng mép đường
         int roundaboutOuter = 170; // bán kính ngoài bùng binh
         int roundaboutIsland = 80; // bán kính đảo giữa

@@ -32,7 +32,7 @@ public class VehicleSpawnManager {
 
     public VehicleSpawnManager(List<Vehicle> vehicles, IntersectionLayout layout) {
         this.vehicles = vehicles;
-        this.layout   = layout;
+        this.layout = layout;
     }
 
     public void setLayout(IntersectionLayout layout) {
@@ -48,8 +48,8 @@ public class VehicleSpawnManager {
         double spawnX = layout.getSpawnX(direction);
         double spawnY = layout.getSpawnY(direction);
 
-        if (!canSpawn(spawnX, spawnY)) return;
-
+        if (!canSpawn(spawnX, spawnY))
+            return;
         Vehicle vehicle = createRandomVehicle(direction, spawnX, spawnY);
         setupVehicle(vehicle);
         vehicles.add(vehicle);
@@ -60,11 +60,16 @@ public class VehicleSpawnManager {
     private Vehicle createRandomVehicle(Direction dir, double x, double y) {
         int type = (int) (Math.random() * 5);
         switch (type) {
-            case 0:  return new Car(x, y, dir);
-            case 1:  return new Motorbike(x, y, dir);
-            case 2:  return new Bicycle(x, y, dir);
-            case 3:  return new Ambulance(x, y, dir);
-            default: return new FireTruck(x, y, dir);
+            case 0:
+                return new Car(x, y, dir);
+            case 1:
+                return new Motorbike(x, y, dir);
+            case 2:
+                return new Bicycle(x, y, dir);
+            case 3:
+                return new Ambulance(x, y, dir);
+            default:
+                return new FireTruck(x, y, dir);
         }
     }
 
@@ -89,11 +94,13 @@ public class VehicleSpawnManager {
                 vehicle.setY(layout.getLaneCenterY(dir, lane));
             }
         } else {
-            // Đẩy xe vào đúng mép đường bằng Vector pháp tuyến
-            double laneOffset = (lane == Lane.RIGHT) ? 25.0 : -25.0;
             double rad = Math.toRadians(dir.toAngleDeg());
-            double nx = Math.cos(rad + Math.PI / 2);
-            double ny = Math.sin(rad + Math.PI / 2);
+            double fx = Math.cos(rad);
+            double fy = Math.sin(rad);
+            // Sửa vector pháp tuyến (chỉ về đúng lề phải thay vì lề trái gây đi lên cỏ)
+            double nx = -fy;
+            double ny = fx;
+            double laneOffset = (lane == Lane.RIGHT) ? 25.0 : -25.0;
             vehicle.setX(vehicle.getX() + nx * laneOffset);
             vehicle.setY(vehicle.getY() + ny * laneOffset);
         }
@@ -101,17 +108,23 @@ public class VehicleSpawnManager {
 
     private void setupTurnType(Vehicle vehicle) {
         double r = Math.random();
-        if (r < 0.33)       vehicle.setTurnType(TurnType.LEFT);
-        else if (r < 0.66)  vehicle.setTurnType(TurnType.RIGHT);
-        else                vehicle.setTurnType(TurnType.STRAIGHT);
+        if (r < 0.33)
+            vehicle.setTurnType(TurnType.LEFT);
+        else if (r < 0.66)
+            vehicle.setTurnType(TurnType.RIGHT);
+        else
+            vehicle.setTurnType(TurnType.STRAIGHT);
     }
 
     private void setupDriverBehavior(Vehicle vehicle) {
-        if (vehicle instanceof Ambulance || vehicle instanceof FireTruck) return;
-        if (vehicle instanceof Motorbike) return;
+        if (vehicle instanceof Ambulance || vehicle instanceof FireTruck)
+            return;
+        if (vehicle instanceof Motorbike)
+            return;
 
         DriverBehavior behavior = (Math.random() < AGGRESSIVE_PROBABILITY)
-                ? new AggressiveDriver() : new NormalDriver();
+                ? new AggressiveDriver()
+                : new NormalDriver();
         vehicle.setBehavior(behavior);
         vehicle.setSpeed(behavior.getSpeed());
         vehicle.setMaxSpeed(behavior.getSpeed());
@@ -145,7 +158,8 @@ public class VehicleSpawnManager {
         for (Vehicle v : vehicles) {
             double dx = v.getX() - x;
             double dy = v.getY() - y;
-            if (Math.sqrt(dx * dx + dy * dy) < Constants.SPAWN_MIN_DISTANCE) return false;
+            if (Math.sqrt(dx * dx + dy * dy) < Constants.SPAWN_MIN_DISTANCE)
+                return false;
         }
         return true;
     }

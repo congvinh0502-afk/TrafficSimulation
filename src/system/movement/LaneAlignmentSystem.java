@@ -3,7 +3,7 @@ package system.movement;
 import config.Constants;
 import model.intersection.IntersectionLayout;
 import model.vehicle.Vehicle;
-import util.Direction; // <-- Dòng import bắt buộc phải có
+import util.Direction; 
 
 /**
  * Hệ thống căn giữa làn đường.
@@ -49,26 +49,25 @@ public class LaneAlignmentSystem {
                 }
             }
         } else {
-            // Lực hút toán học: giữ xe ngã 5 bám đúng đường 72 độ
-            double laneOffset = (vehicle.getLane() == util.Lane.RIGHT) ? 25.0 : -25.0;
             double rad = Math.toRadians(dir.toAngleDeg());
-            double nx = Math.cos(rad + Math.PI / 2);
-            double ny = Math.sin(rad + Math.PI / 2);
-
+            double fx = Math.cos(rad);
+            double fy = Math.sin(rad);
+            // Sửa vector pháp tuyến (chỉ về đúng lề phải thay vì lề trái gây đi lên cỏ)
+            double nx = -fy; 
+            double ny = fx;
+            double laneOffset = (vehicle.getLane() == util.Lane.RIGHT) ? 25.0 : -25.0;
             double linePX = layout.getCx() + nx * laneOffset;
             double linePY = layout.getCy() + ny * laneOffset;
-
             double dx = vehicle.getX() - linePX;
             double dy = vehicle.getY() - linePY;
             double dist = dx * nx + dy * ny;
-
             if (Math.abs(dist) > 0.1) {
-                double correction = Math.signum(dist) * Math.min(smooth, Math.abs(dist));
                 if (postTurn && Math.abs(dist) < Constants.POST_TURN_SNAP_THRESHOLD) {
                     vehicle.setX(vehicle.getX() - dist * nx);
                     vehicle.setY(vehicle.getY() - dist * ny);
                     vehicle.setPostTurnAligning(false);
                 } else {
+                    double correction = Math.signum(dist) * Math.min(smooth, Math.abs(dist));
                     vehicle.setX(vehicle.getX() - correction * nx);
                     vehicle.setY(vehicle.getY() - correction * ny);
                 }

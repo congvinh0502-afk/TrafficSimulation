@@ -25,6 +25,7 @@ public class VehicleMovementSystem {
 
     private void recoverAfterIntersection(Vehicle vehicle, IntersectionLayout layout) {
         if (!layout.isOutsideRecover(vehicle.getX(), vehicle.getY())) return;
+        if (!vehicle.hasTurned()) return;
         vehicle.setStopped(false);
         vehicle.setChangingLane(false);
         vehicle.setTurning(false);

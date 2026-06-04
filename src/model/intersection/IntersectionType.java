@@ -44,11 +44,11 @@ public enum IntersectionType {
     FIVE_WAY;
 
     /** Tâm giao lộ mặc định cho chế độ single-intersection. */
-    public static final int DEFAULT_CX = 400;
+    public static final int DEFAULT_CX = 600;
     public static final int DEFAULT_CY = 400;
 
     /**
-     * Tạo {@link IntersectionLayout} với tâm mặc định (400, 400).
+     * Tạo {@link IntersectionLayout} với tâm mặc định.
      */
     public IntersectionLayout createLayout() {
         return createLayout(DEFAULT_CX, DEFAULT_CY);

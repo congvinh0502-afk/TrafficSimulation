@@ -103,8 +103,8 @@ public class IntersectionLayout {
                                 int recoverTop,   int recoverBottom,
                                 int checkLeft,    int checkRight,
                                 int checkTop,     int checkBottom) {
-        this.cx           = cx;
-        this.cy           = cy;
+        this.cx = cx;
+        this.cy = cy;
         this.arms         = Collections.unmodifiableMap(arms);
         this.turnZone     = turnZone;
         this.recoverLeft  = recoverLeft;
@@ -128,7 +128,21 @@ public class IntersectionLayout {
     public Arm             getArm(Direction d) { return arms.get(d); }
     public boolean         hasDirection(Direction d) { return arms.containsKey(d); }
 
-    public List<Direction> getDirections() { return new ArrayList<>(arms.keySet()); }
+    public List<Direction> getDirections() {
+        List<Direction> result = new ArrayList<>();
+        for (Direction d : arms.keySet()) {
+            if (d.name().startsWith("FW_OUT"))
+                continue;
+            if (d == Direction.NORTH && arms.containsKey(Direction.FW_IN_54))
+                continue;
+            result.add(d);
+        }
+        return result;
+    }
+
+    public boolean isFiveWay() {
+        return arms.containsKey(Direction.FW_IN_54);
+    }
 
     public TurnZone getTurnZone() { return turnZone; }
 
@@ -371,34 +385,35 @@ public class IntersectionLayout {
      * di chuyển chính xác theo góc 72°.
      */
     public static IntersectionLayout fiveWay(int cx, int cy) {
-        int recPad = 80;
-        int buf = 90;
+        int recPad = 60;
+        int buf = 80;
         int roundaboutR = 170;
         Map<Direction, Arm> arms = new LinkedHashMap<>();
 
-        // 5 góc nhánh vật lý
         double[] branchAngles = { 270, 342, 54, 126, 198 };
-
-        // Hướng xe đi VÀO tương ứng với 5 nhánh trên
         Direction[] inboundDirs = {
                 Direction.SOUTH, Direction.FW_IN_342, Direction.FW_IN_54,
                 Direction.FW_IN_126, Direction.FW_IN_198
         };
+        Direction[] outboundDirs = {
+                Direction.NORTH, Direction.FW_OUT_342, Direction.FW_OUT_54,
+                Direction.FW_OUT_126, Direction.FW_OUT_198
+        };
 
-        double spawnDist = 700.0;
+        double spawnDist = 450.0;
 
         for (int i = 0; i < 5; i++) {
-            double rad = Math.toRadians(branchAngles[i]);
-            // Tính toán vị trí sinh xe ngay TẠI MÚT CỦA ĐƯỜNG
-            double dx = Math.cos(rad);
-            double dy = Math.sin(rad);
-            double spawnX = cx + dx * spawnDist;
-            double spawnY = cy + dy * spawnDist;
-
+            double branchRad = Math.toRadians(branchAngles[i]);
+            double spawnX = cx + Math.cos(branchRad) * spawnDist;
+            double spawnY = cy + Math.sin(branchRad) * spawnDist;
             arms.put(inboundDirs[i], new Arm(inboundDirs[i], 0, 0, 0, 0, spawnX, spawnY));
+            arms.put(outboundDirs[i], new Arm(outboundDirs[i], 0, 0, 0, 0,
+                    cx + Math.cos(branchRad) * (spawnDist + 200),
+                    cy + Math.sin(branchRad) * (spawnDist + 200)));
         }
 
-        TurnZone tz = new TurnZone(cx - roundaboutR, cx + roundaboutR, cy - roundaboutR, cy + roundaboutR);
+        TurnZone tz = new TurnZone(cx - roundaboutR, cx + roundaboutR,
+                cy - roundaboutR, cy + roundaboutR);
 
         return new IntersectionLayout(cx, cy, arms, tz,
                 cx - roundaboutR - recPad, cx + roundaboutR + recPad,

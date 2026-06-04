@@ -22,9 +22,11 @@
     5-way: 5 nhánh 72° thật sự
     6-way, 8-way, mạng lưới: thêm vào dễ dàng
     Road network: mỗi intersection có list nhánh riêng, xe navigate bằng graph
-14.(-) Logic xe tệ: chỉ chạy trên 4 hướng mặc định Đông - Tây - Nam - Bắc dẫn đến ngoại trừ ngã tư thì tất cả các nhánh còn lại đều lỗi[Hương]
+14.(-) logic xe tệ: chỉ chạy trên 4 hướng mặc định Đông - Tây - Nam - Bắc dẫn đến ngoại trừ ngã tư thì tất cả các nhánh còn lại đều lỗi[Hương]
     (+)[Hương]
-    - Sửa Direction.java: Xóa bỏ khái niệm N, S, E, W.Thay vào đó là các vector tương ứng các góc 0°, 72°, 144°, 216°, 288°.
-    - Sửa LaneAlignmentSystem: Không thể dùng vehicle.setX(...) hay vehicle.setY(...) để căn làn nữa, mà phải dùng toán học lượng giác(Math.sin, Math.cos) để chiếu tọa độ xe lên trục của từng làn đường nghiêng.
-    - Sửa TurningSystem: Phải tính toán nội suy vòng cung(bezier curve) hoặc xoay xe theo góc 72 độ khi rẽ, thay vì quay 90 độ như hiện tại.
-15. (/) map ở 5-way còn lỗi hiển thị nhiều
+    - sửa Direction.java: Xóa bỏ khái niệm N, S, E, W.Thay vào đó là các vector tương ứng các góc 0°, 72°, 144°, 216°, 288°.
+    - sửa LaneAlignmentSystem: Không thể dùng vehicle.setX(...) hay vehicle.setY(...) để căn làn nữa, mà phải dùng toán học lượng giác(Math.sin, Math.cos) để chiếu tọa độ xe lên trục của từng làn đường nghiêng.
+    - sửa TurningSystem: Phải tính toán nội suy vòng cung(bezier curve) hoặc xoay xe theo góc 72 độ khi rẽ, thay vì quay 90 độ như hiện tại.
+15. (\) map ở 5-way còn lỗi hiển thị nhiều [Hương]
+16. (\) cảnh vật xung quanh: cây cối, đèn giao thông, bãi đậu xe... được đặt mặc định -> rất khó trong việc mở rộng thêm loại giao lộ mới, hoặc thay đổi bố cục đường xá. [Hương]
+
