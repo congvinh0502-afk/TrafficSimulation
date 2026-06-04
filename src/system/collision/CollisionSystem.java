@@ -1,175 +1,103 @@
 package system.collision;
 
 import config.Constants;
-import math.Vector2D;
-import model.intersection.IntersectionLayout;
+import model.network.NetworkLayout;
 import model.vehicle.Vehicle;
 import system.movement.LaneChangeSystem;
 
 import java.util.List;
 
-/**
- * Hệ thống va chạm và khoảng cách an toàn.
- * Dùng IntersectionLayout để lấy vùng check thay vì Constants hardcode.
- */
+/** Khoảng cách an toàn + hitbox overlap. */
 public class CollisionSystem {
 
-    private final LaneChangeSystem laneChangeSystem;
+    private final LaneChangeSystem laneChange = new LaneChangeSystem();
 
-    public CollisionSystem() {
-        this.laneChangeSystem = new LaneChangeSystem();
-    }
+    public void maintainDistance(Vehicle cur, List<Vehicle> all) {
+        if (cur.isTurning() || cur.isChangingLane()) return;
 
-    // ==========================================================
-    // Khoảng cách + gia tốc
-    // ==========================================================
-
-    public void maintainDistance(Vehicle current, List<Vehicle> vehicles) {
-        // Chỉ bỏ qua khi đang rẽ. Khi đang đổi làn vẫn PHẢI giữ khoảng cách với xe phía
-        // trước!
-        if (current.isTurning())
-            return;
-
-        Vehicle leader = findLeader(current, vehicles);
+        Vehicle leader = findLeader(cur, all);
         if (leader == null) {
-            current.setAcceleration(Constants.DEFAULT_ACCELERATION);
-            current.setStopped(false);
+            cur.setAcceleration(Constants.DEFAULT_ACCELERATION);
+            cur.setStopped(false);
             return;
         }
 
-        double gap = gapToLeader(current, leader);
-        double safeDistance = current.getWidth() * 2.2;
-        double brakeStart = Constants.BRAKE_START_DISTANCE;
+        double gap  = gap(cur, leader);
+        double safe = cur.getWidth() * 2.2;
+        double brkS = Constants.BRAKE_START_DISTANCE;
 
         if (gap <= Constants.MIN_FOLLOW_DISTANCE) {
-            current.setStopped(true);
-            current.setAcceleration(0);
-        } else if (gap < safeDistance) {
-            double ratio = 1.0 - (gap / safeDistance);
-            current.setAcceleration(-Constants.MAX_BRAKE_DECEL * ratio);
-            if (current.getSpeed() < current.getMaxSpeed() * 0.3) {
-                if (!laneChangeSystem.tryChangeLane(current, vehicles)) {
-                    if (current.getSpeed() < 0.5)
-                        current.setStopped(true);
-                }
+            cur.setStopped(true); cur.setAcceleration(0);
+        } else if (gap < safe) {
+            double r = 1.0 - gap/safe;
+            cur.setAcceleration(-Constants.MAX_BRAKE_DECEL * r);
+            if (cur.getSpeed() < cur.getMaxSpeed()*0.3) {
+                if (!laneChange.tryChangeLane(cur, all) && cur.getSpeed()<0.5)
+                    cur.setStopped(true);
             }
-        } else if (gap < brakeStart) {
-            double ratio = (brakeStart - gap) / (brakeStart - safeDistance);
-            current.setAcceleration(-Constants.MAX_BRAKE_DECEL * 0.4 * ratio);
+        } else if (gap < brkS) {
+            double r = (brkS-gap)/(brkS-safe);
+            cur.setAcceleration(-Constants.MAX_BRAKE_DECEL*0.4*r);
         } else {
-            current.setAcceleration(Constants.DEFAULT_ACCELERATION);
+            cur.setAcceleration(Constants.DEFAULT_ACCELERATION);
         }
     }
 
-    // ==========================================================
-    // Hitbox
-    // ==========================================================
-
-    public boolean hasOverlap(Vehicle current, List<Vehicle> vehicles) {
-        Hitbox hb = Hitbox.of(current);
-        for (Vehicle other : vehicles) {
-            if (other == current) continue;
-            if (Hitbox.of(other).intersects(hb)) return true;
-        }
+    public boolean hasOverlap(Vehicle cur, List<Vehicle> all) {
+        Hitbox hb = Hitbox.of(cur);
+        for (Vehicle o : all) { if (o==cur) continue; if (Hitbox.of(o).intersects(hb)) return true; }
         return false;
     }
 
-    // ==========================================================
-    // Kiểm tra vào giao lộ — nhận layout
-    // ==========================================================
-
-    public boolean canEnterIntersection(Vehicle vehicle, List<Vehicle> vehicles,
-                                        IntersectionLayout layout) {
-        for (Vehicle other : vehicles) {
-            if (other == vehicle) continue;
-            if (isBlockingIntersection(vehicle, other, layout)) return false;
+    public boolean canEnterIntersection(Vehicle v, List<Vehicle> all) {
+        for (Vehicle o : all) {
+            if (o==v) continue;
+            if (blocking(v, o)) return false;
         }
         return true;
     }
 
-    /** Overload không layout — dùng cho các caller cũ chưa migration. */
-    public boolean canEnterIntersection(Vehicle vehicle, List<Vehicle> vehicles) {
-        for (Vehicle other : vehicles) {
-            if (other == vehicle) continue;
-            if (isBlockingIntersectionFallback(vehicle, other)) return false;
-        }
-        return true;
-    }
-
-    // ==========================================================
-    // Helpers
-    // ==========================================================
-
-    private Vehicle findLeader(Vehicle current, List<Vehicle> vehicles) {
-        Vector2D dir = current.getDirectionVector();
-        double closestDot = Double.MAX_VALUE;
-        Vehicle leader = null;
-
-        for (Vehicle other : vehicles) {
-            // Không được bỏ qua xe đang rẽ (other.isTurning()), xe sau phải phanh chờ xe
-            // trước rẽ xong
-            if (other == current)
-                continue;
-            if (other.getDirection() != current.getDirection())
-                continue;
-
-            double dx = other.getX() - current.getX();
-            double dy = other.getY() - current.getY();
-
-            double forward = dx * dir.x + dy * dir.y;
-            if (forward <= 0)
-                continue;
-
-            double lateral = Math.abs(dx * (-dir.y) + dy * dir.x);
-            if (lateral > Constants.SAME_FILE_TOLERANCE * 1.5)
-                continue;
-
-            if (forward < closestDot) {
-                closestDot = forward;
-                leader = other;
-            }
+    // ── Helpers ────────────────────────────────────────────────
+    private Vehicle findLeader(Vehicle cur, List<Vehicle> all) {
+        double best = Double.MAX_VALUE; Vehicle leader = null;
+        var dir = cur.getDirectionVector();
+        for (Vehicle o : all) {
+            if (o==cur || o.isTurning()) continue;
+            if (o.getDirection() != cur.getDirection()) continue;
+            double dx=o.getX()-cur.getX(), dy=o.getY()-cur.getY();
+            double fwd = dx*dir.x + dy*dir.y;
+            if (fwd <= 0) continue;
+            double lat = Math.abs(dx*(-dir.y) + dy*dir.x);
+            if (lat > Constants.SAME_FILE_TOLERANCE*1.6) continue;
+            if (fwd < best) { best=fwd; leader=o; }
         }
         return leader;
     }
 
-    private double gapToLeader(Vehicle current, Vehicle leader) {
-        Vector2D dir = current.getDirectionVector();
-        double dx = leader.getX() - current.getX();
-        double dy = leader.getY() - current.getY();
-        double centerDist = dx * dir.x + dy * dir.y;
-        return Math.max(0, centerDist - (current.getWidth() + leader.getWidth()) / 2.0);
+    private double gap(Vehicle cur, Vehicle leader) {
+        var dir = cur.getDirectionVector();
+        double dx=leader.getX()-cur.getX(), dy=leader.getY()-cur.getY();
+        double cd = dx*dir.x + dy*dir.y;
+        return Math.max(0, cd - (cur.getWidth()+leader.getWidth())/2.0);
     }
 
-    private boolean isBlockingIntersection(Vehicle vehicle, Vehicle other,
-                                            IntersectionLayout layout) {
-        int cl = layout.getCheckLeft();
-        int cr = layout.getCheckRight();
-        int ct = layout.getCheckTop();
-        int cb = layout.getCheckBottom();
-        int la = Constants.LOOKAHEAD_DISTANCE;
-        int to = Constants.SAME_LANE_TOLERANCE;
-
-        switch (vehicle.getDirection()) {
-            case SOUTH: return Math.abs(other.getX()-vehicle.getX())<to && other.getY()>ct && other.getY()<cb && other.getY()-vehicle.getY()<la;
-            case NORTH: return Math.abs(other.getX()-vehicle.getX())<to && other.getY()>ct && other.getY()<cb && vehicle.getY()-other.getY()<la;
-            case EAST:  return Math.abs(other.getY()-vehicle.getY())<to && other.getX()>cl && other.getX()<cr && other.getX()-vehicle.getX()<la;
-            case WEST:  return Math.abs(other.getY()-vehicle.getY())<to && other.getX()>cl && other.getX()<cr && vehicle.getX()-other.getX()<la;
+    private boolean blocking(Vehicle v, Vehicle o) {
+        int RH = NetworkLayout.ROAD_HALF + 20;
+        int LA = Constants.LOOKAHEAD_DISTANCE;
+        int TO = Constants.SAME_LANE_TOLERANCE;
+        // Dùng homeIntersectionX của xe để xác định vùng giao lộ đúng
+        int ix = v.getHomeIntersectionX();
+        // Y của giao lộ: giả định trục ngang ở y=0 trong hệ tọa độ world,
+        // hoặc dùng 0 nếu chưa có NetworkLayout.IY (single-intersection compat)
+        int iy = 0;
+        switch (v.getDirection()) {
+            case SOUTH: return Math.abs(o.getX()-v.getX())<TO && inBox(o.getY()-iy, -RH, RH) && o.getY()-v.getY()<LA;
+            case NORTH: return Math.abs(o.getX()-v.getX())<TO && inBox(o.getY()-iy, -RH, RH) && v.getY()-o.getY()<LA;
+            case EAST:  return Math.abs(o.getY()-v.getY())<TO && inBox(o.getX()-ix, -RH, RH) && o.getX()-v.getX()<LA;
+            case WEST:  return Math.abs(o.getY()-v.getY())<TO && inBox(o.getX()-ix, -RH, RH) && v.getX()-o.getX()<LA;
             default:    return false;
         }
     }
 
-    /** Fallback dùng tâm giao lộ mặc định khi không có layout. */
-    private boolean isBlockingIntersectionFallback(Vehicle vehicle, Vehicle other) {
-        // Dùng tâm 400,400 với lw=50 buffer=70 → check 280..520
-        int cl = 280, cr = 520, ct = 280, cb = 520;
-        int la = Constants.LOOKAHEAD_DISTANCE;
-        int to = Constants.SAME_LANE_TOLERANCE;
-        switch (vehicle.getDirection()) {
-            case SOUTH: return Math.abs(other.getX()-vehicle.getX())<to && other.getY()>ct && other.getY()<cb && other.getY()-vehicle.getY()<la;
-            case NORTH: return Math.abs(other.getX()-vehicle.getX())<to && other.getY()>ct && other.getY()<cb && vehicle.getY()-other.getY()<la;
-            case EAST:  return Math.abs(other.getY()-vehicle.getY())<to && other.getX()>cl && other.getX()<cr && other.getX()-vehicle.getX()<la;
-            case WEST:  return Math.abs(other.getY()-vehicle.getY())<to && other.getX()>cl && other.getX()<cr && vehicle.getX()-other.getX()<la;
-            default:    return false;
-        }
-    }
+    private boolean inBox(double v, int lo, int hi) { return v>lo && v<hi; }
 }

@@ -33,6 +33,7 @@ import manager.VehicleSpawnManager;
 import model.SimulationConfig;
 import model.intersection.IntersectionLayout;
 import model.intersection.IntersectionType;
+import model.network.IntersectionNode;
 import model.trafficlight.LightColor;
 import model.trafficlight.TrafficLight;
 import model.vehicle.Vehicle;
@@ -55,6 +56,7 @@ public class SimulationScene {
 
     private final SimulationConfig config;
     private final IntersectionLayout layout;   // ← layout chính xác cho loại giao lộ
+    private final List<IntersectionNode> intersections; // danh sách nút cho movement system
 
     private final List<Vehicle> vehicles = new ArrayList<>();
 
@@ -100,6 +102,17 @@ public class SimulationScene {
 
         verticalLight   = new TrafficLight(LightColor.GREEN, Constants.LIGHT_GREEN_DURATION);
         horizontalLight = new TrafficLight(LightColor.RED,   Constants.LIGHT_RED_DURATION);
+
+        // Tạo danh sách IntersectionNode cho movement system v2
+        IntersectionNode singleNode = new IntersectionNode(
+                layout.getCx(), layout.getCy(),
+                config.getIntersectionType(),
+                verticalLight,
+                layout.hasDirection(Direction.EAST) && layout.hasDirection(Direction.WEST)
+                        ? horizontalLight : null
+        );
+        this.intersections = new ArrayList<>();
+        this.intersections.add(singleNode);
 
         trafficController = new TrafficController();
         spawnManager      = new VehicleSpawnManager(vehicles, layout);
@@ -257,7 +270,7 @@ public class SimulationScene {
             return true;
         });
 
-        trafficController.updateVehicles(vehicles, verticalLight, horizontalLight, layout);
+        trafficController.updateVehicles(vehicles, intersections);
 
         if (!config.getTrafficMode().equals("MANUAL")) {
             verticalLight.update();

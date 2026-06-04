@@ -70,11 +70,13 @@ public final class Constants {
     // =========================================================
     public static final double TURN_FINISH_TOLERANCE    = 5.0;
     public static final double ROTATE_SPEED             = 2.5;
-    public static final double TURNING_SPEED_FACTOR     = 0.2;
+    public static final double TURNING_SPEED_FACTOR     = 0.35;
     public static final double LANE_ALIGN_SMOOTH_FACTOR = 0.12;
     public static final double LANE_ALIGN_MAX_SMOOTH    = 2.0;
     public static final double LANE_CHANGE_SMOOTH       = 0.7;
     public static final double LANE_CHANGE_SNAP_THRESHOLD  = 3.0;
+    /** Alias dùng trong v2 movement systems. */
+    public static final double LANE_CHANGE_SNAP_THRESH     = LANE_CHANGE_SNAP_THRESHOLD;
     public static final double POST_TURN_ALIGN_FACTOR   = 0.18;
     public static final double POST_TURN_SNAP_THRESHOLD = 2.5;
 
@@ -103,4 +105,12 @@ public final class Constants {
     // Camera mặc định
     // =========================================================
     public static final double CAMERA_DEFAULT_ZOOM = 1.0;
+
+    // =========================================================
+    // Vùng phục hồi sau giao lộ (dùng bởi VehicleMovementSystem v2)
+    // =========================================================
+    public static final int RECOVER_LEFT   = 500;  // cx - LANE_WIDTH - 50 = 600-50-50
+    public static final int RECOVER_RIGHT  = 700;  // cx + LANE_WIDTH + 50 = 600+50+50
+    public static final int RECOVER_TOP    = 300;  // cy - LANE_WIDTH - 50 = 400-50-50
+    public static final int RECOVER_BOTTOM = 500;  // cy + LANE_WIDTH + 50 = 400+50+50
 }

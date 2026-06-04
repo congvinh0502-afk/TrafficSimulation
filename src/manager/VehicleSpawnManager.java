@@ -91,6 +91,9 @@ public class VehicleSpawnManager {
         setupLane(vehicle);
         setupTurnType(vehicle);
         setupDriverBehavior(vehicle);
+        // Gán giao lộ chủ cho movement system v2
+        vehicle.setHomeIntersectionX(layout.getCx());
+        vehicle.setHomeIntersectionY(layout.getCy());
     }
 
     private void setupLane(Vehicle vehicle) {
