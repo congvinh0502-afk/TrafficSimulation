@@ -63,3 +63,23 @@ Tóm tắt mức độ ưu tiên
 Phải làm ngay (điểm trừ nếu thiếu): âm thanh, chế độ Basic renderer, fix cây trên 5-way, fix THREE_WAY vehicle behavior.
 Nên làm (ảnh hưởng điểm kỹ thuật): mạng lưới đường đa ngã rẽ, hiệu ứng xi-nhan, aggressive overtaking, README.
 Tốt nếu có: Bus class, unit test, thêm loại âm thanh phong phú hơn.
+
+==========
+LOGIC TRAFFIC LIGHT
+
+1. Quản lý Trạng thái & Chu kỳ (Logic cốt lõi - Backend)  [TRUE]
+- Định nghĩa các trạng thái màu (Đỏ, Vàng, Xanh).
+- Xây dựng quản lý màu hiện tại và bộ đếm thời gian.
+- Cài đặt vòng lặp đếm lùi và tự động chuyển pha (Xanh -> Vàng -> Đỏ -> Xanh).
+- Xây dựng hàm công khai (ví dụ: getCurrentColor()) để cung cấp trạng thái đèn cho các xe truy xuất.
+2. Quản lý Nút giao & Chế độ điều khiển (Traffic Controller)
+- Xây dựng lớp Intersection ghép cụm các đèn tại ngã 3, ngã 4, ngã 5 (đảm bảo tính đồng bộ: hướng này Xanh/Vàng thì hướng vuông góc bắt buộc Đỏ).
+- Chế độ Auto: Cho phép bộ đếm ngược của đèn chạy bình thường.
+- Chế độ Manual: Dừng đếm ngược, bắt sự kiện click chuột để ép hệ thống chuyển pha đèn ngay lập tức.
+3. Hiển thị Giao diện (Logic vẽ hình - Frontend) 
+- Loại 1 (Basic): Chỉ vẽ vòng tròn màu, không hiển thị số.
+- Loại 2 (Full Timer): Vẽ vòng tròn màu kèm số đếm lùi liên tục.
+- Loại 3 (Short Timer): Vẽ vòng tròn màu, thêm điều kiện chỉ in số đếm lùi khi thời gian <= 10 giây.
+4. Thiết lập Giao tiếp với Phương tiện (Ranh giới tương tác)
+- Đèn giao thông: Chỉ đứng yên, đổi màu và trả về kết quả màu hiện tại khi bị "hỏi". Hoàn toàn không chứa code can thiệp vào xe.
+- Phương tiện (Vehicle): Tự quét khoảng cách đến đèn gần nhất, tự gọi hàm lấy màu đèn, và tự quyết định hành vi (dừng chờ hay vượt đèn đỏ) tùy theo loại tài xế (NormalDriver hay EmergencyDriver).

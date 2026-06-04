@@ -35,12 +35,12 @@
 18. (-) chỉnh bố cục 3-way, 4-way cân xứng với map [Hương]
 19. (*) xe còn đâm vào nhau, chèn lên nhau, nhất là ở chỗ mấy khúc cua [Hương]
 20. (\) traffic light ở bên trái đường, ngã 4 có 2 cái traffic light hoạt động kiểu gì thế???? [Minh]
-21. (\) đèn đường: [Hương] [Minh]
-    * hiển thị bao nhiêu cái ở mỗi way là hợp lý?
-    * hiển thị đã chính xác? có chọc vô đường hay đứng giữa đường không?
-    * logic hoạt động đã đầy đủ và chính xác? 
-    * đầy đủ các loại: loại đếm số giây, loại không đếm số giây, loại chỉ đếm số giây khi còn 10 giây?
-    * chế độ tự động(đèn giao thông tự chuyển) hoặc thủ công(người dùng click vào đèn để chuyển màu)
+21. (\) đèn đường: [Hương]
+    (-) hiển thị bao nhiêu cái ở mỗi way là hợp lý? [Hương]
+    (-) hiển thị đã chính xác? có chọc vô đường hay đứng giữa đường không? [Hương]
+    [30] logic hoạt động đã đầy đủ và chính xác?
+    (-) đầy đủ các loại: loại đếm số giây, loại không đếm số giây, loại chỉ đếm số giây khi còn 10 giây?
+    (-) chế độ tự động(đèn giao thông tự chuyển) hoặc thủ công(người dùng click vào đèn để chuyển màu)
 22. (-) âm thanh: [Hương] [Toàn]
     - âm thanh đi kèm các loại xe, âm thanh của xe xi - nhan, còi xe xin vượt.. đã có đẩy đủ chưa?
     - hiển thị như nào
@@ -58,7 +58,36 @@
      * phản ứng với giao lộ (khi đi vào giao lộ, khi rẽ, khi thoái ra khỏi giao lộ thì xe phản ứng như nào?)
 25. (*) Kiểm tra lại hình ảnh của xe [Hương]
 26. (*) đèn đang ở chế độ smart tự chuyển xanh khi thấy ambulance/firetruck thay đổi lung tung dễ bug [toàn]
-      * đề xuất : thay đổi đèn về đếm bình thường rồi thay đổi logic
-27. (*) sửa lại bảng công cụ, thanh điều khiển để tối ưu trải nghiệm người dùng [Hương] [Minh]
+     * đề xuất : thay đổi đèn về đếm bình thường rồi thay đổi logic
+27. (*) sửa lại bảng công cụ, thanh điều khiển để tối ưu trải nghiệm người dùng [Hương]
 28. (*) đừng để cái giao diện chương trình khi thu nhỏ hiện ra cái vùng xám được không? [Hương]
 29. (*) Phát triển thêm mạng lưới giao lộ, Network System [Hương]
+30. (*) CHECK LIGHT [Hương]
+    (*) Logic Trạng thái & Loại đèn
+        - Cài đặt 3 màu cơ bản: Xanh, Vàng, Đỏ.
+        - Loại 1: Chỉ hiển thị màu.
+        - Loại 2: Hiển thị màu và đếm lùi số liên tục.
+        - Loại 3: Hiển thị màu và chỉ đếm lùi số khi thời gian <= 10 giây.
+    * Đèn loại 2 và loại 3 đang bị lỗi biến đếm lung tung.
+    * Logic "Xanh -> Vàng -> Đỏ -> Xanh" là đúng, nhưng cách ngã tư hoạt động ở code cũ là chưa tự nhiên. Ở thực tế, ngã tư phải có 4 pha tách biệt:
+    Pha 1: Dọc Xanh - Ngang Đỏ
+    Pha 2: Dọc Vàng - Ngang Đỏ
+    Pha 3: Dọc Đỏ - Ngang Xanh
+    Pha 4: Dọc Đỏ - Ngang Vàng
+    (Tuyệt đối không có chuyện 2 hướng cùng Xanh.Đèn Đỏ của hướng này phải đợi hướng kia chạy xong cả Xanh lẫn Vàng thì mới được chuyển).
+    * Fix lại đèn loại 2: Đếm lùi thời gian còn lại của MÀU ĐANG SÁNG. (Đang Xanh 10s thì đếm 10 -> 1, sang Vàng đếm 3 -> 1, sang Đỏ đếm 13 -> 1). Hai đèn đối diện nhau(ví dụ 2 đèn hướng Bắc và Nam) bắt buộc phải hiển thị màu và số đếm lùi giống hệt nhau tới từng mili - giây.
+    * Fix lại đèn loại 3: Đang bị lỗi đếm 10s -> đếm 6-7s. Và số đếm hiển thị rất loạn xạ. Đổi từ đếm theo frame sang đếm theo thời gian thực tế, làm tròn lên từng giây. Chỉ hiển thị số đếm khi thời gian còn lại của MÀU ĐANG SÁNG <= 10s.
+    (*) Cấu trúc Hệ thống đèn
+        - Cài đặt Đèn đơn lẻ (lưu trạng thái màu, thời gian).
+        - Cài đặt Nút giao (đồng bộ cụm đèn tại ngã 3, ngã 4, ngã 5; đảm bảo các hướng không xung đột).
+        - Cài đặt Bộ điều khiển tổng (quản lý toàn bộ các nút giao trong hệ thống).
+    (*) Chế độ điều khiển
+        - Chế độ Auto: Đèn tự động đếm ngược và chuyển pha.
+        - Chế độ Manual: Dừng đếm ngược và chuyển pha lập tức khi có click chuột.
+    (*) Tương tác Đèn và Xe cộ
+        - Logic xe quét và đọc tín hiệu đèn ở nút giao gần nhất phía trước.
+        - Logic xe tính toán khoảng cách đến vạch dừng.
+    (*) Phản xạ xe
+        - Phản xạ xe thường: Giảm tốc và dừng chờ trước vạch khi đèn Đỏ/Vàng; tiếp tục chạy khi đèn Xanh.
+        - Phản xạ xe ưu tiên: Bỏ qua tín hiệu đèn Đỏ/Vàng, giữ nguyên tốc độ băng qua nút giao.
+    

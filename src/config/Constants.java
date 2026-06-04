@@ -57,9 +57,10 @@ public final class Constants {
     // =========================================================
     // Đèn giao thông (frame @ 60fps)
     // =========================================================
-    public static final int LIGHT_GREEN_DURATION     = 300;
-    public static final int LIGHT_YELLOW_DURATION    = 120;
-    public static final int LIGHT_RED_DURATION       = 300;
+    public static final int LIGHT_GREEN_DURATION     = 10000; // 10 giây (10000 mili-giây)
+    public static final int LIGHT_YELLOW_DURATION    = 3000;  // 3 giây (3000 mili-giây) 
+    // KHÔNG CẦN LIGHT_RED_DURATION nữa vì ta sẽ tự động tính toán tổng Cycle
+    public static final int LIGHT_RED_DURATION       = 780; // GREEN + YELLOW = 13 giây
     public static final int LIGHT_EMERGENCY_DURATION = 400;
     public static final int SMART_LIGHT_THRESHOLD    = 3;
     public static final int SMART_LIGHT_MAX_TIMER    = 400;

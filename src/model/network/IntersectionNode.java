@@ -41,27 +41,56 @@ public class IntersectionNode {
         return verticalLight != null;
     }
 
-    /** Cập nhật chu kỳ đèn mỗi frame (chỉ gọi nếu AUTO mode). */
-    public void updateLights() {
-        if (verticalLight == null) return;
-        verticalLight.update();
-        // Đồng bộ đèn ngang ngược với đèn dọc
-        syncHorizontal();
-    }
+    private long lastTime = 0;
+    private int cycleTimer = 0;
 
-    private void syncHorizontal() {
-        if (horizontalLight == null) return;
-        switch (verticalLight.getColor()) {
-            case GREEN:
-            case YELLOW:
-                horizontalLight.setColor(model.trafficlight.LightColor.RED);
-                break;
-            case RED:
-                if (horizontalLight.getColor() != model.trafficlight.LightColor.GREEN) {
-                    horizontalLight.setColor(model.trafficlight.LightColor.GREEN);
-                    horizontalLight.setTimer(config.Constants.LIGHT_GREEN_DURATION);
-                }
-                break;
+    public void updateLights() {
+        if (verticalLight == null || horizontalLight == null)
+            return;
+
+        // Lấy thời gian thực của hệ thống (mili-giây)
+        long currentTime = System.currentTimeMillis();
+        if (lastTime == 0) {
+            lastTime = currentTime; // Bỏ qua sai số ở frame đầu tiên
+        }
+        int deltaTime = (int) (currentTime - lastTime);
+        lastTime = currentTime;
+
+        int greenTime = config.Constants.LIGHT_GREEN_DURATION;
+        int yellowTime = config.Constants.LIGHT_YELLOW_DURATION;
+        int totalCycle = (greenTime + yellowTime) * 2;
+
+        // Cộng dồn thời gian thực đã trôi qua
+        cycleTimer += deltaTime;
+        if (cycleTimer >= totalCycle) {
+            cycleTimer %= totalCycle; // Chia lấy dư để chu kỳ luôn mượt mà kể cả khi lag
+        }
+
+        int phase1End = greenTime;
+        int phase2End = phase1End + yellowTime;
+        int phase3End = phase2End + greenTime;
+        int phase4End = totalCycle;
+
+        if (cycleTimer < phase1End) {
+            verticalLight.setColor(model.trafficlight.LightColor.GREEN);
+            verticalLight.setTimer(phase1End - cycleTimer);
+            horizontalLight.setColor(model.trafficlight.LightColor.RED);
+            horizontalLight.setTimer(phase2End - cycleTimer);
+        } else if (cycleTimer < phase2End) {
+            verticalLight.setColor(model.trafficlight.LightColor.YELLOW);
+            verticalLight.setTimer(phase2End - cycleTimer);
+            horizontalLight.setColor(model.trafficlight.LightColor.RED);
+            horizontalLight.setTimer(phase2End - cycleTimer);
+        } else if (cycleTimer < phase3End) {
+            verticalLight.setColor(model.trafficlight.LightColor.RED);
+            verticalLight.setTimer(phase4End - cycleTimer);
+            horizontalLight.setColor(model.trafficlight.LightColor.GREEN);
+            horizontalLight.setTimer(phase3End - cycleTimer);
+        } else {
+            verticalLight.setColor(model.trafficlight.LightColor.RED);
+            verticalLight.setTimer(phase4End - cycleTimer);
+            horizontalLight.setColor(model.trafficlight.LightColor.YELLOW);
+            horizontalLight.setTimer(phase4End - cycleTimer);
         }
     }
 

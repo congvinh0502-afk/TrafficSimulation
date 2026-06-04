@@ -59,8 +59,11 @@ public class TrafficLightRenderer {
         drawBulb(gc, x + BULB_OFF, y + BULB_OFF + 68, Color.LIME, light.getColor() == LightColor.GREEN);
         drawPole(gc, x, y);
 
-        if (shouldShowTimer(light, lightType)) {
-            drawTimer(gc, x, y, light.getTimer() / 60);
+        // Chia 1000.0 để quy đổi từ mili-giây sang giây thực tế trên màn hình
+        int displaySeconds = (int) Math.ceil(light.getTimer() / 1000.0);
+
+        if (shouldShowTimer(light, lightType, displaySeconds)) {
+            drawTimer(gc, x, y, displaySeconds);
         }
     }
 
@@ -100,12 +103,12 @@ public class TrafficLightRenderer {
         gc.setTextAlign(TextAlignment.LEFT);
     }
 
-    private boolean shouldShowTimer(TrafficLight light, String lightType) {
+    private boolean shouldShowTimer(TrafficLight light, String lightType, int displaySeconds) {
         switch (lightType) {
             case "ALWAYS COUNTDOWN":
                 return true;
             case "COUNT <= 10":
-                return light.getTimer() / 60 <= 10;
+                return displaySeconds <= 10;
             default:
                 return false;
         }
