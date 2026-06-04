@@ -371,68 +371,35 @@ public class IntersectionLayout {
      * di chuyển chính xác theo góc 72°.
      */
     public static IntersectionLayout fiveWay(int cx, int cy) {
-        int lw = Constants.LANE_WIDTH;
-        int half = lw / 2;
-        int tzPad = 20;
         int recPad = 80;
         int buf = 90;
-
-        // Bán kính bùng binh — xe cần vào vùng này mới trigger rẽ
         int roundaboutR = 170;
-
         Map<Direction, Arm> arms = new LinkedHashMap<>();
 
-        // 5 góc nhánh (độ, 0°=phải, CW). Nhánh 0 = NORTH = 270°
+        // 5 góc nhánh vật lý
         double[] branchAngles = { 270, 342, 54, 126, 198 };
 
-        // Direction map tương ứng (tạm thời dùng Direction gần nhất)
-        Direction[] dirs = {
-                Direction.NORTH,
-                Direction.NORTHEAST,
-                Direction.EAST,
-                Direction.SOUTH,
-                Direction.WEST
+        // Hướng xe đi VÀO tương ứng với 5 nhánh trên
+        Direction[] inboundDirs = {
+                Direction.SOUTH, Direction.FW_IN_342, Direction.FW_IN_54,
+                Direction.FW_IN_126, Direction.FW_IN_198
         };
 
         double spawnDist = 700.0;
 
         for (int i = 0; i < 5; i++) {
-            double angleDeg = branchAngles[i];
-            double rad = Math.toRadians(angleDeg);
+            double rad = Math.toRadians(branchAngles[i]);
+            // Tính toán vị trí sinh xe ngay TẠI MÚT CỦA ĐƯỜNG
+            double dx = Math.cos(rad);
+            double dy = Math.sin(rad);
+            double spawnX = cx + dx * spawnDist;
+            double spawnY = cy + dy * spawnDist;
 
-            // Vector hướng nhánh (từ tâm ra ngoài)
-            double dx = Math.cos(rad); // x tăng sang phải
-            double dy = Math.sin(rad); // y tăng xuống (canvas)
-
-            // Vector vuông góc sang PHẢI khi nhìn theo hướng đi (CW 90°)
-            // rotate(dx,dy) 90° CW → (dy, -dx)
-            double perpX = dy;
-            double perpY = -dx;
-
-            // Làn RIGHT: offset nửa làn sang phải
-            int rightX = cx + (int) Math.round(perpX * half);
-            int rightY = cy + (int) Math.round(perpY * half);
-
-            // Làn LEFT: offset 1.5 làn sang phải (= half + lw)
-            int leftX = cx + (int) Math.round(perpX * (half + lw));
-            int leftY = cy + (int) Math.round(perpY * (half + lw));
-
-            // Spawn: từ bên ngoài màn hình, đi ngược chiều nhánh vào
-            double spawnX = cx - dx * spawnDist;
-            double spawnY = cy - dy * spawnDist;
-
-            arms.put(dirs[i], new Arm(dirs[i],
-                    leftX, leftY,
-                    rightX, rightY,
-                    spawnX, spawnY));
+            arms.put(inboundDirs[i], new Arm(inboundDirs[i], 0, 0, 0, 0, spawnX, spawnY));
         }
 
-        // TurnZone = hình tròn bùng binh, xấp xỉ bằng bounding box
-        TurnZone tz = new TurnZone(
-                cx - roundaboutR, cx + roundaboutR,
-                cy - roundaboutR, cy + roundaboutR);
+        TurnZone tz = new TurnZone(cx - roundaboutR, cx + roundaboutR, cy - roundaboutR, cy + roundaboutR);
 
-        // Vùng recover và check rộng hơn vì 5 nhánh tỏa nhiều hướng
         return new IntersectionLayout(cx, cy, arms, tz,
                 cx - roundaboutR - recPad, cx + roundaboutR + recPad,
                 cy - roundaboutR - recPad, cy + roundaboutR + recPad,

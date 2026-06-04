@@ -35,8 +35,26 @@ public final class Vector2D {
     /** Hướng chéo Tây-Nam (ngược NORTHEAST). */
     public static final Vector2D SOUTHWEST = new Vector2D(-Math.sqrt(2)/2, Math.sqrt(2)/2);
 
+    /** Các hướng chéo cho ngã 5 (chia đều 72 độ bắt đầu từ NORTH 270°) */
+    public static final Vector2D FW_NE = new Vector2D(Math.cos(Math.toRadians(342)), Math.sin(Math.toRadians(342)));
+    public static final Vector2D FW_SE = new Vector2D(Math.cos(Math.toRadians(54)), Math.sin(Math.toRadians(54)));
+    public static final Vector2D FW_SW = new Vector2D(Math.cos(Math.toRadians(126)), Math.sin(Math.toRadians(126)));
+    public static final Vector2D FW_NW = new Vector2D(Math.cos(Math.toRadians(198)), Math.sin(Math.toRadians(198)));
+
+    /** Các hướng chéo cho ngã 5 (chia đều 72 độ bắt đầu từ NORTH 270°) */
+    public static final Vector2D FW_342 = new Vector2D(Math.cos(Math.toRadians(342)), Math.sin(Math.toRadians(342)));
+    public static final Vector2D FW_54 = new Vector2D(Math.cos(Math.toRadians(54)), Math.sin(Math.toRadians(54)));
+    public static final Vector2D FW_126 = new Vector2D(Math.cos(Math.toRadians(126)), Math.sin(Math.toRadians(126)));
+    public static final Vector2D FW_198 = new Vector2D(Math.cos(Math.toRadians(198)), Math.sin(Math.toRadians(198)));
+
     /** Vectơ không (dừng lại). */
-    public static final Vector2D ZERO      = new Vector2D(0, 0);
+    public static final Vector2D ZERO = new Vector2D(0, 0);
+
+    /** Tạo Vector từ góc (độ) */
+    public static Vector2D fromAngle(double deg) {
+        double rad = Math.toRadians(deg);
+        return new Vector2D(Math.cos(rad), Math.sin(rad));
+    }
 
     // --------------------------------------------------------
     // Constructor

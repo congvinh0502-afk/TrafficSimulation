@@ -34,6 +34,14 @@ public final class DirectionHelper {
                 return Direction.NORTH;
             case WEST:
                 return Direction.SOUTH;
+            case FW_IN_198:
+                return Direction.FW_OUT_126;
+            case FW_IN_126:
+                return Direction.FW_OUT_54;
+            case FW_IN_54:
+                return Direction.FW_OUT_342;
+            case FW_IN_342:
+                return Direction.NORTH;
             default:
                 return direction;
         }
@@ -41,10 +49,6 @@ public final class DirectionHelper {
 
     /**
      * Trả về hướng rẽ phải từ hướng hiện tại.
-     *
-     * @param direction hướng hiện tại của xe
-     * @return hướng sau khi rẽ phải, hoặc chính {@code direction} nếu không xác
-     *         định
      */
     public static Direction getRightDirection(Direction direction) {
         switch (direction) {
@@ -55,6 +59,14 @@ public final class DirectionHelper {
             case EAST:
                 return Direction.SOUTH;
             case WEST:
+                return Direction.NORTH;
+            case FW_IN_342:
+                return Direction.FW_OUT_54;
+            case FW_IN_54:
+                return Direction.FW_OUT_126;
+            case FW_IN_126:
+                return Direction.FW_OUT_198;
+            case FW_IN_198:
                 return Direction.NORTH;
             default:
                 return direction;

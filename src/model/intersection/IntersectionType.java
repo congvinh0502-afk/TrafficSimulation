@@ -40,7 +40,7 @@ public enum IntersectionType {
     /** Ngã tư — NORTH, SOUTH, EAST, WEST. */
     FOUR_WAY,
 
-    /** Ngã năm — NORTH, SOUTH, EAST, WEST, NORTHEAST (đường chéo SW→NE). */
+    /** Ngã năm — NORTH, FW_NE, FW_SE, FW_SW, FW_NW (5 nhánh cách đều 72 độ). */
     FIVE_WAY;
 
     /** Tâm giao lộ mặc định cho chế độ single-intersection. */

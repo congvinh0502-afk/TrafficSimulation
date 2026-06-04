@@ -12,9 +12,8 @@
 8. (-) xe di chuyển trên 3-way như 4-way, 3-way lỗi xe chạy trên cỏ {Hương}
 9. (*) xe di chuyển không thẳng [Hương]
 10.(-) cho xe chay cham lai [toan]
-<<<<<<< HEAD
 11.(/) bo sung them am thanh cho cac loai xe [toan]
-12.(-) 3-way và 5-way đang bị phụ thuộc vào logic phát triển của 4-way -> lỗi, cần fix lại logic intersect {Hương}
+12.(-) logic giao lộ tệ: 3-way và 5-way đang bị phụ thuộc vào logic phát triển của 4-way -> lỗi, cần fix lại logic intersect {Hương}
 13.(-) 5-way đang là 4 nhánh vuông + 1 nhánh chéo -> 5 nhánh đều {Hương}
    (+) Direction (enum cứng)  →  DirectionVector (góc + vector, dynamic) {Hương}
    Khi đó:
@@ -23,4 +22,9 @@
     5-way: 5 nhánh 72° thật sự
     6-way, 8-way, mạng lưới: thêm vào dễ dàng
     Road network: mỗi intersection có list nhánh riêng, xe navigate bằng graph
-14.(\) Logic xe tệ: chỉ chạy trên 4 hướng mặc định Đông - Tây - Nam - Bắc dẫn đến ngoại trừ ngã tư thì tất cả các nhánh còn lại đều lỗi
+14.(-) Logic xe tệ: chỉ chạy trên 4 hướng mặc định Đông - Tây - Nam - Bắc dẫn đến ngoại trừ ngã tư thì tất cả các nhánh còn lại đều lỗi[Hương]
+    (+)[Hương]
+    - Sửa Direction.java: Xóa bỏ khái niệm N, S, E, W.Thay vào đó là các vector tương ứng các góc 0°, 72°, 144°, 216°, 288°.
+    - Sửa LaneAlignmentSystem: Không thể dùng vehicle.setX(...) hay vehicle.setY(...) để căn làn nữa, mà phải dùng toán học lượng giác(Math.sin, Math.cos) để chiếu tọa độ xe lên trục của từng làn đường nghiêng.
+    - Sửa TurningSystem: Phải tính toán nội suy vòng cung(bezier curve) hoặc xoay xe theo góc 72 độ khi rẽ, thay vì quay 90 độ như hiện tại.
+15. (/) map ở 5-way còn lỗi hiển thị nhiều

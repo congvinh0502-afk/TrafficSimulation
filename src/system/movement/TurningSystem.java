@@ -33,61 +33,32 @@ public class TurningSystem {
         if (!layout.getTurnZone().contains(vehicle.getX(), vehicle.getY(), hw, hh))
             return;
 
+        boolean isFiveWay = layout.getDirections().size() == 5;
+
         switch (vehicle.getTurnType()) {
-            case LEFT: {
-                Direction target = DirectionHelper.getLeftDirection(vehicle.getDirection());
-                if (!layout.hasDirection(target)) {
-                    // Hướng rẽ trái không tồn tại — fallback sang phải
-                    Direction fallback = DirectionHelper.getRightDirection(vehicle.getDirection());
-                    if (!layout.hasDirection(fallback))
-                        return;
-                    initiateTurnRight(vehicle);
-                    vehicle.setTurnType(util.TurnType.RIGHT);
-                } else {
-                    initiateTurnLeft(vehicle);
-                }
+            case LEFT:
+                initiateTurnLeft(vehicle);
                 break;
-            }
-            case RIGHT: {
-                Direction target = DirectionHelper.getRightDirection(vehicle.getDirection());
-                if (!layout.hasDirection(target)) {
-                    // Hướng rẽ phải không tồn tại — fallback sang trái
-                    Direction fallback = DirectionHelper.getLeftDirection(vehicle.getDirection());
-                    if (!layout.hasDirection(fallback))
-                        return;
-                    initiateTurnLeft(vehicle);
-                    vehicle.setTurnType(util.TurnType.LEFT);
-                } else {
-                    initiateTurnRight(vehicle);
-                }
+            case RIGHT:
+                initiateTurnRight(vehicle);
                 break;
-            }
-            case STRAIGHT: {
-                // Kiểm tra hướng đối diện có tồn tại không
-                Direction opposite = vehicle.getDirection().opposite();
-                if (!layout.hasDirection(opposite)) {
-                    // Không thể đi thẳng (3-way không có nhánh đối diện)
-                    // Rẽ ngẫu nhiên sang trái hoặc phải
-                    Direction left = DirectionHelper.getLeftDirection(vehicle.getDirection());
-                    Direction right = DirectionHelper.getRightDirection(vehicle.getDirection());
-                    boolean canLeft = layout.hasDirection(left);
-                    boolean canRight = layout.hasDirection(right);
-                    if (canLeft && canRight) {
+            case STRAIGHT:
+                if (isFiveWay) {
+                    // Ngã 5 không có đường thẳng đối diện tuyệt đối -> rẽ ngẫu nhiên
+                    if (Math.random() < 0.5)
+                        initiateTurnLeft(vehicle);
+                    else
+                        initiateTurnRight(vehicle);
+                } else {
+                    Direction opposite = vehicle.getDirection().opposite();
+                    if (!layout.hasDirection(opposite)) {
                         if (Math.random() < 0.5)
                             initiateTurnLeft(vehicle);
                         else
                             initiateTurnRight(vehicle);
-                    } else if (canLeft)
-                        initiateTurnLeft(vehicle);
-                    else if (canRight)
-                        initiateTurnRight(vehicle);
-                    else
-                        return;
-                } else {
-                    return; // đi thẳng bình thường
+                    }
                 }
                 break;
-            }
             default:
                 return;
         }
@@ -95,24 +66,94 @@ public class TurningSystem {
     }
 
     private void initiateTurnLeft(Vehicle vehicle) {
-        switch (vehicle.getDirection()) {
-            case NORTH: vehicle.setTargetDirection(Direction.WEST);  vehicle.setTargetAngle(180); break;
-            case SOUTH: vehicle.setTargetDirection(Direction.EAST);  vehicle.setTargetAngle(0);   break;
-            case EAST:  vehicle.setTargetDirection(Direction.NORTH); vehicle.setTargetAngle(-90); break;
-            case WEST:  vehicle.setTargetDirection(Direction.SOUTH); vehicle.setTargetAngle(90);  break;
-            default: return;
+        Direction dir = vehicle.getDirection();
+        Direction target = dir;
+        double angle = vehicle.getAngle();
+        switch (dir) {
+            // Ngã 4
+            case NORTH:
+                target = Direction.WEST;
+                angle = 180;
+                break;
+            case EAST:
+                target = Direction.NORTH;
+                angle = -90;
+                break;
+            case WEST:
+                target = Direction.SOUTH;
+                angle = 90;
+                break;
+
+            // Ngã 5 (Inbound -> Outbound nhảy sang nhánh ngược chiều kim đồng hồ)
+            case SOUTH:
+                target = Direction.FW_OUT_198;
+                angle = 198;
+                break; // Từ nhánh 270 (Top) rẽ sang 198
+            case FW_IN_198:
+                target = Direction.FW_OUT_126;
+                angle = 126;
+                break;
+            case FW_IN_126:
+                target = Direction.FW_OUT_54;
+                angle = 54;
+                break;
+            case FW_IN_54:
+                target = Direction.FW_OUT_342;
+                angle = 342;
+                break;
+            case FW_IN_342:
+                target = Direction.NORTH;
+                angle = -90;
+                break;
         }
+        vehicle.setTargetDirection(target);
+        vehicle.setTargetAngle(angle);
         vehicle.setTurning(true);
     }
 
     private void initiateTurnRight(Vehicle vehicle) {
-        switch (vehicle.getDirection()) {
-            case NORTH: vehicle.setTargetDirection(Direction.EAST);  vehicle.setTargetAngle(0);   break;
-            case SOUTH: vehicle.setTargetDirection(Direction.WEST);  vehicle.setTargetAngle(180); break;
-            case EAST:  vehicle.setTargetDirection(Direction.SOUTH); vehicle.setTargetAngle(90);  break;
-            case WEST:  vehicle.setTargetDirection(Direction.NORTH); vehicle.setTargetAngle(-90); break;
-            default: return;
+        Direction dir = vehicle.getDirection();
+        Direction target = dir;
+        double angle = vehicle.getAngle();
+        switch (dir) {
+            // Ngã 4
+            case NORTH:
+                target = Direction.EAST;
+                angle = 0;
+                break;
+            case EAST:
+                target = Direction.SOUTH;
+                angle = 90;
+                break;
+            case WEST:
+                target = Direction.NORTH;
+                angle = -90;
+                break;
+
+            // Ngã 5 (Inbound -> Outbound nhảy sang nhánh thuận chiều kim đồng hồ)
+            case SOUTH:
+                target = Direction.FW_OUT_342;
+                angle = 342;
+                break; // Từ nhánh 270 (Top) rẽ sang 342
+            case FW_IN_342:
+                target = Direction.FW_OUT_54;
+                angle = 54;
+                break;
+            case FW_IN_54:
+                target = Direction.FW_OUT_126;
+                angle = 126;
+                break;
+            case FW_IN_126:
+                target = Direction.FW_OUT_198;
+                angle = 198;
+                break;
+            case FW_IN_198:
+                target = Direction.NORTH;
+                angle = -90;
+                break;
         }
+        vehicle.setTargetDirection(target);
+        vehicle.setTargetAngle(angle);
         vehicle.setTurning(true);
     }
 

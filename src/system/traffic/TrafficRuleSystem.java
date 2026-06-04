@@ -53,17 +53,22 @@ public class TrafficRuleSystem {
 
     // --------------------------------------------------------
 
-    private TrafficLight selectLight(Direction dir,
-                                     TrafficLight vertical,
-                                     TrafficLight horizontal,
-                                     IntersectionLayout layout) {
+    private TrafficLight selectLight(Direction dir, TrafficLight vertical, TrafficLight horizontal,
+            IntersectionLayout layout) {
         switch (dir) {
-            case NORTH: case SOUTH: return vertical;
-            case EAST:  case WEST:
-                // Chỉ dùng đèn ngang nếu layout có hướng EAST và WEST
+            case NORTH:
+            case SOUTH:
+            case FW_IN_342:
+            case FW_IN_126:
+                return vertical;
+            case EAST:
+            case WEST:
+            case FW_IN_54:
+            case FW_IN_198:
                 return (layout.hasDirection(Direction.EAST) && layout.hasDirection(Direction.WEST))
-                        ? horizontal : null;
-            default: return null;
+                        || layout.hasDirection(Direction.FW_IN_54) ? horizontal : null;
+            default:
+                return null;
         }
     }
 
@@ -76,17 +81,30 @@ public class TrafficRuleSystem {
 
     private double distanceToStopLine(Vehicle vehicle, Direction dir, IntersectionLayout layout) {
         int off = Constants.STOP_SENSOR_OFFSET;
-        int cl  = layout.getCheckLeft();
-        int cr  = layout.getCheckRight();
-        int ct  = layout.getCheckTop();
-        int cb  = layout.getCheckBottom();
+        boolean isFiveWay = layout.getDirections().size() == 5;
 
-        switch (dir) {
-            case SOUTH: return ct - (vehicle.getY() + off);
-            case NORTH: return (vehicle.getY() - off) - cb;
-            case EAST:  return cl - (vehicle.getX() + off);
-            case WEST:  return (vehicle.getX() - off) - cr;
-            default:    return Double.MAX_VALUE;
+        if (!isFiveWay) {
+            int cl = layout.getCheckLeft(), cr = layout.getCheckRight();
+            int ct = layout.getCheckTop(), cb = layout.getCheckBottom();
+            switch (dir) {
+                case SOUTH:
+                    return ct - (vehicle.getY() + off);
+                case NORTH:
+                    return (vehicle.getY() - off) - cb;
+                case EAST:
+                    return cl - (vehicle.getX() + off);
+                case WEST:
+                    return (vehicle.getX() - off) - cr;
+                default:
+                    return Double.MAX_VALUE;
+            }
+        } else {
+            // Toán học tính khoảng cách dừng xe bằng dot product cho góc chéo
+            double dx = layout.getCx() - vehicle.getX();
+            double dy = layout.getCy() - vehicle.getY();
+            double rad = Math.toRadians(dir.toAngleDeg());
+            double distToCenter = dx * Math.cos(rad) + dy * Math.sin(rad);
+            return distToCenter - (170 + 10);
         }
     }
 }

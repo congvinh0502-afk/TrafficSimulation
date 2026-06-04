@@ -79,25 +79,23 @@ public class VehicleSpawnManager {
         vehicle.setLane(lane);
         Direction dir = vehicle.getDirection();
 
-        switch (dir) {
-            case NORTH:
-            case SOUTH:
+        boolean isFiveWay = layout.getDirections().size() == 5;
+
+        if (!isFiveWay && (dir == Direction.NORTH || dir == Direction.SOUTH || dir == Direction.EAST
+                || dir == Direction.WEST)) {
+            if (dir == Direction.NORTH || dir == Direction.SOUTH) {
                 vehicle.setX(layout.getLaneCenterX(dir, lane));
-                break;
-            case EAST:
-            case WEST:
+            } else {
                 vehicle.setY(layout.getLaneCenterY(dir, lane));
-                break;
-            case NORTHEAST: {
-                // Snap ke lane center theo hướng chéo — dùng cả X lẫn Y
-                int lcx = layout.getLaneCenterX(dir, lane);
-                int lcy = layout.getLaneCenterY(dir, lane);
-                if (lcx != 0) vehicle.setX(lcx);
-                if (lcy != 0) vehicle.setY(lcy);
-                break;
             }
-            default:
-                break;
+        } else {
+            // Đẩy xe vào đúng mép đường bằng Vector pháp tuyến
+            double laneOffset = (lane == Lane.RIGHT) ? 25.0 : -25.0;
+            double rad = Math.toRadians(dir.toAngleDeg());
+            double nx = Math.cos(rad + Math.PI / 2);
+            double ny = Math.sin(rad + Math.PI / 2);
+            vehicle.setX(vehicle.getX() + nx * laneOffset);
+            vehicle.setY(vehicle.getY() + ny * laneOffset);
         }
     }
 

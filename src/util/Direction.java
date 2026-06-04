@@ -2,32 +2,28 @@ package util;
 
 import math.Vector2D;
 
-/**
- * Hướng di chuyển của phương tiện.
- *
- * <p>Mỗi giá trị enum đi kèm một {@link Vector2D} đơn vị,
- * cho phép mã di chuyển không cần switch-case hướng.</p>
- *
- * <p>NORTHEAST dành riêng cho ngã năm (FIVE_WAY).</p>
- */
 public enum Direction {
 
-    /** Đi từ Nam lên Bắc (y giảm). */
-    NORTH(Vector2D.NORTH, -90),
+    // --- CÁC HƯỚNG CHUẨN CỦA NGÃ 4 ---
+    NORTH(new Vector2D(0, -1), -90),
+    SOUTH(new Vector2D(0, 1), 90),
+    EAST(new Vector2D(1, 0), 0),
+    WEST(new Vector2D(-1, 0), 180),
+    NORTHEAST(new Vector2D(Math.sqrt(2) / 2, -Math.sqrt(2) / 2), -45),
 
-    /** Đi từ Bắc xuống Nam (y tăng). */
-    SOUTH(Vector2D.SOUTH, 90),
+    // --- NGÃ 5: XE TỪ NHÁNH ĐI VÀO TÂM (INBOUND) ---
+    // Nhánh 270 độ (Top) đi vào -> Đi hướng SOUTH (90)
+    FW_IN_342(Vector2D.fromAngle(162), 162), // Nhánh Top-Right đi vào
+    FW_IN_54(Vector2D.fromAngle(234), 234), // Nhánh Bot-Right đi vào
+    FW_IN_126(Vector2D.fromAngle(306), 306), // Nhánh Bot-Left đi vào
+    FW_IN_198(Vector2D.fromAngle(18), 18), // Nhánh Top-Left đi vào
 
-    /** Đi từ Tây sang Đông (x tăng). */
-    EAST(Vector2D.EAST, 0),
-
-    /** Đi từ Đông sang Tây (x giảm). */
-    WEST(Vector2D.WEST, 180),
-
-    /** Hướng chéo Đông-Bắc 45° — chỉ dùng trong FIVE_WAY. */
-    NORTHEAST(Vector2D.NORTHEAST, -45);
-
-    // --------------------------------------------------------
+    // --- NGÃ 5: XE TỪ TÂM ĐI RA NGOÀI (OUTBOUND) ---
+    // Nhánh 270 độ (Top) đi ra -> Đi hướng NORTH (-90)
+    FW_OUT_342(Vector2D.fromAngle(342), 342),
+    FW_OUT_54(Vector2D.fromAngle(54), 54),
+    FW_OUT_126(Vector2D.fromAngle(126), 126),
+    FW_OUT_198(Vector2D.fromAngle(198), 198);
 
     private final Vector2D vector;
     private final double angleDeg;
@@ -37,38 +33,42 @@ public enum Direction {
         this.angleDeg = angleDeg;
     }
 
-    /**
-     * Vectơ đơn vị tương ứng với hướng này.
-     *
-     * @return {@link Vector2D} đã normalize
-     */
     public Vector2D toVector() {
         return vector;
     }
 
-    /**
-     * Góc hiển thị mặc định (độ) khi xe xuất phát theo hướng này.
-     * Hệ tọa độ: 0° = phải, tăng chiều kim đồng hồ.
-     *
-     * @return góc tính bằng độ
-     */
     public double toAngleDeg() {
         return angleDeg;
     }
 
-    /**
-     * Hướng ngược lại.
-     *
-     * @return hướng đối diện
-     */
     public Direction opposite() {
         switch (this) {
-            case NORTH:     return SOUTH;
-            case SOUTH:     return NORTH;
-            case EAST:      return WEST;
-            case WEST:      return EAST;
-            case NORTHEAST: return NORTHEAST; // không có cặp
-            default:        return this;
+            case NORTH:
+                return SOUTH;
+            case SOUTH:
+                return NORTH;
+            case EAST:
+                return WEST;
+            case WEST:
+                return EAST;
+            case FW_IN_342:
+                return FW_OUT_342;
+            case FW_IN_54:
+                return FW_OUT_54;
+            case FW_IN_126:
+                return FW_OUT_126;
+            case FW_IN_198:
+                return FW_OUT_198;
+            case FW_OUT_342:
+                return FW_IN_342;
+            case FW_OUT_54:
+                return FW_IN_54;
+            case FW_OUT_126:
+                return FW_IN_126;
+            case FW_OUT_198:
+                return FW_IN_198;
+            default:
+                return this;
         }
     }
 }
