@@ -77,15 +77,23 @@ public class LaneChangeSystem {
     }
 
     public boolean tryChangeLane(Vehicle current, List<Vehicle> vehicles) {
-        if (current.isChangingLane() || current.isTurning()) return false;
-        if (current.getLaneChangeCooldown() > 0) return false;
+        if (current.isChangingLane() || current.isTurning())
+            return false;
+        if (current.getLaneChangeCooldown() > 0)
+            return false;
 
         Lane targetLane = (current.getLane() == Lane.LEFT) ? Lane.RIGHT : Lane.LEFT;
 
         for (Vehicle other : vehicles) {
-            if (other == current) continue;
-            if (other.getDirection() != current.getDirection()) continue;
-            if (other.getLane() == targetLane && distance(current, other) < Constants.LANE_CHANGE_SAFE_DIST)
+            if (other == current)
+                continue;
+            if (other.getDirection() != current.getDirection())
+                continue;
+
+            // Kiểm tra cả trường hợp xe kia đang ở làn mục tiêu HOẶC cũng đang xin chuyển
+            // làn mục tiêu
+            boolean isThreat = (other.getLane() == targetLane || other.isChangingLane());
+            if (isThreat && distance(current, other) < Constants.LANE_CHANGE_SAFE_DIST)
                 return false;
         }
 

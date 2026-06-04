@@ -25,19 +25,21 @@ public class CollisionSystem {
     // ==========================================================
 
     public void maintainDistance(Vehicle current, List<Vehicle> vehicles) {
-        if (current.isTurning() || current.isChangingLane()) return;
+        // Chỉ bỏ qua khi đang rẽ. Khi đang đổi làn vẫn PHẢI giữ khoảng cách với xe phía
+        // trước!
+        if (current.isTurning())
+            return;
 
         Vehicle leader = findLeader(current, vehicles);
-
         if (leader == null) {
             current.setAcceleration(Constants.DEFAULT_ACCELERATION);
             current.setStopped(false);
             return;
         }
 
-        double gap          = gapToLeader(current, leader);
+        double gap = gapToLeader(current, leader);
         double safeDistance = current.getWidth() * 2.2;
-        double brakeStart   = Constants.BRAKE_START_DISTANCE;
+        double brakeStart = Constants.BRAKE_START_DISTANCE;
 
         if (gap <= Constants.MIN_FOLLOW_DISTANCE) {
             current.setStopped(true);
@@ -47,7 +49,8 @@ public class CollisionSystem {
             current.setAcceleration(-Constants.MAX_BRAKE_DECEL * ratio);
             if (current.getSpeed() < current.getMaxSpeed() * 0.3) {
                 if (!laneChangeSystem.tryChangeLane(current, vehicles)) {
-                    if (current.getSpeed() < 0.5) current.setStopped(true);
+                    if (current.getSpeed() < 0.5)
+                        current.setStopped(true);
                 }
             }
         } else if (gap < brakeStart) {
@@ -103,18 +106,28 @@ public class CollisionSystem {
         Vehicle leader = null;
 
         for (Vehicle other : vehicles) {
-            if (other == current || other.isTurning()) continue;
-            if (other.getDirection() != current.getDirection()) continue;
+            // Không được bỏ qua xe đang rẽ (other.isTurning()), xe sau phải phanh chờ xe
+            // trước rẽ xong
+            if (other == current)
+                continue;
+            if (other.getDirection() != current.getDirection())
+                continue;
 
-            double dx      = other.getX() - current.getX();
-            double dy      = other.getY() - current.getY();
+            double dx = other.getX() - current.getX();
+            double dy = other.getY() - current.getY();
+
             double forward = dx * dir.x + dy * dir.y;
-            if (forward <= 0) continue;
+            if (forward <= 0)
+                continue;
 
             double lateral = Math.abs(dx * (-dir.y) + dy * dir.x);
-            if (lateral > Constants.SAME_FILE_TOLERANCE * 1.5) continue;
+            if (lateral > Constants.SAME_FILE_TOLERANCE * 1.5)
+                continue;
 
-            if (forward < closestDot) { closestDot = forward; leader = other; }
+            if (forward < closestDot) {
+                closestDot = forward;
+                leader = other;
+            }
         }
         return leader;
     }
