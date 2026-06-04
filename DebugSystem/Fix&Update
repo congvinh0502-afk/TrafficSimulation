@@ -1,6 +1,5 @@
 /* Đọc hướng dẫn sử dụng ở UserManual */
 
-
 1. (-) sử dụng `lane` để tạo `road`, một `road` bao gồm một hoặc nhiều `lane`, five-way, four-way, three-way gồm `road` và `intersection` [Minh]
 2. (*) tạo hitbox(hộp chạm/ biên giới) để kiểm tra xem các thực thể có chạm nhau hay không, chạy song song với code giữ khoảng cách [Minh]
 3. (-) thêm "gia tốc" (acceleration) thay vì sử dụng tốc độ và hướng, tốc độ = tốc độ + gia tốc mỗi khung hình(frame) [Minh]
@@ -36,3 +35,17 @@
 18. (-) chỉnh bố cục 3-way, 4-way cân xứng với map [Hương]
 19. (*) xe còn đâm vào nhau, chèn lên nhau, nhất là ở chỗ mấy khúc cua [Hương]
 20. (*) traffic light ở bên trái đường, ngã 4 có 2 cái traffic light hoạt động kiểu gì thế???? [Minh]
+21. (*) đèn đường: [Hương]
+    * hiển thị bao nhiêu cái ở mỗi way là hợp lý?
+    * hiển thị đã chính xác? có chọc vô đường hay đứng giữa đường không?
+    * logic hoạt động đã đầy đủ và chính xác? 
+    * đầy đủ các loại: loại đếm số giây, loại không đếm số giây, loại chỉ đếm số giây khi còn 10 giây?
+    * chế độ tự động(đèn giao thông tự chuyển) hoặc thủ công(người dùng click vào đèn để chuyển màu)
+22. (*) âm thanh: [Hương]
+    * âm thanh đi kèm các loại xe, âm thanh của xe xi - nhan, còi xe xin vượt.. đã có đẩy đủ chưa?
+    * hiển thị như nào
+    * tính năng tắt mở âm thanh các loại?
+23. (*) Chế độ hiển thị: Basic (khối chữ nhật) & Gui (hình ảnh) [Hương]
+    * Chế độ Basic: chỉ hiển thị các khối chữ nhật đại diện cho xe, đường, cây cối... không có hình ảnh, màu sắc đơn giản. Ưu điểm: dễ dàng mở rộng thêm loại giao lộ mới, dễ dàng chỉnh sửa bố cục đường xá, hiệu suất cao.
+    * Chế độ Gui: hiển thị đầy đủ hình ảnh, màu sắc, chi tiết của xe, đường, cây cối... Ưu điểm: trực quan sinh động, hấp dẫn người dùng. Nhược điểm: khó mở rộng thêm loại giao lộ mới, khó chỉnh sửa bố cục đường xá, hiệu suất thấp hơn.
+    * Cho phép người dùng chuyển đổi linh hoạt giữa hai chế độ hiển thị này trong quá trình chạy chương trình.

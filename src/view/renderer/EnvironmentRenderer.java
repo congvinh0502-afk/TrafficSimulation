@@ -70,14 +70,25 @@ public class EnvironmentRenderer {
                 int cx = x + cellSize / 2;
                 int cy = y + cellSize / 2;
 
-                boolean isRoad = isRoadCollision(cx, cy, type, 60); // Đất để xây nhà phải cách mép đường 60px
-                boolean isSidewalk = isRoadCollision(cx, cy, type, -10); // Vùng sát mép đường
+                // FIX 1: Kiểm tra cả 4 góc của ô đất để chắc chắn không góc nào chìa ra đường
+                // Margin an toàn = 10px để đảm bảo ô đất hoàn toàn sạch sẽ
+                boolean isRoad = isRoadCollision(x, y, type, 10) ||
+                                 isRoadCollision(x + cellSize, y, type, 10) ||
+                                 isRoadCollision(x, y + cellSize, type, 10) ||
+                                 isRoadCollision(x + cellSize, y + cellSize, type, 10) ||
+                                 isRoadCollision(cx, cy, type, 10);
+
+                // Kiểm tra vùng lề đường (dùng số âm để thu hẹp lại)
+                boolean isSidewalk = isRoadCollision(cx, cy, type, -20);
 
                 if (!isRoad) {
                     // Đất trống -> Sinh nhà cửa/cây cối
                     int rand = rng.nextInt(100);
-                    final int drawX = x + rng.nextInt(15);
-                    final int drawY = y + rng.nextInt(15);
+                    
+                    // FIX 2: Bỏ random offset, căn giữa chuẩn chỉ lưới 100x100
+                    // Thêm 10px padding sẽ tạo không gian thẳng hàng, không chèn lên nhau
+                    final int drawX = x + 10;
+                    final int drawY = y + 10;
 
                     if (rand < 25) {
                         cachedProps.add(() -> nature.drawParkWithPond(gc, drawX, drawY, 80, 80));
@@ -90,7 +101,8 @@ public class EnvironmentRenderer {
                     } else if (rand < 85) {
                         cachedProps.add(() -> building.drawLuxuryRestaurant(gc, drawX, drawY));
                     } else {
-                        cachedProps.add(() -> parking.drawParkingLotWithCars(gc, drawX, drawY, 90, 90));
+                        // Căn giảm kích thước bãi đỗ xe xuống 80x80 để lọt thỏm đẹp vào ô đất (tránh tràn)
+                        cachedProps.add(() -> parking.drawParkingLotWithCars(gc, drawX, drawY, 80, 80)); 
                     }
                 } else if (!isSidewalk) {
                     // Vùng đệm lề đường -> Lắp đèn đường tự động
@@ -105,23 +117,23 @@ public class EnvironmentRenderer {
     /**
      * Toán học kiểm tra va chạm giữa 1 điểm và mặt đường
      */
-    private boolean isRoadCollision(int cx, int cy, int type, int margin) {
+    private boolean isRoadCollision(int px, int py, int type, int margin) {
         if (type == 3) { // 3-way
-            boolean isHoriz = (cy > 300 - margin && cy < 500 + margin);
-            boolean isVert = (cx > 500 - margin && cx < 700 + margin && cy < 500 + margin);
+            boolean isHoriz = (py > 300 - margin && py < 500 + margin);
+            boolean isVert = (px > 500 - margin && px < 700 + margin && py < 500 + margin);
             return isHoriz || isVert;
         } else if (type == 4) { // 4-way
-            boolean isHoriz = (cy > 300 - margin && cy < 500 + margin);
-            boolean isVert = (cx > 500 - margin && cx < 700 + margin);
+            boolean isHoriz = (py > 300 - margin && py < 500 + margin);
+            boolean isVert = (px > 500 - margin && px < 700 + margin);
             return isHoriz || isVert;
         } else if (type == 5) { // 5-way
-            if (Math.hypot(cx - 600, cy - 400) < 170 + margin)
+            if (Math.hypot(px - 600, py - 400) < 170 + margin)
                 return true;
             double[] angles = { 270, 342, 54, 126, 198 };
             for (double ang : angles) {
                 double rad = Math.toRadians(ang);
-                double dx = cx - 600;
-                double dy = cy - 400;
+                double dx = px - 600;
+                double dy = py - 400;
                 double proj = dx * Math.cos(rad) + dy * Math.sin(rad); // Độ dài trên trục nhánh
                 double perp = Math.abs(-dx * Math.sin(rad) + dy * Math.cos(rad)); // Khoảng cách vuông góc tới trục
                 if (proj > -50 && perp < 100 + margin)
