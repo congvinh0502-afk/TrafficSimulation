@@ -310,21 +310,29 @@ public class SimulationScene {
         double lcx = layout.getCx();
         double lcy = layout.getCy();
         double roadHalfW = 100; // Nửa chiều rộng đường ngầm định
-        double stopLineDist = 172; // Khoảng cách từ tâm đến vạch dừng
+        
+        // SỬA LỖI ĐÈN NGÃ 5 BỊ LỆCH:
+        double stopLineDist = (config.getIntersectionType() == IntersectionType.FIVE_WAY) ? 177 : 135;
 
         if (config.getIntersectionType() == IntersectionType.FIVE_WAY) {
-            // Ngã 5: Quét 5 nhánh đều
             double[] angles = { 270, 342, 54, 126, 198 };
             for (int i = 0; i < angles.length; i++) {
                 TrafficLight lightToRender = (i % 2 == 0) ? verticalLight : horizontalLight;
                 lightRenderer.renderAutoPosition(gc, lightToRender, lcx, lcy, angles[i], roadHalfW, stopLineDist, config.getLightType());
             }
         } else {
-            // Ngã 3 & 4: Dựa theo các hướng có sẵn trong layout
             if (layout.hasDirection(Direction.NORTH)) 
                 lightRenderer.renderAutoPosition(gc, verticalLight, lcx, lcy, 270, roadHalfW, stopLineDist, config.getLightType());
-            if (layout.hasDirection(Direction.SOUTH)) 
+            
+            // SỬA LỖI ĐÈN Ở NGÃ 3: 
+            // Ép bỏ qua đèn hướng Nam (SOUTH) nếu là ngã 3, chặn đứng việc file Layout cấu hình sai
+            boolean isSouthActive = layout.hasDirection(Direction.SOUTH);
+            if (config.getIntersectionType() == IntersectionType.THREE_WAY) {
+                isSouthActive = false; 
+            }
+            if (isSouthActive) 
                 lightRenderer.renderAutoPosition(gc, verticalLight, lcx, lcy, 90, roadHalfW, stopLineDist, config.getLightType());
+
             if (layout.hasDirection(Direction.EAST)) 
                 lightRenderer.renderAutoPosition(gc, horizontalLight, lcx, lcy, 0, roadHalfW, stopLineDist, config.getLightType());
             if (layout.hasDirection(Direction.WEST)) 

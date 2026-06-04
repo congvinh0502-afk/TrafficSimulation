@@ -58,10 +58,11 @@ public class EnvironmentRenderer {
         currentIntersectionType = type;
         cachedProps.clear();
 
-        int cellSize = 100;
+        // Tăng kích thước lưới lên 150 để các tòa nhà to không bị tràn sang ô bên cạnh
+        int cellSize = 150;
         int cols = 1200 / cellSize;
         int rows = 800 / cellSize;
-        Random rng = new Random(type * 1000L); // Seed cố định theo map để layout không bị đổi liên tục
+        Random rng = new Random(type * 1000L); 
 
         for (int r = 0; r <= rows; r++) {
             for (int c = 0; c <= cols; c++) {
@@ -70,28 +71,24 @@ public class EnvironmentRenderer {
                 int cx = x + cellSize / 2;
                 int cy = y + cellSize / 2;
 
-                // FIX 1: Kiểm tra cả 4 góc của ô đất để chắc chắn không góc nào chìa ra đường
-                // Margin an toàn = 10px để đảm bảo ô đất hoàn toàn sạch sẽ
-                boolean isRoad = isRoadCollision(x, y, type, 10) ||
-                                 isRoadCollision(x + cellSize, y, type, 10) ||
-                                 isRoadCollision(x, y + cellSize, type, 10) ||
-                                 isRoadCollision(x + cellSize, y + cellSize, type, 10) ||
-                                 isRoadCollision(cx, cy, type, 10);
+                // Tăng margin an toàn để tòa nhà cách xa mép đường hơn
+                boolean isRoad = isRoadCollision(x, y, type, 25) ||
+                                 isRoadCollision(x + cellSize, y, type, 25) ||
+                                 isRoadCollision(x, y + cellSize, type, 25) ||
+                                 isRoadCollision(x + cellSize, y + cellSize, type, 25) ||
+                                 isRoadCollision(cx, cy, type, 25);
 
-                // Kiểm tra vùng lề đường (dùng số âm để thu hẹp lại)
-                boolean isSidewalk = isRoadCollision(cx, cy, type, -20);
+                boolean isSidewalk = isRoadCollision(cx, cy, type, -15);
 
                 if (!isRoad) {
-                    // Đất trống -> Sinh nhà cửa/cây cối
                     int rand = rng.nextInt(100);
                     
-                    // FIX 2: Bỏ random offset, căn giữa chuẩn chỉ lưới 100x100
-                    // Thêm 10px padding sẽ tạo không gian thẳng hàng, không chèn lên nhau
-                    final int drawX = x + 10;
-                    final int drawY = y + 10;
+                    // Căn giữa tương đối trong lưới 150x150
+                    final int drawX = x + 15;
+                    final int drawY = y + 15;
 
                     if (rand < 25) {
-                        cachedProps.add(() -> nature.drawParkWithPond(gc, drawX, drawY, 80, 80));
+                        cachedProps.add(() -> nature.drawParkWithPond(gc, drawX, drawY, 120, 120));
                     } else if (rand < 40) {
                         cachedProps.add(() -> building.drawSkyscraper(gc, drawX, drawY));
                     } else if (rand < 60) {
@@ -101,12 +98,10 @@ public class EnvironmentRenderer {
                     } else if (rand < 85) {
                         cachedProps.add(() -> building.drawLuxuryRestaurant(gc, drawX, drawY));
                     } else {
-                        // Căn giảm kích thước bãi đỗ xe xuống 80x80 để lọt thỏm đẹp vào ô đất (tránh tràn)
-                        cachedProps.add(() -> parking.drawParkingLotWithCars(gc, drawX, drawY, 80, 80)); 
+                        cachedProps.add(() -> parking.drawParkingLotWithCars(gc, drawX, drawY, 120, 120)); 
                     }
                 } else if (!isSidewalk) {
-                    // Vùng đệm lề đường -> Lắp đèn đường tự động
-                    if ((c + r) % 2 == 0) { // Đặt đèn thưa ra cho đẹp
+                    if ((c + r) % 2 == 0) { 
                         cachedProps.add(() -> drawProceduralStreetLight(gc, cx, cy));
                     }
                 }

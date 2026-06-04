@@ -7,14 +7,14 @@
 5. (-) thêm hệ thống di chuyển góc quay phóng to, thu nhỏ màn hình [Minh]
 6. (*) khoảng cách `direction` của `lane` hiện tại đang sử dụng "north", "south",..... Đề xuất thay đổi bằng vector [Minh]
 6. (-) các phương tiện hiện đang teleport ở ngã rẽ, chưa tìm thấy nguyên nhân [Minh]
-7. (\) 5-way: bố cục các làn không cân xứng, cây mọc trên đường [Hương]
+7. (-) 5-way: bố cục các làn không cân xứng, cây mọc trên đường [Hương]
 8. (-) xe di chuyển trên 3-way như 4-way {Hương}
 9. (-) 3 - way lỗi xe chạy trên cỏ [Hương]
 10.(-) cho xe chay cham lai [toan]
 11.(/) bo sung them am thanh cho cac loai xe [toan]
 12.(-) logic giao lộ tệ: 3-way và 5-way đang bị phụ thuộc vào logic phát triển của 4-way -> lỗi, cần fix lại logic intersect {Hương}
 13.(-) 5-way đang là 4 nhánh vuông + 1 nhánh chéo -> 5 nhánh đều {Hương}
-   (+) Direction (enum cứng)  →  DirectionVector (góc + vector, dynamic) {Hương}
+   (-) Direction (enum cứng)  →  DirectionVector (góc + vector, dynamic) {Hương}
    Khi đó:
     3-way: 3 nhánh cách nhau 120° (hoặc T-shape tùy chọn)
     4-way: 4 nhánh 90°
@@ -22,13 +22,13 @@
     6-way, 8-way, mạng lưới: thêm vào dễ dàng
     Road network: mỗi intersection có list nhánh riêng, xe navigate bằng graph
 14.(-) logic xe tệ: chỉ chạy trên 4 hướng mặc định Đông - Tây - Nam - Bắc dẫn đến ngoại trừ ngã tư thì tất cả các nhánh còn lại đều lỗi[Hương]
-    (+)[Hương]
+    (-)[Hương]
     - sửa Direction.java: Xóa bỏ khái niệm N, S, E, W.Thay vào đó là các vector tương ứng các góc 0°, 72°, 144°, 216°, 288°.
     - sửa LaneAlignmentSystem: Không thể dùng vehicle.setX(...) hay vehicle.setY(...) để căn làn nữa, mà phải dùng toán học lượng giác(Math.sin, Math.cos) để chiếu tọa độ xe lên trục của từng làn đường nghiêng.
     - sửa TurningSystem: Phải tính toán nội suy vòng cung(bezier curve) hoặc xoay xe theo góc 72 độ khi rẽ, thay vì quay 90 độ như hiện tại.
 15. (\) map ở 5-way còn lỗi hiển thị nhiều [Hương]
 16. (-) cảnh vật xung quanh: cây cối, đèn giao thông, bãi đậu xe... được đặt mặc định -> rất khó trong việc mở rộng thêm loại giao lộ mới, hoặc thay đổi bố cục đường xá. [Hương]
-    (+) cần chuyển từ phương pháp Hardcode(gắn tọa độ chết) sang phương pháp Procedural Generation(Sinh tự động theo thuật toán lưới). Thuật toán này hoạt động dựa trên nguyên lý: Quét toàn bộ bản đồ và chỉ đặt vật thể ở những nơi không có mặt đường.
+    (-) cần chuyển từ phương pháp Hardcode(gắn tọa độ chết) sang phương pháp Procedural Generation(Sinh tự động theo thuật toán lưới). Thuật toán này hoạt động dựa trên nguyên lý: Quét toàn bộ bản đồ và chỉ đặt vật thể ở những nơi không có mặt đường. [Hương]
 17. (-) lỗi logic xe chạy ở 3-way & 4-way -> khi cập nhật chỉnh sửa 5-way mới lộ rõ: [Hương]
     - ngã 4: Code cũ cấu hình sai hướng đi thẳng. Xe đang đi thẳng lên hướng Bắc lại bị code ép quay ngoắt 180 độ sang hướng Nam, khiến xe tự nhiên xoay vòng vòng giữa ngã tư.
     - ngã 3(hình chữ T, không có đường bên dưới): Nhánh đường từ trên cắm xuống bị cấu hình sai vector(đáng lẽ phải đi xuống thì code cũ lại cho đi ngược lên trời nên xe bay ra ngoài). Thêm nữa, xe không bị cấm rẽ vào nhánh dưới nên cứ thế lao thẳng xuống bãi cỏ.
@@ -49,3 +49,5 @@
     * Chế độ Basic: chỉ hiển thị các khối chữ nhật đại diện cho xe, đường, cây cối... không có hình ảnh, màu sắc đơn giản. Ưu điểm: dễ dàng mở rộng thêm loại giao lộ mới, dễ dàng chỉnh sửa bố cục đường xá, hiệu suất cao.
     * Chế độ Gui: hiển thị đầy đủ hình ảnh, màu sắc, chi tiết của xe, đường, cây cối... Ưu điểm: trực quan sinh động, hấp dẫn người dùng. Nhược điểm: khó mở rộng thêm loại giao lộ mới, khó chỉnh sửa bố cục đường xá, hiệu suất thấp hơn.
     * Cho phép người dùng chuyển đổi linh hoạt giữa hai chế độ hiển thị này trong quá trình chạy chương trình.
+24. (*) Ai đó hãy kiểm tra lại tất cả logic xe chạy [Hương]
+25. (*) Kiểm tra lại hình ảnh của xe [Hương]

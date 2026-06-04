@@ -38,18 +38,18 @@ public class TrafficLightRenderer {
             double armAngleDeg, double roadHalfWidth,
             double distanceToStopLine, String lightType) {
 
-        // Toán học Vector: Tìm điểm nằm trên lề đường bên phải tại vạch dừng
         double armRad = Math.toRadians(armAngleDeg);
-        double rightEdgeRad = Math.toRadians(armAngleDeg + 90); // Xoay 90 độ để lấy lề phải
+        double rightEdgeRad = Math.toRadians(armAngleDeg + 90);
 
-        // Tính tọa độ cột đèn (đẩy lùi ra ngoài đường 25px để không vướng xe)
+        // Đẩy lùi ra ngoài vỉa hè 35px để không cản xe rẽ
         int lightX = (int) (intersectionCenterX + distanceToStopLine * Math.cos(armRad)
-                + (roadHalfWidth + 25) * Math.cos(rightEdgeRad));
+                + (roadHalfWidth + 35) * Math.cos(rightEdgeRad));
         int lightY = (int) (intersectionCenterY + distanceToStopLine * Math.sin(armRad)
-                + (roadHalfWidth + 25) * Math.sin(rightEdgeRad));
+                + (roadHalfWidth + 35) * Math.sin(rightEdgeRad));
 
-        // Gọi hàm render gốc, trừ đi nửa chiều rộng hộp để tâm vào đúng vị trí
-        render(gc, light, lightX - BOX_W / 2, lightY - BOX_H, lightType);
+        // SỬA LỖI ĐÈN CHUI XUỐNG ĐẤT:
+        // Phải trừ đi tổng chiều cao (BOX_H + 35 phần cột thép) để đáy cột đèn chạm đúng mặt đất
+        render(gc, light, lightX - BOX_W / 2, lightY - (BOX_H + 35), lightType);
     }
 
     public void render(GraphicsContext gc, TrafficLight light, int x, int y, String lightType) {
