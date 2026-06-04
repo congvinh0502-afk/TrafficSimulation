@@ -49,3 +49,6 @@
     * Chế độ Basic: chỉ hiển thị các khối chữ nhật đại diện cho xe, đường, cây cối... không có hình ảnh, màu sắc đơn giản. Ưu điểm: dễ dàng mở rộng thêm loại giao lộ mới, dễ dàng chỉnh sửa bố cục đường xá, hiệu suất cao.
     * Chế độ Gui: hiển thị đầy đủ hình ảnh, màu sắc, chi tiết của xe, đường, cây cối... Ưu điểm: trực quan sinh động, hấp dẫn người dùng. Nhược điểm: khó mở rộng thêm loại giao lộ mới, khó chỉnh sửa bố cục đường xá, hiệu suất thấp hơn.
     * Cho phép người dùng chuyển đổi linh hoạt giữa hai chế độ hiển thị này trong quá trình chạy chương trình.
+24. (*) đèn đang ở chế độ smart tự chuyển xanh khi thấy ambulance/firetruck thay đổi lung tung dễ bug [toàn]
+      * đề xuất : thay đổi đèn về đếm bình thường rồi thay đổi logic
+      
