@@ -24,11 +24,11 @@ import model.vehicle.Vehicle;
  *
  * <p>Cách dùng:
  * <pre>
- *   // Mỗi frame:
- *   SoundManager.getInstance().updateVehicleSound(vehicle);
+ * // Mỗi frame:
+ * SoundManager.getInstance().updateVehicleSound(vehicle);
  *
- *   // Khi xe bị xóa:
- *   SoundManager.getInstance().onVehicleRemoved(vehicle);
+ * // Khi xe bị xóa:
+ * SoundManager.getInstance().onVehicleRemoved(vehicle);
  * </pre>
  * </p>
  */
@@ -56,6 +56,10 @@ public class SoundManager {
     // ------------------------------------------------------------------
     private final Map<SoundKey, Clip> clips       = new EnumMap<>(SoundKey.class);
     private final Map<SoundKey, Integer> activeCount = new EnumMap<>(SoundKey.class);
+    
+    // Thêm 2 map quản lý volume và mute riêng biệt
+    private final Map<SoundKey, Float> volumes    = new EnumMap<>(SoundKey.class);
+    private final Map<SoundKey, Boolean> muted    = new EnumMap<>(SoundKey.class);
 
     private SoundManager() {
         loadClip(SoundKey.AMBULANCE,   "AmbulanceSound.wav");
@@ -64,8 +68,11 @@ public class SoundManager {
         loadClip(SoundKey.MOTORBIKE,   "MotorbikeSound.wav");
         loadClip(SoundKey.TURN_SIGNAL, "TurnSignalSound.wav");
 
+        // Khởi tạo các giá trị mặc định cho từng SoundKey
         for (SoundKey key : SoundKey.values()) {
             activeCount.put(key, 0);
+            volumes.put(key, 0.6f);   // thêm
+            muted.put(key, false);    // thêm
         }
     }
 
@@ -144,7 +151,7 @@ public class SoundManager {
     }
 
     // ------------------------------------------------------------------
-    // Điều khiển volume / mute
+    // Điều khiển volume / mute tổng thể và riêng lẻ
     // ------------------------------------------------------------------
 
     public void setMasterVolume(float volume) {
@@ -156,6 +163,39 @@ public class SoundManager {
         activeCount.replaceAll((k, v) -> 0);
     }
 
+    /** Chỉnh volume riêng cho 1 loại xe (0.0 – 1.0) */
+    public void setVolume(SoundKey key, float volume) {
+        volumes.put(key, Math.max(0f, Math.min(1f, volume)));
+        Clip clip = clips.get(key);
+        if (clip != null && !muted.getOrDefault(key, false)) {
+            setVolume(clip, volume);
+        }
+    }
+
+    /** Bật/tắt âm thanh 1 loại xe */
+    public void setMuted(SoundKey key, boolean mute) {
+        muted.put(key, mute);
+        Clip clip = clips.get(key);
+        if (clip == null) return;
+        if (mute) {
+            clip.stop();
+        } else {
+            // Chỉ resume nếu đang có xe loại đó đang chạy
+            if (activeCount.getOrDefault(key, 0) > 0) {
+                clip.loop(Clip.LOOP_CONTINUOUSLY);
+            }
+            setVolume(clip, volumes.getOrDefault(key, 0.6f));
+        }
+    }
+
+    public boolean isMuted(SoundKey key) {
+        return muted.getOrDefault(key, false);
+    }
+
+    public float getVolume(SoundKey key) {
+        return volumes.getOrDefault(key, 0.6f);
+    }
+
     // ------------------------------------------------------------------
     // Internal helpers
     // ------------------------------------------------------------------
@@ -165,7 +205,10 @@ public class SoundManager {
         if (clip == null) return;
 
         activeCount.merge(key, 1, Integer::sum);
-
+        
+        // Check trạng thái mute trước khi phát
+        if (muted.getOrDefault(key, false)) return;
+        
         if (!clip.isRunning()) {
             clip.setFramePosition(0);
             clip.loop(Clip.LOOP_CONTINUOUSLY);
