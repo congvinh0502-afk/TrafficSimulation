@@ -41,13 +41,15 @@
     * logic hoạt động đã đầy đủ và chính xác? 
     * đầy đủ các loại: loại đếm số giây, loại không đếm số giây, loại chỉ đếm số giây khi còn 10 giây?
     * chế độ tự động(đèn giao thông tự chuyển) hoặc thủ công(người dùng click vào đèn để chuyển màu)
-22. (\) âm thanh: [Hương] [Toàn]
-    * âm thanh đi kèm các loại xe, âm thanh của xe xi - nhan, còi xe xin vượt.. đã có đẩy đủ chưa?
-    * hiển thị như nào
-    * tính năng tắt mở âm thanh các loại?
+22. (-) âm thanh: [Hương] [Toàn]
+    - âm thanh đi kèm các loại xe, âm thanh của xe xi - nhan, còi xe xin vượt.. đã có đẩy đủ chưa?
+    - hiển thị như nào
+    (/) tính năng tắt mở âm thanh các loại?( đang đợi làm lại thanh công cụ)
 23. (*) Chế độ hiển thị: Basic (khối chữ nhật) & Gui (hình ảnh) [Hương]
     * Chế độ Basic: chỉ hiển thị các khối chữ nhật đại diện cho xe, đường, cây cối... không có hình ảnh, màu sắc đơn giản. Ưu điểm: dễ dàng mở rộng thêm loại giao lộ mới, dễ dàng chỉnh sửa bố cục đường xá, hiệu suất cao.
     * Chế độ Gui: hiển thị đầy đủ hình ảnh, màu sắc, chi tiết của xe, đường, cây cối... Ưu điểm: trực quan sinh động, hấp dẫn người dùng. Nhược điểm: khó mở rộng thêm loại giao lộ mới, khó chỉnh sửa bố cục đường xá, hiệu suất thấp hơn.
     * Cho phép người dùng chuyển đổi linh hoạt giữa hai chế độ hiển thị này trong quá trình chạy chương trình.
 24. (*) Ai đó hãy kiểm tra lại tất cả logic xe chạy [Hương]
 25. (*) Kiểm tra lại hình ảnh của xe [Hương]
+26. (*) đèn đang ở chế độ smart tự chuyển xanh khi thấy ambulance/firetruck thay đổi lung tung dễ bug [toàn]
+      * đề xuất : thay đổi đèn về đếm bình thường rồi thay đổi logic
