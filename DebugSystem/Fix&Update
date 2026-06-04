@@ -50,8 +50,15 @@
     * Chế độ Gui: hiển thị đầy đủ hình ảnh, màu sắc, chi tiết của xe, đường, cây cối... Ưu điểm: trực quan sinh động, hấp dẫn người dùng. Nhược điểm: khó mở rộng thêm loại giao lộ mới, khó chỉnh sửa bố cục đường xá, hiệu suất thấp hơn.
     * Cho phép người dùng chuyển đổi linh hoạt giữa hai chế độ hiển thị này trong quá trình chạy chương trình.
 24. (*) Ai đó hãy kiểm tra lại tất cả logic xe chạy [Hương]
+     * logic sinh số lượng xe, loại xe, hướng đi của xe đã hợp lý chưa?
+     * bộ não của từng xe (mỗi xe có những hành vi, thuộc tính lái xe nào?)
+     * logic các hành vi, thuộc tính lái xe đã đúng chưa?
+     * phản ứng với đèn giao thông (khi đèn đỏ, đèn vàng, đèn xanh, đèn hỏng thì xe phản ứng như nào?)
+     * phản ứng với xe khác (khi đụng nhau, có nghiến qua nhau không, có dừng lại không, có tránh nhau không...)
+     * phản ứng với giao lộ (khi đi vào giao lộ, khi rẽ, khi thoái ra khỏi giao lộ thì xe phản ứng như nào?)
 25. (*) Kiểm tra lại hình ảnh của xe [Hương]
 26. (*) đèn đang ở chế độ smart tự chuyển xanh khi thấy ambulance/firetruck thay đổi lung tung dễ bug [toàn]
       * đề xuất : thay đổi đèn về đếm bình thường rồi thay đổi logic
 27. (*) sửa lại bảng công cụ, thanh điều khiển để tối ưu trải nghiệm người dùng [Hương] [Minh]
 28. (*) đừng để cái giao diện chương trình khi thu nhỏ hiện ra cái vùng xám được không? [Hương]
+29. (*) Phát triển thêm mạng lưới giao lộ, Network System [Hương]
