@@ -1,7 +1,6 @@
 package controller;
 
-import model.intersection.IntersectionLayout;
-import model.trafficlight.TrafficLight;
+import model.network.IntersectionNode;
 import model.vehicle.Vehicle;
 import system.vehicle.VehicleUpdatePipeline;
 import util.Direction;
@@ -10,7 +9,7 @@ import java.util.List;
 
 /**
  * Điều phối cập nhật toàn bộ phương tiện mỗi frame.
- * Nhận IntersectionLayout thay vì IntersectionType.
+ * Dùng List<IntersectionNode> thay vì IntersectionLayout đơn lẻ.
  */
 public class TrafficController {
 
@@ -20,12 +19,9 @@ public class TrafficController {
         this.pipeline = new VehicleUpdatePipeline();
     }
 
-    public void updateVehicles(List<Vehicle> vehicles,
-                               TrafficLight verticalLight,
-                               TrafficLight horizontalLight,
-                               IntersectionLayout layout) {
+    public void updateVehicles(List<Vehicle> vehicles, List<IntersectionNode> intersections) {
         for (Vehicle vehicle : vehicles) {
-            pipeline.update(vehicle, vehicles, verticalLight, horizontalLight, layout);
+            pipeline.update(vehicle, vehicles, intersections);
         }
     }
 

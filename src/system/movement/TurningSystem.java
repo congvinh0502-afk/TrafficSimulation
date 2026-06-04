@@ -2,248 +2,253 @@ package system.movement;
 
 import config.Constants;
 import model.intersection.IntersectionLayout;
+import model.intersection.IntersectionType;
+import model.network.IntersectionNode;
 import model.vehicle.Vehicle;
 import util.Direction;
+import util.DirectionHelper;
+
+import java.util.List;
 
 /**
- * Hệ thống xử lý rẽ tại giao lộ.
- * Tách biệt hoàn toàn logic Ngã 4 và vòng xuyến CCW Ngã 5 để tránh lỗi xe biến mất, đi lấn cỏ.
+ * Hệ thống rẽ — phát hiện giao lộ gần nhất và xử lý rẽ.
+ * - Ngã 5 (FIVE_WAY): đi theo quỹ đạo tròn CCW trên vòng xuyến (giống v0.1.2).
+ * - Ngã 3/4: rẽ góc thường (rotate + move).
  */
 public class TurningSystem {
 
-    public void updateTurning(Vehicle vehicle, IntersectionLayout layout) {
-        handleTurning(vehicle, layout);
-        if (vehicle.isTurning()) {
-            smoothTurning(vehicle, layout);
+    private static final double TURN_ZONE = config.Constants.LANE_WIDTH + 15.0; // 65 px
+
+    // Trạng thái vòng xuyến: lưu node đang dùng để smoothTurning biết cx/cy
+    // (dùng per-vehicle thông qua vehicle field, không cần field ở đây)
+
+    public void updateTurning(Vehicle v, List<IntersectionNode> intersections) {
+        if (!v.isTurning()) {
+            IntersectionNode node = findApproachingNode(v, intersections);
+            if (node != null) initTurn(v, node);
+        }
+        if (v.isTurning()) {
+            // Lấy node gần nhất để biết cx/cy cho smoothTurning vòng xuyến
+            IntersectionNode nearest = findNearestNode(v, intersections);
+            smoothTurning(v, nearest);
         }
     }
 
-    // ==========================================================
-    // Phát hiện và kích hoạt rẽ
-    // ==========================================================
+    // =========================================================
+    // Phát hiện vào vùng rẽ
+    // =========================================================
 
-    public void handleTurning(Vehicle vehicle, IntersectionLayout layout) {
-        if (vehicle.hasTurned())
-            return;
+    private IntersectionNode findApproachingNode(Vehicle v, List<IntersectionNode> nodes) {
+        if (v.hasTurned()) return null;
 
-        double hw = vehicle.getWidth() / 2;
-        double hh = vehicle.getHeight() / 2;
-
-        if (!layout.getTurnZone().contains(vehicle.getX(), vehicle.getY(), hw, hh))
-            return;
-
-        boolean isFiveWay = layout.getDirections().size() == 5;
-
-        switch (vehicle.getTurnType()) {
-            case LEFT:
-                initiateTurnLeft(vehicle, isFiveWay);
-                break;
-            case RIGHT:
-                initiateTurnRight(vehicle, isFiveWay);
-                break;
-            case STRAIGHT:
-                initiateTurnStraight(vehicle, isFiveWay);
-                break;
-            default:
-                return;
+        for (IntersectionNode n : nodes) {
+            if (n.type == IntersectionType.FIVE_WAY) {
+                // Ngã 5 dùng turnZone từ layout
+                IntersectionLayout layout = n.type.createLayout(n.cx, n.cy);
+                double hw = v.getWidth() / 2, hh = v.getHeight() / 2;
+                if (layout.getTurnZone().contains(v.getX(), v.getY(), hw, hh)) return n;
+            } else {
+                // Ngã 3/4: chỉ rẽ nếu không STRAIGHT
+                if (v.getTurnType() == util.TurnType.STRAIGHT) continue;
+                if (inTurnZone(v, n.cx, n.cy)) return n;
+            }
         }
-        vehicle.setTurned(true);
+        return null;
     }
 
-    private Direction[] fwOutDirs = {
-            Direction.NORTH, Direction.FW_OUT_342, Direction.FW_OUT_54,
-            Direction.FW_OUT_126, Direction.FW_OUT_198
+    private IntersectionNode findNearestNode(Vehicle v, List<IntersectionNode> nodes) {
+        IntersectionNode best = null;
+        double bestDist = Double.MAX_VALUE;
+        for (IntersectionNode n : nodes) {
+            double dx = v.getX() - n.cx;
+            double dy = v.getY() - n.cy;
+            double d = dx * dx + dy * dy;
+            if (d < bestDist) { bestDist = d; best = n; }
+        }
+        return best;
+    }
+
+    private boolean inTurnZone(Vehicle v, int ix, int iy) {
+        double hx = v.getWidth()  / 2, hy = v.getHeight() / 2;
+        return v.getX() + hx > ix - TURN_ZONE && v.getX() - hx < ix + TURN_ZONE
+            && v.getY() + hy > iy - TURN_ZONE && v.getY() - hy < iy + TURN_ZONE;
+    }
+
+    // =========================================================
+    // Khởi tạo rẽ
+    // =========================================================
+
+    private void initTurn(Vehicle v, IntersectionNode node) {
+        if (node.type == IntersectionType.FIVE_WAY) {
+            initiateFiveWayTurn(v);
+        } else {
+            initTurnNormal(v, node);
+        }
+        v.setTurned(true);
+    }
+
+    // --- Ngã 5: vòng xuyến CCW ---
+
+    private static final Direction[] FW_OUT_DIRS = {
+        Direction.NORTH, Direction.FW_OUT_342, Direction.FW_OUT_54,
+        Direction.FW_OUT_126, Direction.FW_OUT_198
     };
-    private double[] fwOutAngles = { -90, 342, 54, 126, 198 };
-    private Direction[] fwInDirs = {
-            Direction.SOUTH, Direction.FW_IN_342, Direction.FW_IN_54,
-            Direction.FW_IN_126, Direction.FW_IN_198
+    private static final double[] FW_OUT_ANGLES = { -90, 342, 54, 126, 198 };
+    private static final Direction[] FW_IN_DIRS = {
+        Direction.SOUTH, Direction.FW_IN_342, Direction.FW_IN_54,
+        Direction.FW_IN_126, Direction.FW_IN_198
     };
-    private double[] branchAngles = { 270, 342, 54, 126, 198 };
 
     private int getFiveWayIndex(Direction dir) {
-        for (int i = 0; i < fwInDirs.length; i++) {
-            if (fwInDirs[i] == dir)
-                return i;
+        for (int i = 0; i < FW_IN_DIRS.length; i++) {
+            if (FW_IN_DIRS[i] == dir) return i;
         }
         return -1;
     }
 
-    private void initiateFiveWayTurn(Vehicle vehicle) {
-        int inIdx = getFiveWayIndex(vehicle.getDirection());
+    private void initiateFiveWayTurn(Vehicle v) {
+        int inIdx = getFiveWayIndex(v.getDirection());
         if (inIdx < 0) return;
 
         int outIdx;
         // Đi theo vòng xuyến ngược chiều kim đồng hồ (CCW)
-        switch (vehicle.getTurnType()) {
+        switch (v.getTurnType()) {
             case RIGHT:    outIdx = (inIdx + 4) % 5; break; // Lối ra thứ 1
             case STRAIGHT: outIdx = (inIdx + 3) % 5; break; // Lối ra thứ 2
             case LEFT:     outIdx = (inIdx + 2) % 5; break; // Lối ra thứ 3
             default:       outIdx = (inIdx + 3) % 5; break;
         }
 
-        vehicle.setTargetDirection(fwOutDirs[outIdx]);
-        vehicle.setTargetAngle(fwOutAngles[outIdx]); 
-        vehicle.setTurning(true);
+        v.setTargetDirection(FW_OUT_DIRS[outIdx]);
+        v.setTargetAngle(FW_OUT_ANGLES[outIdx]);
+        v.setTurning(true);
     }
 
-    private void initiateTurnLeft(Vehicle vehicle, boolean isFiveWay) {
-        Direction dir = vehicle.getDirection();
-        Direction target = dir;
-        double angle = vehicle.getAngle();
+    // --- Ngã 3/4: rẽ góc thường ---
 
-        if (isFiveWay) {
-            initiateFiveWayTurn(vehicle);
-            return;
-        } else {
-            switch (dir) {
-                case NORTH: target = Direction.WEST; angle = 180; break;
-                case EAST:  target = Direction.NORTH; angle = -90; break;
-                case WEST:  target = Direction.SOUTH; angle = 90; break;
-                case SOUTH: target = Direction.EAST; angle = 0; break;
-                default: break;
-            }
+    private void initTurnNormal(Vehicle v, IntersectionNode node) {
+        Direction current = v.getDirection();
+        Direction target;
+        double targetAngle;
+
+        switch (v.getTurnType()) {
+            case LEFT:
+                target = DirectionHelper.getLeftDirection(current);
+                break;
+            case RIGHT:
+                target = DirectionHelper.getRightDirection(current);
+                break;
+            case STRAIGHT:
+                // Đi thẳng: set hướng, không bẻ lái
+                setDirectionStraight(v);
+                return;
+            default:
+                return;
         }
-        vehicle.setTargetDirection(target);
-        vehicle.setTargetAngle(angle);
-        vehicle.setTurning(true);
+
+        if (target == null) return;
+        if (!node.type.getDirections().contains(target)) return;
+
+        targetAngle = target.toAngleDeg();
+        v.setTargetDirection(target);
+        v.setTargetAngle(targetAngle);
+        v.setTurning(true);
     }
 
-    private void initiateTurnRight(Vehicle vehicle, boolean isFiveWay) {
-        Direction dir = vehicle.getDirection();
-        Direction target = dir;
-        double angle = vehicle.getAngle();
-
-        if (isFiveWay) {
-            initiateFiveWayTurn(vehicle);
-            return;
-        } else {
-            switch (dir) {
-                case NORTH: target = Direction.EAST; angle = 0; break;
-                case EAST:  target = Direction.SOUTH; angle = 90; break;
-                case WEST:  target = Direction.NORTH; angle = -90; break;
-                case SOUTH: target = Direction.WEST; angle = 180; break;
-                default: break;
-            }
+    private void setDirectionStraight(Vehicle v) {
+        Direction dir = v.getDirection();
+        double angle = v.getAngle();
+        switch (dir) {
+            case NORTH: angle = -90; break;
+            case SOUTH: angle = 90;  break;
+            case EAST:  angle = 0;   break;
+            case WEST:  angle = 180; break;
+            default: break;
         }
-        vehicle.setTargetDirection(target);
-        vehicle.setTargetAngle(angle);
-        vehicle.setTurning(true);
+        v.setTargetDirection(dir);
+        v.setTargetAngle(angle);
+        v.setTurning(false);
     }
 
-    private void initiateTurnStraight(Vehicle vehicle, boolean isFiveWay) {
-        Direction dir = vehicle.getDirection();
-        Direction target = dir;
-        double angle = vehicle.getAngle();
-
-        if (isFiveWay) {
-            initiateFiveWayTurn(vehicle);
-            return;
-        } else {
-            switch (dir) {
-                case NORTH: target = Direction.NORTH; angle = -90; break;
-                case SOUTH: target = Direction.SOUTH; angle = 90; break;
-                case EAST:  target = Direction.EAST; angle = 0; break;
-                case WEST:  target = Direction.WEST; angle = 180; break;
-                default: break;
-            }
-        }
-        vehicle.setTargetDirection(target);
-        vehicle.setTargetAngle(angle);
-        // Đi thẳng: không bẻ lái, chỉ set hướng
-        vehicle.setTurning(false);
-        vehicle.setTurned(true);
-    }
-
-    // ==========================================================
+    // =========================================================
     // Di chuyển mượt khi đang rẽ
-    // ==========================================================
+    // =========================================================
 
-    public void smoothTurning(Vehicle vehicle, IntersectionLayout layout) {
-        if (!vehicle.isTurning())
-            return;
+    public void smoothTurning(Vehicle v, IntersectionNode node) {
+        if (!v.isTurning()) return;
 
-        boolean isFiveWay = layout.getDirections().size() == 5;
-        
-        // --- XỬ LÝ VÒNG XUYẾN (ĐI THEO QUỸ ĐẠO TRÒN) ---
-        if (isFiveWay) {
-            double cx = layout.getCx();
-            double cy = layout.getCy();
-            
-            double dx = vehicle.getX() - cx;
-            double dy = vehicle.getY() - cy;
+        // --- XỬ LÝ VÒNG XUYẾN (QUỸ ĐẠO TRÒN CCW) ---
+        if (node != null && node.type == IntersectionType.FIVE_WAY) {
+            double cx = node.cx;
+            double cy = node.cy;
+
+            double dx = v.getX() - cx;
+            double dy = v.getY() - cy;
             double radius = Math.sqrt(dx * dx + dy * dy);
-            
+
             // Ép xe dần bám vào bán kính an toàn của bùng binh
             if (radius > 120) radius -= 1.8;
             else if (radius < 115) radius += 1.8;
-            
+
             double currentAngleRad = Math.atan2(dy, dx);
-            double speed = vehicle.getSpeed() * Constants.TURNING_SPEED_FACTOR * 1.6;
+            double speed = v.getSpeed() * Constants.TURNING_SPEED_FACTOR * 1.6;
             double angularSpeed = speed / radius;
-            
+
             // Chạy CCW (ngược chiều kim đồng hồ) -> góc giảm dần
             double nextAngleRad = currentAngleRad - angularSpeed;
-            
-            vehicle.setX(cx + Math.cos(nextAngleRad) * radius);
-            vehicle.setY(cy + Math.sin(nextAngleRad) * radius);
-            
+
+            v.setX(cx + Math.cos(nextAngleRad) * radius);
+            v.setY(cy + Math.sin(nextAngleRad) * radius);
+
             // Chỉnh hướng đầu xe dọc theo tiếp tuyến của đường tròn
             double facingAngle = Math.toDegrees(nextAngleRad) - 90;
-            vehicle.setAngle(facingAngle);
-            
+            v.setAngle(facingAngle);
+
             // Kiểm tra lối ra
-            double exitAngleRad = Math.toRadians(vehicle.getTargetAngle());
+            double exitAngleRad = Math.toRadians(v.getTargetAngle());
             double diff = Math.toDegrees(nextAngleRad - exitAngleRad);
-            while (diff > 180) diff -= 360;
+            while (diff >  180) diff -= 360;
             while (diff < -180) diff += 360;
-            
+
             // Nếu đã tới vị trí góc rẽ hướng ra -> Kết thúc cua
             if (Math.abs(diff) < Math.toDegrees(angularSpeed) * 1.5 && radius <= 130) {
-                vehicle.setDirection(vehicle.getTargetDirection());
-                vehicle.setAngle(vehicle.getTargetDirection().toAngleDeg());
-                vehicle.setLane(util.Lane.RIGHT);
-                vehicle.setTurning(false);
-                vehicle.setAcceleration(Constants.DEFAULT_ACCELERATION);
-                vehicle.setPostTurnAligning(true);
+                v.setDirection(v.getTargetDirection());
+                v.setAngle(v.getTargetDirection().toAngleDeg());
+                v.setLane(util.Lane.RIGHT);
+                v.setTurning(false);
+                v.setAcceleration(Constants.DEFAULT_ACCELERATION);
+                v.setPostTurnAligning(true);
             }
             return;
         }
 
         // --- XỬ LÝ RẼ GÓC THƯỜNG (NGÃ 3, NGÃ 4) ---
-        double speed = vehicle.getSpeed() * Constants.TURNING_SPEED_FACTOR;
-        double rad = Math.toRadians(vehicle.getAngle());
-        vehicle.setX(vehicle.getX() + Math.cos(rad) * speed);
-        vehicle.setY(vehicle.getY() + Math.sin(rad) * speed);
-
-        updateVehicleAngle(vehicle);
-        finishTurning(vehicle);
+        double speed = v.getSpeed() * Constants.TURNING_SPEED_FACTOR;
+        double rad   = Math.toRadians(v.getAngle());
+        v.setX(v.getX() + Math.cos(rad) * speed);
+        v.setY(v.getY() + Math.sin(rad) * speed);
+        updateAngle(v);
+        tryFinish(v);
     }
 
-    public void updateVehicleAngle(Vehicle vehicle) {
-        double current = vehicle.getAngle();
-        double target = vehicle.getTargetAngle();
-        double diff = target - current;
-        while (diff > 180)
-            diff -= 360;
-        while (diff < -180)
-            diff += 360;
-
+    private void updateAngle(Vehicle v) {
+        double diff = v.getTargetAngle() - v.getAngle();
+        while (diff >  180) diff -= 360;
+        while (diff < -180) diff += 360;
         if (Math.abs(diff) < Constants.ROTATE_SPEED) {
-            vehicle.setAngle(target);
+            v.setAngle(v.getTargetAngle());
             return;
         }
-        vehicle.setAngle(current + (diff > 0 ? Constants.ROTATE_SPEED : -Constants.ROTATE_SPEED));
+        v.setAngle(v.getAngle() + (diff > 0 ? Constants.ROTATE_SPEED : -Constants.ROTATE_SPEED));
     }
 
-    private void finishTurning(Vehicle vehicle) {
-        if (Math.abs(vehicle.getAngle() - vehicle.getTargetAngle()) >= Constants.TURN_FINISH_TOLERANCE)
-            return;
+    private void tryFinish(Vehicle v) {
+        if (Math.abs(v.getAngle() - v.getTargetAngle()) >= Constants.TURN_FINISH_TOLERANCE) return;
 
-        vehicle.setDirection(vehicle.getTargetDirection());
-        vehicle.setLane(util.Lane.RIGHT);
-        vehicle.setTurning(false);
-        vehicle.setAcceleration(Constants.DEFAULT_ACCELERATION);
-        vehicle.setPostTurnAligning(true);
+        v.setDirection(v.getTargetDirection());
+        v.setLane(util.Lane.RIGHT);
+        v.setTurning(false);
+        v.setAcceleration(Constants.DEFAULT_ACCELERATION);
+        v.setPostTurnAligning(true);
     }
 }

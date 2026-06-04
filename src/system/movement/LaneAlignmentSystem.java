@@ -1,77 +1,46 @@
 package system.movement;
 
 import config.Constants;
-import model.intersection.IntersectionLayout;
+import manager.LaneManager;
+import model.network.NetworkLayout;
 import model.vehicle.Vehicle;
-import util.Direction; 
 
-/**
- * Hệ thống căn giữa làn đường.
- * Tích hợp công thức hình học để bám làn trên các đường chéo 72 độ.
- */
+/** Căn giữa làn — dùng NetworkLayout cho right-hand traffic. */
 public class LaneAlignmentSystem {
 
-    public void alignToLane(Vehicle vehicle, IntersectionLayout layout) {
-        if (vehicle.isChangingLane() || vehicle.isTurning())
-            return;
+    public void alignToLane(Vehicle v) {
+        if (v.isChangingLane() || v.isTurning()) return;
 
-        boolean postTurn = vehicle.isPostTurnAligning();
-        double smoothFactor = postTurn ? Constants.POST_TURN_ALIGN_FACTOR : Constants.LANE_ALIGN_SMOOTH_FACTOR;
-        double maxSmooth = postTurn ? 4.0 : Constants.LANE_ALIGN_MAX_SMOOTH;
-        double smooth = Math.min(vehicle.getSpeed() * smoothFactor + (postTurn ? 0.5 : 0), maxSmooth);
+        boolean post   = v.isPostTurnAligning();
+        double  factor = post ? Constants.POST_TURN_ALIGN_FACTOR : Constants.LANE_ALIGN_SMOOTH_FACTOR;
+        double  smooth = Math.min(v.getSpeed() * factor + (post ? 0.5 : 0), post ? 4.0 : Constants.LANE_ALIGN_MAX_SMOOTH);
 
-        Direction dir = vehicle.getDirection();
-        boolean isFiveWay = layout.getDirections().size() == 5;
-
-        if (!isFiveWay && (dir == Direction.NORTH || dir == Direction.SOUTH || dir == Direction.EAST
-                || dir == Direction.WEST)) {
-            if (dir == Direction.NORTH || dir == Direction.SOUTH) {
-                int targetX = layout.getLaneCenterX(dir, vehicle.getLane());
-                if (targetX == 0)
-                    return;
-                double diff = targetX - vehicle.getX();
-                if (postTurn && Math.abs(diff) < Constants.POST_TURN_SNAP_THRESHOLD) {
-                    vehicle.setX(targetX);
-                    vehicle.setPostTurnAligning(false);
+        switch (v.getDirection()) {
+            case NORTH:
+            case SOUTH: {
+                int target = LaneManager.getLaneCenterX(v.getDirection(), v.getHomeIntersectionX());
+                double diff = target - v.getX();
+                if (post && Math.abs(diff) < Constants.POST_TURN_SNAP_THRESHOLD) {
+                    v.setX(target);
+                    v.setPostTurnAligning(false);
                 } else {
-                    vehicle.setX(vehicle.getX() + Math.signum(diff) * Math.min(smooth, Math.abs(diff)));
+                    v.setX(v.getX() + Math.signum(diff) * Math.min(smooth, Math.abs(diff)));
                 }
-            } else {
-                int targetY = layout.getLaneCenterY(dir, vehicle.getLane());
-                if (targetY == 0)
-                    return;
-                double diff = targetY - vehicle.getY();
-                if (postTurn && Math.abs(diff) < Constants.POST_TURN_SNAP_THRESHOLD) {
-                    vehicle.setY(targetY);
-                    vehicle.setPostTurnAligning(false);
-                } else {
-                    vehicle.setY(vehicle.getY() + Math.signum(diff) * Math.min(smooth, Math.abs(diff)));
-                }
+                break;
             }
-        } else {
-            double rad = Math.toRadians(dir.toAngleDeg());
-            double fx = Math.cos(rad);
-            double fy = Math.sin(rad);
-            // Sửa vector pháp tuyến (chỉ về đúng lề phải thay vì lề trái gây đi lên cỏ)
-            double nx = -fy; 
-            double ny = fx;
-            double laneOffset = (vehicle.getLane() == util.Lane.RIGHT) ? 25.0 : -25.0;
-            double linePX = layout.getCx() + nx * laneOffset;
-            double linePY = layout.getCy() + ny * laneOffset;
-            double dx = vehicle.getX() - linePX;
-            double dy = vehicle.getY() - linePY;
-            double dist = dx * nx + dy * ny;
-            if (Math.abs(dist) > 0.1) {
-                if (postTurn && Math.abs(dist) < Constants.POST_TURN_SNAP_THRESHOLD) {
-                    vehicle.setX(vehicle.getX() - dist * nx);
-                    vehicle.setY(vehicle.getY() - dist * ny);
-                    vehicle.setPostTurnAligning(false);
+            case EAST:
+            case WEST: {
+                int target = LaneManager.getLaneCenterY(v.getDirection(), v.getHomeIntersectionY());
+                double diff = target - v.getY();
+                if (post && Math.abs(diff) < Constants.POST_TURN_SNAP_THRESHOLD) {
+                    v.setY(target);
+                    v.setPostTurnAligning(false);
                 } else {
-                    double correction = Math.signum(dist) * Math.min(smooth, Math.abs(dist));
-                    vehicle.setX(vehicle.getX() - correction * nx);
-                    vehicle.setY(vehicle.getY() - correction * ny);
+                    v.setY(v.getY() + Math.signum(diff) * Math.min(smooth, Math.abs(diff)));
                 }
+                break;
             }
+            default: break;
         }
     }
 }

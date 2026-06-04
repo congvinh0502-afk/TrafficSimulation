@@ -75,6 +75,12 @@ public abstract class Vehicle {
     protected double targetY;
 
     // --------------------------------------------------------
+    // Giao lộ chủ (dùng cho LaneManager trong NetworkLayout)
+    // --------------------------------------------------------
+    protected int homeIntersectionX;
+    protected int homeIntersectionY;
+
+    // --------------------------------------------------------
     // Chiến lược lái
     // --------------------------------------------------------
     protected DriverBehavior behavior;
@@ -203,6 +209,15 @@ public abstract class Vehicle {
     public void   setTargetX(double tx){ this.targetX = tx; }
     public double getTargetY()     { return targetY; }
     public void   setTargetY(double ty){ this.targetY = ty; }
+
+    // ==========================================================
+    // Getter / Setter — giao lộ chủ
+    // ==========================================================
+
+    public int  getHomeIntersectionX()       { return homeIntersectionX; }
+    public void setHomeIntersectionX(int v)  { this.homeIntersectionX = v; }
+    public int  getHomeIntersectionY()       { return homeIntersectionY; }
+    public void setHomeIntersectionY(int v)  { this.homeIntersectionY = v; }
 
     // ==========================================================
     // Getter / Setter — chiến lược lái
