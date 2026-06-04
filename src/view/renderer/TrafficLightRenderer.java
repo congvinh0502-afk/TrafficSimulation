@@ -10,27 +10,60 @@ import model.trafficlight.TrafficLight;
 
 /**
  * Renderer đèn giao thông (JavaFX).
- *
- * <p>Hiển thị hộp đèn 3 bóng (đỏ-vàng-xanh), cột và đếm ngược
- * theo cài đặt lightType.</p>
+ * Bổ sung hệ thống Auto-Positioning tự động tìm mép đường.
  */
 public class TrafficLightRenderer {
 
-    private static final int BOX_W  = 42;
-    private static final int BOX_H  = 110;
+    private static final int BOX_W = 42;
+    private static final int BOX_H = 110;
     private static final int BOX_ARC = 12;
     private static final int BULB_SIZE = 30;
-    private static final int BULB_OFF  = 6;
+    private static final int BULB_OFF = 6;
+
+    /**
+     * Tự động căn tọa độ đèn giao thông nằm đúng vào mép phải vạch dừng của bất kỳ
+     * loại ngã nào.
+     * Cần gọi hàm này thay cho hàm render() cũ ở file điều phối (ví dụ:
+     * SimulationScene).
+     *
+     * @param intersectionCenterX Tâm giao lộ X (ví dụ 600)
+     * @param intersectionCenterY Tâm giao lộ Y (ví dụ 400)
+     * @param armAngleDeg         Góc của nhánh đường (ví dụ nhánh phía Bắc là 270
+     *                            độ)
+     * @param roadHalfWidth       Nửa chiều rộng đường (ví dụ 2 làn = 100)
+     * @param distanceToStopLine  Khoảng cách từ tâm đến vạch dừng
+     */
+    public void renderAutoPosition(GraphicsContext gc, TrafficLight light,
+            double intersectionCenterX, double intersectionCenterY,
+            double armAngleDeg, double roadHalfWidth,
+            double distanceToStopLine, String lightType) {
+
+        double armRad = Math.toRadians(armAngleDeg);
+        double rightEdgeRad = Math.toRadians(armAngleDeg + 90);
+
+        // Đẩy lùi ra ngoài vỉa hè 35px để không cản xe rẽ
+        int lightX = (int) (intersectionCenterX + distanceToStopLine * Math.cos(armRad)
+                + (roadHalfWidth + 35) * Math.cos(rightEdgeRad));
+        int lightY = (int) (intersectionCenterY + distanceToStopLine * Math.sin(armRad)
+                + (roadHalfWidth + 35) * Math.sin(rightEdgeRad));
+
+        // SỬA LỖI ĐÈN CHUI XUỐNG ĐẤT:
+        // Phải trừ đi tổng chiều cao (BOX_H + 35 phần cột thép) để đáy cột đèn chạm đúng mặt đất
+        render(gc, light, lightX - BOX_W / 2, lightY - (BOX_H + 35), lightType);
+    }
 
     public void render(GraphicsContext gc, TrafficLight light, int x, int y, String lightType) {
         drawBox(gc, x, y);
-        drawBulb(gc, x + BULB_OFF, y + BULB_OFF,      Color.RED,    light.getColor() == LightColor.RED);
-        drawBulb(gc, x + BULB_OFF, y + BULB_OFF + 34,  Color.YELLOW, light.getColor() == LightColor.YELLOW);
-        drawBulb(gc, x + BULB_OFF, y + BULB_OFF + 68,  Color.LIME,   light.getColor() == LightColor.GREEN);
+        drawBulb(gc, x + BULB_OFF, y + BULB_OFF, Color.RED, light.getColor() == LightColor.RED);
+        drawBulb(gc, x + BULB_OFF, y + BULB_OFF + 34, Color.YELLOW, light.getColor() == LightColor.YELLOW);
+        drawBulb(gc, x + BULB_OFF, y + BULB_OFF + 68, Color.LIME, light.getColor() == LightColor.GREEN);
         drawPole(gc, x, y);
 
-        if (shouldShowTimer(light, lightType)) {
-            drawTimer(gc, x, y, light.getTimer() / 60);
+        // Chia 1000.0 để quy đổi từ mili-giây sang giây thực tế trên màn hình
+        int displaySeconds = (int) Math.ceil(light.getTimer() / 1000.0);
+
+        if (shouldShowTimer(light, lightType, displaySeconds)) {
+            drawTimer(gc, x, y, displaySeconds);
         }
     }
 
@@ -70,11 +103,14 @@ public class TrafficLightRenderer {
         gc.setTextAlign(TextAlignment.LEFT);
     }
 
-    private boolean shouldShowTimer(TrafficLight light, String lightType) {
+    private boolean shouldShowTimer(TrafficLight light, String lightType, int displaySeconds) {
         switch (lightType) {
-            case "ALWAYS COUNTDOWN": return true;
-            case "COUNT <= 10":      return light.getTimer() / 60 <= 10;
-            default:                 return false;
+            case "ALWAYS COUNTDOWN":
+                return true;
+            case "COUNT <= 10":
+                return displaySeconds <= 10;
+            default:
+                return false;
         }
     }
 }

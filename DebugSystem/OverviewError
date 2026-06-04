@@ -1,0 +1,85 @@
+/* Tổng Quan */
+
+Những gì đã được triển khai tốt
+Cấu trúc tổng thể khá rõ ràng: Strategy Pattern cho driver behavior, Pipeline cập nhật xe, Camera 2D, hệ thống đèn giao thông với 3 loại hiển thị, spawn/remove xe, HUD, và nút quay về menu đều đã có.
+
+Những phần còn thiếu hoặc chưa đúng yêu cầu
+1. Thiếu hoàn toàn: Âm thanh
+Đây là yêu cầu bắt buộc trong đề tài nhưng không có một dòng code âm thanh nào. Cần bổ sung:
+
+Tiếng động cơ xe (khác nhau cho xe máy, ô tô, xe tải)
+Còi xe ưu tiên (xe cứu thương/cứu hỏa)
+Âm thanh xi-nhan khi xe rẽ
+Còi xe khi xin vượt (khi xe đang bị chặn và muốn đổi làn)
+
+JavaFX có AudioClip và MediaPlayer để làm điều này.
+
+2. Thiếu hoàn toàn: Chế độ Basic (hình chữ nhật + tên)
+Đề tài yêu cầu hai chế độ hiển thị tách biệt hoàn toàn. Hiện tại VehicleRenderer chỉ có một chế độ đồ họa. Cần:
+
+Thêm BasicVehicleRenderer vẽ rectangle + label ("Car", "Ambu", "Moto"...)
+Thêm toggle trong Settings để chuyển giữa hai chế độ
+Tách giao diện VehicleRenderer thành interface, hai class implement riêng
+
+
+3. Chưa hoàn chỉnh: Mở rộng sang mạng lưới đường (yêu cầu thứ 4)
+Đề tài yêu cầu (4) một vùng rộng gồm mạng lưới đường với nhiều loại ngã rẽ. Hiện tại toàn bộ simulation chỉ có một ngã rẽ duy nhất tại trung tâm màn hình (hardcode tại x=300–500, y=300–500). Cần xây dựng thêm:
+
+Cấu trúc dữ liệu RoadNetwork chứa nhiều Intersection và Road nối chúng
+Xe có thể di chuyển từ ngã tư này sang ngã tư khác
+Zoom ra để thấy toàn bộ mạng lưới, zoom vào để thấy chi tiết một ngã rẽ (Camera đã có sẵn, chỉ cần nội dung map)
+
+
+4. Thiếu: Xe buýt
+Đề tài liệt kê xe buýt như một ví dụ loại xe mới cần hỗ trợ dễ dàng. Hiện có 5 loại (Car, Motorbike, Bicycle, Ambulance, FireTruck) — đủ số lượng tối thiểu, nhưng nên thêm Bus để thể hiện tính extensibility, vì đây là tiêu chí kỹ thuật quan trọng.
+
+5. Lỗi logic: THREE_WAY — xe di chuyển như FOUR_WAY
+Đây là bug đã được ghi nhận trong DebugSystem/Fix&Update mục số 8. Nguyên nhân cụ thể:
+Trong TurningSystem.handleTurning(), vùng trigger rẽ dùng hằng số TURN_TRIGGER_* là cố định, không phân biệt loại ngã rẽ. Xe NORTH đến THREE_WAY vẫn cố rẽ về SOUTH (nhưng SOUTH không có trong THREE_WAY.getDirections() nên bị bỏ qua), tuy nhiên xe đi thẳng xuyên qua theo đường dọc vốn không tồn tại ở THREE_WAY vì RoadRenderer.renderThreeWay() chỉ vẽ đường dọc đến y=800 nhưng không có nhánh bên phải — xe NORTH vẫn có thể spawn và đi thẳng xuống SOUTH lane ngay cả khi THREE_WAY không có SOUTH. Trong VehicleSpawnManager, getSpawnY(NORTH) trả SPAWN_OFFSCREEN_POSITIVE (1100), tức xe NORTH spawn từ phía dưới đi lên — điều này logic chứ không sai, nhưng THREE_WAY không có SOUTH direction trong getDirections() mà vẫn spawn NORTH từ dưới thì kỳ lạ về mặt trực quan.
+
+6. Bug tiềm ẩn: VehicleUpdatePipeline reset stopped = false mỗi frame trước khi EmergencyVehicleSystem chạy
+Thứ tự trong SimulationScene.updateSimulation():
+javatrafficController.updateVehicles(...);   // pipeline reset stopped=false, rồi có thể set lại true
+emergencySystem.updateEmergencyVehicles(vehicles);  // set stopped=true cho xe bị chặn
+Nhưng trong VehicleUpdatePipeline.update(), bước 1 reset stopped = false cho tất cả xe. Điều này có nghĩa là trạng thái stopped = true do EmergencyVehicleSystem set ở frame trước sẽ bị xóa ngay đầu frame kế tiếp trước khi xe kịp phản ứng — thực ra emergency system chạy sau pipeline nên frame đó vẫn đúng, nhưng nếu pipeline được gọi lại trước emergency system thì xe sẽ nhúc nhích 1 frame trước khi bị dừng lại.
+
+7. Chưa có: Hiệu ứng xi-nhan trực quan
+Khi xe chuẩn bị rẽ (TurnType != STRAIGHT), không có hiệu ứng xi-nhan (nhấp nháy một bên xe). VehicleRenderer hiện chỉ nhấp nháy đèn ưu tiên cho Ambulance/FireTruck. Cần thêm nhấp nháy đèn xi-nhan trái/phải cho tất cả xe trước khi vào vùng rẽ.
+
+8. Chưa có: Xe vượt nhau có kiểm soát
+Yêu cầu: "các xe có thể vượt nhau nhưng vượt sao cho không gây ra va chạm". Hiện tại LaneChangeSystem.tryChangeLane() chỉ được gọi khi xe bị chặn (tốc độ thấp hơn 30% maxSpeed). Không có hành vi chủ động vượt xe chậm hơn cho xe có AggressiveDriver. Cần:
+
+AggressiveDriver chủ động trigger tryChangeLane() khi phát hiện xe chậm phía trước
+Kiểm tra an toàn cả trước và sau khi đổi làn (hiện tại chỉ kiểm tra khoảng cách Euclidean, không xét hướng)
+
+
+9. Chưa xử lý: Cây trên mặt đường 5-way
+Bug ghi nhận trong DebugSystem mục 7. Trong EnvironmentRenderer.renderFiveWay(), 4 cây được vẽ tại (cx-18, cy-58), (cx-18, cy+28), (cx-58, cy-18), (cx+28, cy-18) với cx=cy=400 — tức ngay trên bùng binh. NatureRenderer.drawTreeRow() có kiểm tra ROAD_MIN=260, ROAD_MAX=540 để tránh vẽ cây trên đường ngang/dọc, nhưng 4 cây này được gọi trực tiếp không qua kiểm tra đó, nên chúng xuất hiện giữa bùng binh.
+
+10. Thiếu: Unit test / tài liệu README
+README.md hoàn toàn trống. Không có test nào. Với dự án nhóm, cần ít nhất mô tả cách build/run, cấu trúc dự án và design patterns đã dùng.
+
+Tóm tắt mức độ ưu tiên
+Phải làm ngay (điểm trừ nếu thiếu): âm thanh, chế độ Basic renderer, fix cây trên 5-way, fix THREE_WAY vehicle behavior.
+Nên làm (ảnh hưởng điểm kỹ thuật): mạng lưới đường đa ngã rẽ, hiệu ứng xi-nhan, aggressive overtaking, README.
+Tốt nếu có: Bus class, unit test, thêm loại âm thanh phong phú hơn.
+
+==========
+LOGIC TRAFFIC LIGHT
+
+1. Quản lý Trạng thái & Chu kỳ (Logic cốt lõi - Backend)  [TRUE]
+- Định nghĩa các trạng thái màu (Đỏ, Vàng, Xanh).
+- Xây dựng quản lý màu hiện tại và bộ đếm thời gian.
+- Cài đặt vòng lặp đếm lùi và tự động chuyển pha (Xanh -> Vàng -> Đỏ -> Xanh).
+- Xây dựng hàm công khai (ví dụ: getCurrentColor()) để cung cấp trạng thái đèn cho các xe truy xuất.
+2. Quản lý Nút giao & Chế độ điều khiển (Traffic Controller)
+- Xây dựng lớp Intersection ghép cụm các đèn tại ngã 3, ngã 4, ngã 5 (đảm bảo tính đồng bộ: hướng này Xanh/Vàng thì hướng vuông góc bắt buộc Đỏ).
+- Chế độ Auto: Cho phép bộ đếm ngược của đèn chạy bình thường.
+- Chế độ Manual: Dừng đếm ngược, bắt sự kiện click chuột để ép hệ thống chuyển pha đèn ngay lập tức.
+3. Hiển thị Giao diện (Logic vẽ hình - Frontend) 
+- Loại 1 (Basic): Chỉ vẽ vòng tròn màu, không hiển thị số.
+- Loại 2 (Full Timer): Vẽ vòng tròn màu kèm số đếm lùi liên tục.
+- Loại 3 (Short Timer): Vẽ vòng tròn màu, thêm điều kiện chỉ in số đếm lùi khi thời gian <= 10 giây.
+4. Thiết lập Giao tiếp với Phương tiện (Ranh giới tương tác)
+- Đèn giao thông: Chỉ đứng yên, đổi màu và trả về kết quả màu hiện tại khi bị "hỏi". Hoàn toàn không chứa code can thiệp vào xe.
+- Phương tiện (Vehicle): Tự quét khoảng cách đến đèn gần nhất, tự gọi hàm lấy màu đèn, và tự quyết định hành vi (dừng chờ hay vượt đèn đỏ) tùy theo loại tài xế (NormalDriver hay EmergencyDriver).

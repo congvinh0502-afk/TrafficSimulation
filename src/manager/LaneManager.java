@@ -1,76 +1,66 @@
 package manager;
 
 import config.Constants;
+import model.network.NetworkLayout;
 import util.Direction;
 import util.Lane;
 
 /**
- * Quản lý tọa độ trung tâm làn đường.
- *
- * <p>
- * Cung cấp tọa độ X hoặc Y trung tâm của từng làn
- * dựa trên hướng di chuyển và vị trí làn (LEFT/RIGHT).
- * Tất cả giá trị được tính từ hằng số trong {@link Constants}
- * — không dùng số cứng trực tiếp.
- * </p>
- *
- * <p>
- * Dùng bởi:
- * <ul>
- * <li>{@link VehicleSpawnManager} — snap xe về làn khi spawn</li>
- * <li>{@code LaneAlignmentSystem} — căn xe vào giữa làn mỗi frame</li>
- * <li>{@code LaneChangeSystem} — tính đích khi đổi làn</li>
- * <li>{@code TurningSystem.recoverLane} — về làn sau khi rẽ xong</li>
- * </ul>
- * </p>
+ * Cung cấp tọa độ trung tâm làn.
+ * Dùng Constants.LANE_WIDTH để tương thích với v0.1.2 (lane_half = LANE_WIDTH/2 = 25px).
  */
 public final class LaneManager {
+    private LaneManager() {}
 
-    private LaneManager() {
-        /* tiện ích tĩnh */ }
+    /** Nửa chiều rộng làn — khớp với IntersectionLayout của v0.1.2. */
+    private static final int LANE_HALF = Constants.LANE_WIDTH / 2;
 
     /**
-     * Tọa độ X trung tâm làn cho xe đi theo chiều dọc (NORTH / SOUTH).
-     *
-     * @param direction NORTH hoặc SOUTH (NORTHEAST dùng cùng giá trị với NORTH)
-     * @param lane      LEFT hoặc RIGHT
-     * @return tọa độ X trung tâm; 0 nếu hướng không áp dụng
+     * Tâm X làn cho xe N/S-bound.
+     * NORTH: lề phải = phía ĐÔNG → cx + LANE_HALF
+     * SOUTH: lề phải = phía TÂY  → cx - LANE_HALF
      */
-    public static int getLaneCenterX(Direction direction, Lane lane) {
+    public static int getLaneCenterX(Direction direction, int homeIntersectionX) {
         switch (direction) {
-            case NORTH:
-            case NORTHEAST:
-                return (lane == Lane.LEFT)
-                        ? Constants.LANE_NORTH_LEFT_X
-                        : Constants.LANE_NORTH_RIGHT_X;
-            case SOUTH:
-                return (lane == Lane.LEFT)
-                        ? Constants.LANE_SOUTH_LEFT_X
-                        : Constants.LANE_SOUTH_RIGHT_X;
-            default:
-                return 0;
+            case NORTH: return homeIntersectionX + LANE_HALF;
+            case SOUTH: return homeIntersectionX - LANE_HALF;
+            default:    return homeIntersectionX;
         }
     }
 
     /**
-     * Tọa độ Y trung tâm làn cho xe đi theo chiều ngang (EAST / WEST).
-     *
-     * @param direction EAST hoặc WEST
-     * @param lane      LEFT hoặc RIGHT
-     * @return tọa độ Y trung tâm; 0 nếu hướng không áp dụng
+     * Tâm Y làn cho xe E/W-bound.
+     * EAST: lề phải = phía NAM → iy + LANE_HALF
+     * WEST: lề phải = phía BẮC → iy - LANE_HALF
+     * @param homeIntersectionY tâm Y của giao lộ mà xe thuộc về
      */
-    public static int getLaneCenterY(Direction direction, Lane lane) {
+    public static int getLaneCenterY(Direction direction, int homeIntersectionY) {
         switch (direction) {
-            case EAST:
-                return (lane == Lane.LEFT)
-                        ? Constants.LANE_EAST_LEFT_Y
-                        : Constants.LANE_EAST_RIGHT_Y;
-            case WEST:
-                return (lane == Lane.LEFT)
-                        ? Constants.LANE_WEST_LEFT_Y
-                        : Constants.LANE_WEST_RIGHT_Y;
-            default:
-                return 0;
+            case EAST: return homeIntersectionY + LANE_HALF;
+            case WEST: return homeIntersectionY - LANE_HALF;
+            default:   return homeIntersectionY;
         }
+    }
+
+    /** Overload không có homeIntersectionY — fallback về NetworkLayout (dùng cho network_v2). */
+    public static int getLaneCenterY(Direction direction) {
+        switch (direction) {
+            case EAST: return NetworkLayout.EAST_LANE_Y;
+            case WEST: return NetworkLayout.WEST_LANE_Y;
+            default:   return 0;
+        }
+    }
+
+    // Legacy overloads
+    public static int getLaneCenterX(Direction direction, Lane lane, int homeIntersectionX) {
+        return getLaneCenterX(direction, homeIntersectionX);
+    }
+
+    public static int getLaneCenterY(Direction direction, Lane lane) {
+        return getLaneCenterY(direction);
+    }
+
+    public static int getLaneCenterX(Direction direction, model.intersection.IntersectionLayout layout) {
+        return layout.getLaneCenterX(direction, Lane.RIGHT);
     }
 }

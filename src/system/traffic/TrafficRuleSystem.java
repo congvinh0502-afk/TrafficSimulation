@@ -1,110 +1,149 @@
 package system.traffic;
 
+import java.util.List;
+
 import config.Constants;
-import math.Vector2D;
+import model.network.IntersectionNode;
+import model.network.NetworkLayout;
 import model.trafficlight.LightColor;
 import model.trafficlight.TrafficLight;
 import model.vehicle.Vehicle;
+import strategy.driver.DriverBehavior;
 import system.collision.CollisionSystem;
 import util.Direction;
 
-import java.util.List;
-
 /**
- * Hệ thống quy tắc giao thông — đèn đỏ gây phanh dần, không dừng ngay.
+ * Kiểm tra đèn giao thông cho từng xe — hỗ trợ nhiều giao lộ.
  *
- * <p>Thay đổi so với phiên bản cũ:
+ * <p>Logic dừng đèn:
  * <ul>
- *   <li>Khi tiến vào vùng đèn đỏ, đặt {@code acceleration} âm tỉ lệ
- *       với khoảng cách còn lại đến vạch dừng.</li>
- *   <li>Chỉ khi đã đủ gần (speed ≈ 0 và gần vạch) mới set stopped=true.</li>
- *   <li>THREE_WAY không có đèn ngang — không áp dụng đèn ngang.</li>
+ *   <li>Xe có {@link DriverBehavior} được hỏi qua {@code shouldStop()} trước.
+ *       {@code EmergencyDriver} luôn trả về {@code false} → vượt đèn đỏ.</li>
+ *   <li>Xe bình thường dừng khi đèn đỏ hoặc có xe khác chặn giao lộ.</li>
+ *   <li>THREE_WAY không có đèn: xe E/W nhường N/S theo yield-rule.</li>
  * </ul>
  * </p>
+ *
+ * <p>Dừng trước stop-line (trước khi vào intersection):
+ * xe bắt đầu giảm tốc từ {@code BRAKE_START_DISTANCE} và dừng hẳn
+ * tại stop-line (dist &lt;= 0), không tiến vào giao lộ cho đến khi đèn xanh.</p>
  */
 public class TrafficRuleSystem {
 
-    private final CollisionSystem collisionSystem;
+    private final CollisionSystem collision;
+    public TrafficRuleSystem() { this.collision = new CollisionSystem(); }
 
-    public TrafficRuleSystem() {
-        this.collisionSystem = new CollisionSystem();
-    }
+    public void checkAllIntersections(Vehicle v, List<Vehicle> all, List<IntersectionNode> nodes) {
+        if (v.isTurning()) return;
 
-    public void checkTrafficLight(Vehicle vehicle,
-                                  TrafficLight verticalLight,
-                                  TrafficLight horizontalLight,
-                                  List<Vehicle> vehicles) {
-        if (vehicle.isTurning()) return;
+        IntersectionNode approaching = findApproaching(v, nodes);
+        if (approaching == null) return;
 
-        Direction dir     = vehicle.getDirection();
-        TrafficLight light = selectLight(dir, verticalLight, horizontalLight);
-        if (light == null) return;
-
-        double distToStop = distanceToStopLine(vehicle, dir);
-
-        if (distToStop > Constants.BRAKE_START_DISTANCE) {
-            // Xa đèn — không ảnh hưởng từ đèn
+        if (!approaching.hasTrafficLights()) {
+            // THREE_WAY: chỉ yield theo collision
+            checkYieldRule(v, all, approaching);
             return;
         }
 
-        boolean mustStop   = shouldStopForLight(vehicle, vehicles, light);
-        boolean blockedInt = !collisionSystem.canEnterIntersection(vehicle, vehicles);
+        TrafficLight light = selectLight(v.getDirection(), approaching);
+        if (light == null) return;
 
-        if (mustStop || blockedInt) {
-            if (distToStop <= 0 || vehicle.getSpeed() < 0.3) {
-                // Đã đến vạch dừng hoặc gần như dừng
-                vehicle.setStopped(true);
-                vehicle.setAcceleration(0);
+        // Hỏi DriverBehavior trước — EmergencyDriver trả về false → không dừng
+        DriverBehavior beh = v.getBehavior();
+        boolean behaviorSaysStop = (beh != null)
+                ? beh.shouldStop(v, all, light)
+                : (light.getColor() == LightColor.RED);
+
+        // Ngoài ra, nếu có xe đang chặn giao lộ thì vẫn cần dừng
+        // (EmergencyDriver vẫn tránh va chạm vật lý với xe đang trong giao lộ)
+        boolean blockedByVehicle = !isEmergency(beh) && !collision.canEnterIntersection(v, all);
+
+        boolean mustStop = behaviorSaysStop || blockedByVehicle;
+        if (!mustStop) return;
+
+        double dist = distToStopLine(v, approaching.cx, approaching.cy);
+
+        // Dừng hẳn tại hoặc sau stop-line
+        if (dist <= 0 || v.getSpeed() < 0.3) {
+            v.setStopped(true);
+            v.setAcceleration(0);
+        } else {
+            // Giảm tốc dần khi gần stop-line
+            double ratio = Math.max(0, Math.min(1, 1.0 - dist / Constants.BRAKE_START_DISTANCE));
+            v.setAcceleration(-Constants.MAX_BRAKE_DECEL * (0.3 + 0.7 * ratio));
+        }
+    }
+
+    /** Trả về true nếu behavior là EmergencyDriver (hoặc tương đương). */
+    private boolean isEmergency(DriverBehavior beh) {
+        if (beh == null) return false;
+        // EmergencyDriver luôn trả về false cho shouldStop với mọi đèn
+        // Dùng class-check để tránh phụ thuộc vào logic nội bộ
+        return beh.getClass().getSimpleName().equals("EmergencyDriver");
+    }
+
+    // ── Yield cho THREE_WAY: xe E/W-bound nhường N/S ──────────────
+    private void checkYieldRule(Vehicle v, List<Vehicle> all, IntersectionNode node) {
+        Direction dir = v.getDirection();
+        if (dir != Direction.EAST && dir != Direction.WEST) return; // N/S có quyền ưu tiên
+
+        // Emergency vehicles không cần yield
+        if (isEmergency(v.getBehavior())) return;
+
+        if (!collision.canEnterIntersection(v, all)) {
+            double dist = distToStopLine(v, node.cx, node.cy);
+            if (dist > 0) {
+                double r = Math.max(0, Math.min(1, 1.0 - dist / Constants.BRAKE_START_DISTANCE));
+                v.setAcceleration(-Constants.MAX_BRAKE_DECEL * 0.5 * r);
             } else {
-                // Giảm tốc dần tỉ lệ khoảng cách
-                double ratio  = Math.max(0, Math.min(1, 1.0 - distToStop / Constants.BRAKE_START_DISTANCE));
-                double decel  = -Constants.MAX_BRAKE_DECEL * (0.3 + 0.7 * ratio);
-                vehicle.setAcceleration(decel);
+                v.setStopped(true);
+                v.setAcceleration(0);
             }
         }
-        // else: acceleration không bị thay đổi ở đây
-        // (CollisionSystem hoặc VehicleMovementSystem quản lý acceleration bình thường)
     }
 
-    // --------------------------------------------------------
-    // Tiện ích nội bộ
-    // --------------------------------------------------------
+    // ── Tìm giao lộ đang tiếp cận ─────────────────────────────────
+    private IntersectionNode findApproaching(Vehicle v, List<IntersectionNode> nodes) {
+        double vx = v.getX(), vy = v.getY();
+        int    B  = (int) Constants.BRAKE_START_DISTANCE + 20;
+        int    RH = NetworkLayout.ROAD_HALF;
 
-    private TrafficLight selectLight(Direction dir,
-                                     TrafficLight vertical,
-                                     TrafficLight horizontal) {
+        for (IntersectionNode n : nodes) {
+            int ix = n.cx, iy = n.cy;
+            switch (v.getDirection()) {
+                case NORTH:
+                    if (Math.abs(vx - ix) < RH && vy > iy && vy < iy + B) return n;
+                    break;
+                case SOUTH:
+                    if (Math.abs(vx - ix) < RH && vy < iy && vy > iy - B) return n;
+                    break;
+                case EAST:
+                    if (Math.abs(vy - iy) < RH && vx < ix && vx > ix - B) return n;
+                    break;
+                case WEST:
+                    if (Math.abs(vy - iy) < RH && vx > ix && vx < ix + B) return n;
+                    break;
+                default: break;
+            }
+        }
+        return null;
+    }
+
+    private TrafficLight selectLight(Direction dir, IntersectionNode n) {
         switch (dir) {
-            case NORTH: case SOUTH:   return vertical;
-            case EAST:  case WEST:    return horizontal;
-            default:                  return null; // NORTHEAST không có đèn
+            case NORTH: case SOUTH: return n.verticalLight;
+            case EAST:  case WEST:  return n.horizontalLight;
+            default: return null;
         }
     }
 
-    private boolean shouldStopForLight(Vehicle vehicle,
-                                        List<Vehicle> vehicles,
-                                        TrafficLight light) {
-        if (vehicle.getBehavior() != null) {
-            return vehicle.getBehavior().shouldStop(vehicle, vehicles, light);
-        }
-        return light.getColor() == LightColor.RED;
-    }
-
-    /**
-     * Khoảng cách px từ mũi xe đến vạch dừng.
-     * Giá trị âm nghĩa là đã qua vạch.
-     */
-    private double distanceToStopLine(Vehicle vehicle, Direction dir) {
-        int cl = Constants.INTERSECTION_CHECK_LEFT;
-        int cr = Constants.INTERSECTION_CHECK_RIGHT;
-        int ct = Constants.INTERSECTION_CHECK_TOP;
-        int cb = Constants.INTERSECTION_CHECK_BOTTOM;
-        int off = Constants.STOP_SENSOR_OFFSET;
-
-        switch (dir) {
-            case SOUTH: return ct - (vehicle.getY() + off);
-            case NORTH: return (vehicle.getY() - off) - cb;
-            case EAST:  return cl - (vehicle.getX() + off);
-            case WEST:  return (vehicle.getX() - off) - cr;
+    private double distToStopLine(Vehicle v, int ix, int iy) {
+        int sl = NetworkLayout.STOP_LINE;
+        switch (v.getDirection()) {
+            case NORTH: return (iy + sl) - v.getY();
+            case SOUTH: return v.getY() - (iy - sl);
+            case EAST:  return (ix - sl) - v.getX();
+            case WEST:  return v.getX() - (ix + sl);
             default:    return Double.MAX_VALUE;
         }
     }

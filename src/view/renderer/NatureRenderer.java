@@ -6,7 +6,7 @@ import javafx.scene.paint.Color;
 /** Renderer thiên nhiên (JavaFX). */
 public class NatureRenderer {
 
-    private static final int ROAD_MIN = 260, ROAD_MAX = 540;
+    private static final int ROAD_MIN = 460, ROAD_MAX = 740;
 
     public void drawBeautifulTree(GraphicsContext gc, int x, int y) {
         gc.setFill(Color.rgb(90,50,15));   gc.fillRect(x+10,y+22,6,12);
