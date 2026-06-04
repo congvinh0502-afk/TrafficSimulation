@@ -44,9 +44,23 @@ public class VehicleSpawnManager {
     // ==========================================================
 
     public void spawnRandomVehicle(List<Direction> validDirections) {
-        Direction direction = randomFrom(validDirections);
+        // Lọc bỏ các hướng outbound (FW_OUT) trước khi spawn
+        List<Direction> spawnable = new ArrayList<>();
+        for (Direction d : validDirections) {
+            if (!d.name().startsWith("FW_OUT")) {
+                spawnable.add(d);
+            }
+        }
+        if (spawnable.isEmpty()) return;
+
+        Direction direction = randomFrom(spawnable);
         double spawnX = layout.getSpawnX(direction);
         double spawnY = layout.getSpawnY(direction);
+
+        // Chặn sinh xe ở những hướng bị khuyết (NaN) trong layout ngã 3
+        if (Double.isNaN(spawnX) || Double.isNaN(spawnY)) {
+            return;
+        }
 
         if (!canSpawn(spawnX, spawnY))
             return;
@@ -107,13 +121,37 @@ public class VehicleSpawnManager {
     }
 
     private void setupTurnType(Vehicle vehicle) {
-        double r = Math.random();
-        if (r < 0.33)
-            vehicle.setTurnType(TurnType.LEFT);
-        else if (r < 0.66)
-            vehicle.setTurnType(TurnType.RIGHT);
-        else
-            vehicle.setTurnType(TurnType.STRAIGHT);
+        TurnType turnType;
+        Direction dir = vehicle.getDirection();
+        
+        // Nhận diện ngã 3 bằng cách xem nhánh lên (NORTH) có bị khóa spawn không
+        boolean isThreeWay = Double.isNaN(layout.getSpawnX(Direction.NORTH));
+
+        while (true) {
+            double r = Math.random();
+            if (r < 0.33)
+                turnType = TurnType.LEFT;
+            else if (r < 0.66)
+                turnType = TurnType.RIGHT;
+            else
+                turnType = TurnType.STRAIGHT;
+
+            // Nếu là Ngã ba (không có nhánh đi xuống dưới)
+            // Phải sinh lại TurnType nếu quyết định dẫn đến việc đi vào làn khuyết (SOUTH)
+            if (isThreeWay) {
+                if (dir == Direction.SOUTH && turnType == TurnType.STRAIGHT) {
+                    continue; // Xe từ trên đi thẳng -> Xuống SOUTH -> CHẶN
+                }
+                if (dir == Direction.EAST && turnType == TurnType.RIGHT) {
+                    continue; // Xe từ trái rẽ phải -> Xuống SOUTH -> CHẶN
+                }
+                if (dir == Direction.WEST && turnType == TurnType.LEFT) {
+                    continue; // Xe từ phải rẽ trái -> Xuống SOUTH -> CHẶN
+                }
+            }
+            break; // Random hợp lệ, thoát vòng lặp
+        }
+        vehicle.setTurnType(turnType);
     }
 
     private void setupDriverBehavior(Vehicle vehicle) {

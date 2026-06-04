@@ -141,16 +141,18 @@ public class TurningSystem {
             return;
         } else {
             switch (dir) {
-                case NORTH: target = Direction.SOUTH; angle = 90; break;
-                case SOUTH: target = Direction.NORTH; angle = -90; break;
-                case EAST:  target = Direction.WEST; angle = 180; break;
-                case WEST:  target = Direction.EAST; angle = 0; break;
+                case NORTH: target = Direction.NORTH; angle = -90; break;
+                case SOUTH: target = Direction.SOUTH; angle = 90; break;
+                case EAST:  target = Direction.EAST; angle = 0; break;
+                case WEST:  target = Direction.WEST; angle = 180; break;
                 default: break;
             }
         }
         vehicle.setTargetDirection(target);
         vehicle.setTargetAngle(angle);
-        vehicle.setTurning(true);
+        // Đi thẳng: không bẻ lái, chỉ set hướng
+        vehicle.setTurning(false);
+        vehicle.setTurned(true);
     }
 
     // ==========================================================

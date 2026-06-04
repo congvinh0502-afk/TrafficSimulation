@@ -246,8 +246,16 @@ public class SimulationScene {
     // ==========================================================
 
     private void updateSimulation() {
-        // Xóa xe không thuộc hướng hợp lệ của layout này
-        vehicles.removeIf(v -> !layout.hasDirection(v.getDirection()));
+        // Xóa xe với hướng outbound không tồn tại trong layout
+        // (chỉ xóa nếu hướng thực sự không được khai báo trong layout)
+        vehicles.removeIf(v -> {
+            Direction dir = v.getDirection();
+            // Cho phép NORTH trong three-way vì xe đang rẽ ra
+            if (layout.hasDirection(dir)) return false;
+            // Các hướng FW_OUT không cần kiểm tra (xe đang thoát ra ngoài)
+            if (dir.name().startsWith("FW_OUT")) return false;
+            return true;
+        });
 
         trafficController.updateVehicles(vehicles, verticalLight, horizontalLight, layout);
 

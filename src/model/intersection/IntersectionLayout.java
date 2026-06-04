@@ -198,7 +198,16 @@ public class IntersectionLayout {
 
         Map<Direction, Arm> arms = new LinkedHashMap<>();
 
-        // Sửa lỗi: Nhánh dọc hướng từ trên xuống phải là SOUTH
+        // NORTH arm: Vẫn phải giữ để có làn định tuyến khi xe thoái ra (đi lên trên). 
+        // Tuy nhiên đặt spawn thành NaN để CHẶN việc sinh xe từ làn dưới cùng.
+        int nRightX = cx + half;
+        int nLeftX  = cx + half + lw;
+        arms.put(Direction.NORTH, new Arm(Direction.NORTH,
+                nLeftX,  0,
+                nRightX, 0,
+                Double.NaN, Double.NaN));
+
+        // SOUTH arm: xe đi xuống (spawn từ trên xuống)
         int sRightX = cx - half;
         int sLeftX = cx - half - lw;
         arms.put(Direction.SOUTH, new Arm(Direction.SOUTH,
