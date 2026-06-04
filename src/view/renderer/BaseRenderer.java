@@ -15,7 +15,7 @@ public class BaseRenderer {
     private static final Color LIGHT_BULB   = Color.WHITE;
 
     private static final int[][] LIGHT_POS = {
-        {250, 250}, {550, 250}, {250, 550}, {550, 550}
+        {450, 250}, {750, 250}, {450, 550}, {750, 550}
     };
 
     public void drawGrass(GraphicsContext gc) {

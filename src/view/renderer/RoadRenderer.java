@@ -33,44 +33,45 @@ public class RoadRenderer {
     public void renderThreeWay(GraphicsContext gc) {
         // Trục dọc — chỉ từ trên xuống tâm giao lộ (không có nhánh xuống)
         gc.setFill(ASPHALT);
-        gc.fillRect(300, 0, 200, 500); // dừng ở y=500 (đáy giao lộ)
+        gc.fillRect(500, 0, 200, 500); // dừng ở y=500 (đáy giao lộ)
+
         // Đường ngang — trải full width như 4-way
         gc.fillRect(0, 300, 1200, 200);
 
         // Mép vỉa hè
         gc.setFill(ROAD_EDGE);
-        gc.fillRect(295, 0, 5, 500); // mép trái trục dọc, dừng ở y=500
-        gc.fillRect(500, 0, 5, 500); // mép phải trục dọc, dừng ở y=500
+        gc.fillRect(495, 0, 5, 500); // mép trái trục dọc, dừng ở y=500
+        gc.fillRect(700, 0, 5, 500); // mép phải trục dọc, dừng ở y=500
         gc.fillRect(0, 295, 1200, 5); // mép trên đường ngang
         gc.fillRect(0, 500, 1200, 5); // mép dưới đường ngang
 
         // Vạch đứt chia làn — dọc (chỉ phần trên giao lộ)
         gc.setFill(MARKING);
         for (int i = 0; i < 280; i += 40) {
-            gc.fillRoundRect(395, i, 10, 20, 4, 4);
+            gc.fillRoundRect(595, i, 10, 20, 4, 4);
         }
         // Vạch đứt chia làn — ngang (tránh vùng giao lộ)
         for (int i = 0; i < 1200; i += 40) {
-            if (i < 280 || i > 500)
+            if (i < 480 || i > 700)
                 gc.fillRoundRect(i, 395, 20, 10, 4, 4);
         }
 
         // Vạch dừng đèn đỏ
-        gc.fillRect(300, 270, 200, 6); // trên giao lộ (xe NORTH dừng đây)
-        gc.fillRect(270, 300, 6, 200); // mép trái (xe EAST dừng đây)
-        gc.fillRect(524, 300, 6, 200); // mép phải (xe WEST dừng đây)
+        gc.fillRect(500, 270, 200, 6); // trên giao lộ (xe NORTH dừng đây)
+        gc.fillRect(470, 300, 6, 200); // mép trái (xe EAST dừng đây)
+        gc.fillRect(724, 300, 6, 200); // mép phải (xe WEST dừng đây)
 
         // Vạch đi bộ
-        drawHorizontalZebra(gc, 300, 280); // trước vạch dừng NORTH
-        drawVerticalZebra(gc, 280, 300);
-        drawVerticalZebra(gc, 490, 300);
+        drawHorizontalZebra(gc, 500, 280); // trước vạch dừng NORTH
+        drawVerticalZebra(gc, 480, 300);
+        drawVerticalZebra(gc, 690, 300);
 
         // Bịt đầu dưới trục dọc (vỉa hè, không có đường)
         gc.setFill(Color.rgb(65, 142, 65)); // màu cỏ
-        gc.fillRect(300, 500, 200, 300);
+        gc.fillRect(500, 500, 200, 300);
         // Viền vỉa hè bịt đầu
         gc.setFill(Color.rgb(180, 180, 180));
-        gc.fillRect(295, 498, 210, 5);
+        gc.fillRect(495, 498, 210, 5);
     }
 
     // ==========================================================
@@ -80,13 +81,13 @@ public class RoadRenderer {
     public void renderFourWay(GraphicsContext gc) {
         // Mặt đường
         gc.setFill(ASPHALT);
-        gc.fillRect(300, 0, 200, 800);
+        gc.fillRect(500, 0, 200, 800);
         gc.fillRect(0, 300, 1200, 200);
 
         // Mép vỉa hè
         gc.setFill(ROAD_EDGE);
-        gc.fillRect(295, 0, 5, 800);
-        gc.fillRect(500, 0, 5, 800);
+        gc.fillRect(495, 0, 5, 800);
+        gc.fillRect(700, 0, 5, 800);
         gc.fillRect(0, 295, 1200, 5);
         gc.fillRect(0, 500, 1200, 5);
 
@@ -94,29 +95,29 @@ public class RoadRenderer {
         gc.setFill(MARKING);
         for (int i = 0; i < 800; i += 40) {
             if (i < 280 || i > 500)
-                gc.fillRoundRect(395, i, 10, 20, 4, 4);
+                gc.fillRoundRect(595, i, 10, 20, 4, 4);
         }
         // Vạch đứt chia làn — ngang
         for (int i = 0; i < 1200; i += 40) {
-            if (i < 280 || i > 500)
+            if (i < 480 || i > 700)
                 gc.fillRoundRect(i, 395, 20, 10, 4, 4);
         }
 
         // Vạch dừng đèn đỏ
-        gc.fillRect(300, 270, 200, 6);
-        gc.fillRect(300, 524, 200, 6);
-        gc.fillRect(270, 300, 6, 200);
-        gc.fillRect(524, 300, 6, 200);
+        gc.fillRect(500, 270, 200, 6);
+        gc.fillRect(500, 524, 200, 6);
+        gc.fillRect(470, 300, 6, 200);
+        gc.fillRect(724, 300, 6, 200);
 
         // Vạch đi bộ
-        drawHorizontalZebra(gc, 300, 280);
-        drawHorizontalZebra(gc, 300, 490);
-        drawVerticalZebra(gc, 280, 300);
-        drawVerticalZebra(gc, 490, 300);
+        drawHorizontalZebra(gc, 500, 280);
+        drawHorizontalZebra(gc, 500, 490);
+        drawVerticalZebra(gc, 480, 300);
+        drawVerticalZebra(gc, 690, 300);
 
         // Đảo giao thông nhỏ
         gc.setFill(ISLAND_GRAY);
-        gc.fillOval(360, 360, 80, 80);
+        gc.fillOval(560, 360, 80, 80);
     }
 
     // ==========================================================

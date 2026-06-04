@@ -18,23 +18,22 @@ public class EnvironmentRenderer {
     public void renderFourWay(GraphicsContext gc) {
         base.drawGrass(gc);
         road.renderFourWay(gc);
-
         building.drawSkyscraper(gc, 30, 30);
         building.drawLuxuryHouse(gc, 160, 40);
         building.drawLuxuryHouse(gc, 155, 140);
-        nature.drawTreeRow(gc, 30, 200, 230, true);
+        nature.drawTreeRow(gc, 30, 200, 430, true);
 
-        building.drawModernFactory(gc, 580, 40);
-        parking.drawParkingLotWithCars(gc, 740, 30, 340, 180);
-        nature.drawTreeRow(gc, 560, 205, 640, true);
+        building.drawModernFactory(gc, 780, 40);
+        parking.drawParkingLotWithCars(gc, 820, 30, 340, 180);
+        nature.drawTreeRow(gc, 760, 205, 440, true);
 
-        nature.drawParkWithPond(gc, 15, 560, 240, 220);
+        nature.drawParkWithPond(gc, 15, 560, 400, 220);
 
-        nature.drawTreeRow(gc, 550, 540, 630, true);
-        nature.drawTreeRow(gc, 545, 560, 220, false);
-        building.drawLuxuryHouse(gc, 600, 600);
-        building.drawLuxuryHouse(gc, 720, 650);
-        building.drawLuxuryRestaurant(gc, 870, 620);
+        nature.drawTreeRow(gc, 750, 540, 450, true);
+        nature.drawTreeRow(gc, 745, 560, 220, false);
+        building.drawLuxuryHouse(gc, 800, 600);
+        building.drawLuxuryHouse(gc, 920, 650);
+        building.drawLuxuryRestaurant(gc, 1060, 620);
 
         base.drawStreetLights(gc);
     }
@@ -44,28 +43,29 @@ public class EnvironmentRenderer {
         road.renderThreeWay(gc);
 
         // Góc Tây-Bắc
-        nature.drawParkWithPond(gc, 15, 15, 240, 225);
+        nature.drawParkWithPond(gc, 15, 15, 400, 225);
 
         // Góc Tây-Nam (dưới giao lộ, phần cỏ phía dưới trục dọc bị bịt)
         building.drawLuxuryHouse(gc, 50, 560);
         building.drawLuxuryHouse(gc, 155, 610);
+        building.drawLuxuryHouse(gc, 300, 600);
         nature.drawTreeRow(gc, 20, 540, 240, false);
 
         // Góc Đông-Bắc
-        parking.drawParkingLotWithCars(gc, 580, 40, 340, 180);
-        building.drawModernFactory(gc, 960, 30);
+        parking.drawParkingLotWithCars(gc, 780, 40, 340, 180);
+        building.drawModernFactory(gc, 1000, 30);
 
         // Góc Đông-Nam
-        building.drawLuxuryHouse(gc, 560, 560);
-        building.drawLuxuryHouse(gc, 700, 560);
-        building.drawSkyscraper(gc, 880, 560);
+        building.drawLuxuryHouse(gc, 760, 560);
+        building.drawLuxuryHouse(gc, 900, 560);
+        building.drawSkyscraper(gc, 1080, 560);
 
         // Cây dọc bên phải đường ngang (phần trên và dưới giao lộ)
-        nature.drawTreeRow(gc, 545, 20, 250, false); // phần trên
-        nature.drawTreeRow(gc, 545, 540, 250, false); // phần dưới
+        nature.drawTreeRow(gc, 745, 20, 250, false); // phần trên
+        nature.drawTreeRow(gc, 745, 540, 250, false); // phần dưới
 
         // Bịt vùng cỏ dưới trục dọc bằng cây
-        nature.drawTreeRow(gc, 305, 520, 190, false);
+        nature.drawTreeRow(gc, 505, 520, 190, false);
     }
 
     public void renderFiveWay(GraphicsContext gc) {

@@ -23,14 +23,14 @@ public final class Constants {
     public static final int LANE_WIDTH = 50;
 
     // =========================================================
-    // Hình học giao lộ mặc định (tâm 400,400 trên canvas 800×800)
+    // Hình học giao lộ mặc định (tâm 600,400 trên canvas 1200×800)
     // Dùng cho Road.createVertical/Horizontal và renderer hardcode.
     // IntersectionLayout tính riêng từ cx,cy được truyền vào.
     // =========================================================
-    /** Cạnh trái vùng giao lộ mặc định (cx=400, lw=50 → 400-50=350, nhưng vẽ từ 300). */
-    public static final int INTERSECTION_LEFT   = 300;
+    /** Cạnh trái vùng giao lộ mặc định (cx=600, lw=50). */
+    public static final int INTERSECTION_LEFT   = 500;
     /** Cạnh phải vùng giao lộ mặc định. */
-    public static final int INTERSECTION_RIGHT  = 500;
+    public static final int INTERSECTION_RIGHT  = 700;
     /** Cạnh trên vùng giao lộ mặc định. */
     public static final int INTERSECTION_TOP    = 300;
     /** Cạnh dưới vùng giao lộ mặc định. */

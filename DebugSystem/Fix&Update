@@ -29,4 +29,7 @@
     - sửa TurningSystem: Phải tính toán nội suy vòng cung(bezier curve) hoặc xoay xe theo góc 72 độ khi rẽ, thay vì quay 90 độ như hiện tại.
 15. (\) map ở 5-way còn lỗi hiển thị nhiều [Hương]
 16. (\) cảnh vật xung quanh: cây cối, đèn giao thông, bãi đậu xe... được đặt mặc định -> rất khó trong việc mở rộng thêm loại giao lộ mới, hoặc thay đổi bố cục đường xá. [Hương]
-
+17. (-) lỗi logic xe chạy ở 3-way & 4-way -> khi cập nhật chỉnh sửa 5-way mới lộ rõ: [Hương]
+    - ngã 4: Code cũ cấu hình sai hướng đi thẳng. Xe đang đi thẳng lên hướng Bắc lại bị code ép quay ngoắt 180 độ sang hướng Nam, khiến xe tự nhiên xoay vòng vòng giữa ngã tư.
+    - ngã 3(hình chữ T, không có đường bên dưới): Nhánh đường từ trên cắm xuống bị cấu hình sai vector(đáng lẽ phải đi xuống thì code cũ lại cho đi ngược lên trời nên xe bay ra ngoài). Thêm nữa, xe không bị cấm rẽ vào nhánh dưới nên cứ thế lao thẳng xuống bãi cỏ.
+18. (-) chỉnh bố cục 3-way, 4-way cân xứng với map [Hương]
