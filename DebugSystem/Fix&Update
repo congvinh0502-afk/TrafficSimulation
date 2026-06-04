@@ -35,6 +35,7 @@
 18. (-) chỉnh bố cục 3-way, 4-way cân xứng với map [Hương]
 19. (*) xe còn đâm vào nhau, chèn lên nhau, nhất là ở chỗ mấy khúc cua [Hương]
 20. (*) traffic light ở bên trái đường, ngã 4 có 2 cái traffic light hoạt động kiểu gì thế???? [Minh]
+<<<<<<< HEAD
 21. (*) đèn đường: [Hương]
     * hiển thị bao nhiêu cái ở mỗi way là hợp lý?
     * hiển thị đã chính xác? có chọc vô đường hay đứng giữa đường không?
@@ -49,3 +50,7 @@
     * Chế độ Basic: chỉ hiển thị các khối chữ nhật đại diện cho xe, đường, cây cối... không có hình ảnh, màu sắc đơn giản. Ưu điểm: dễ dàng mở rộng thêm loại giao lộ mới, dễ dàng chỉnh sửa bố cục đường xá, hiệu suất cao.
     * Chế độ Gui: hiển thị đầy đủ hình ảnh, màu sắc, chi tiết của xe, đường, cây cối... Ưu điểm: trực quan sinh động, hấp dẫn người dùng. Nhược điểm: khó mở rộng thêm loại giao lộ mới, khó chỉnh sửa bố cục đường xá, hiệu suất thấp hơn.
     * Cho phép người dùng chuyển đổi linh hoạt giữa hai chế độ hiển thị này trong quá trình chạy chương trình.
+=======
+   (\) đang thêm [toàn]
+
+>>>>>>> 5a24417b420606703dbe60fe784b9d721515519e
