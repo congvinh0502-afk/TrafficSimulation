@@ -11,7 +11,7 @@
 8. (-) xe di chuyển trên 3-way như 4-way {Hương}
 9. (-) 3 - way lỗi xe chạy trên cỏ [Hương]
 10.(-) cho xe chay cham lai [toan]
-11.(/) bo sung them am thanh cho cac loai xe [toan]
+11.(-) bo sung them am thanh cho cac loai xe [toan]
 12.(-) logic giao lộ tệ: 3-way và 5-way đang bị phụ thuộc vào logic phát triển của 4-way -> lỗi, cần fix lại logic intersect {Hương}
 13.(-) 5-way đang là 4 nhánh vuông + 1 nhánh chéo -> 5 nhánh đều {Hương}
    (-) Direction (enum cứng)  →  DirectionVector (góc + vector, dynamic) {Hương}
@@ -22,11 +22,11 @@
     6-way, 8-way, mạng lưới: thêm vào dễ dàng
     Road network: mỗi intersection có list nhánh riêng, xe navigate bằng graph
 14.(-) logic xe tệ: chỉ chạy trên 4 hướng mặc định Đông - Tây - Nam - Bắc dẫn đến ngoại trừ ngã tư thì tất cả các nhánh còn lại đều lỗi[Hương]
-    (-)[Hương]
+   (-) [Hương]
     - sửa Direction.java: Xóa bỏ khái niệm N, S, E, W.Thay vào đó là các vector tương ứng các góc 0°, 72°, 144°, 216°, 288°.
     - sửa LaneAlignmentSystem: Không thể dùng vehicle.setX(...) hay vehicle.setY(...) để căn làn nữa, mà phải dùng toán học lượng giác(Math.sin, Math.cos) để chiếu tọa độ xe lên trục của từng làn đường nghiêng.
     - sửa TurningSystem: Phải tính toán nội suy vòng cung(bezier curve) hoặc xoay xe theo góc 72 độ khi rẽ, thay vì quay 90 độ như hiện tại.
-15. (\) map ở 5-way còn lỗi hiển thị nhiều [Hương]
+15. (-) map ở 5-way còn lỗi hiển thị nhiều [Hương]
 16. (-) cảnh vật xung quanh: cây cối, đèn giao thông, bãi đậu xe... được đặt mặc định -> rất khó trong việc mở rộng thêm loại giao lộ mới, hoặc thay đổi bố cục đường xá. [Hương]
     (-) cần chuyển từ phương pháp Hardcode(gắn tọa độ chết) sang phương pháp Procedural Generation(Sinh tự động theo thuật toán lưới). Thuật toán này hoạt động dựa trên nguyên lý: Quét toàn bộ bản đồ và chỉ đặt vật thể ở những nơi không có mặt đường. [Hương]
 17. (-) lỗi logic xe chạy ở 3-way & 4-way -> khi cập nhật chỉnh sửa 5-way mới lộ rõ: [Hương]
@@ -53,3 +53,5 @@
 25. (*) Kiểm tra lại hình ảnh của xe [Hương]
 26. (*) đèn đang ở chế độ smart tự chuyển xanh khi thấy ambulance/firetruck thay đổi lung tung dễ bug [toàn]
       * đề xuất : thay đổi đèn về đếm bình thường rồi thay đổi logic
+27. (*) sửa lại bảng công cụ, thanh điều khiển để tối ưu trải nghiệm người dùng [Hương] [Minh]
+28. (*) đừng để cái giao diện chương trình khi thu nhỏ hiện ra cái vùng xám được không? [Hương]
