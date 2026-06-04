@@ -28,7 +28,7 @@
     - sửa LaneAlignmentSystem: Không thể dùng vehicle.setX(...) hay vehicle.setY(...) để căn làn nữa, mà phải dùng toán học lượng giác(Math.sin, Math.cos) để chiếu tọa độ xe lên trục của từng làn đường nghiêng.
     - sửa TurningSystem: Phải tính toán nội suy vòng cung(bezier curve) hoặc xoay xe theo góc 72 độ khi rẽ, thay vì quay 90 độ như hiện tại.
 15. (\) map ở 5-way còn lỗi hiển thị nhiều [Hương]
-16. (\) cảnh vật xung quanh: cây cối, đèn giao thông, bãi đậu xe... được đặt mặc định -> rất khó trong việc mở rộng thêm loại giao lộ mới, hoặc thay đổi bố cục đường xá. [Hương]
+16. (-) cảnh vật xung quanh: cây cối, đèn giao thông, bãi đậu xe... được đặt mặc định -> rất khó trong việc mở rộng thêm loại giao lộ mới, hoặc thay đổi bố cục đường xá. [Hương]
     (+) cần chuyển từ phương pháp Hardcode(gắn tọa độ chết) sang phương pháp Procedural Generation(Sinh tự động theo thuật toán lưới). Thuật toán này hoạt động dựa trên nguyên lý: Quét toàn bộ bản đồ và chỉ đặt vật thể ở những nơi không có mặt đường.
 17. (-) lỗi logic xe chạy ở 3-way & 4-way -> khi cập nhật chỉnh sửa 5-way mới lộ rõ: [Hương]
     - ngã 4: Code cũ cấu hình sai hướng đi thẳng. Xe đang đi thẳng lên hướng Bắc lại bị code ép quay ngoắt 180 độ sang hướng Nam, khiến xe tự nhiên xoay vòng vòng giữa ngã tư.
