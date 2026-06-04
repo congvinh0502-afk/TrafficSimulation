@@ -293,17 +293,29 @@ public class SimulationScene {
 
         for (Vehicle v : vehicles) vehicleRenderer.render(gc, v, flash);
 
-        // Vị trí đèn dựa trên layout.cx/cy
-        int lcx = layout.getCx();
-        int lcy = layout.getCy();
-        int lw  = Constants.LANE_WIDTH;
+        // === AUTO-POSITIONING ĐÈN GIAO THÔNG ===
+        double lcx = layout.getCx();
+        double lcy = layout.getCy();
+        double roadHalfW = 100; // Nửa chiều rộng đường ngầm định
+        double stopLineDist = 172; // Khoảng cách từ tâm đến vạch dừng
 
-        lightRenderer.render(gc, verticalLight,
-                lcx + lw + 20, lcy - lw - 130, config.getLightType());
-
-        if (layout.hasDirection(Direction.EAST) && layout.hasDirection(Direction.WEST)) {
-            lightRenderer.render(gc, horizontalLight,
-                    lcx - lw - 70, lcy + lw + 20, config.getLightType());
+        if (config.getIntersectionType() == IntersectionType.FIVE_WAY) {
+            // Ngã 5: Quét 5 nhánh đều
+            double[] angles = { 270, 342, 54, 126, 198 };
+            for (int i = 0; i < angles.length; i++) {
+                TrafficLight lightToRender = (i % 2 == 0) ? verticalLight : horizontalLight;
+                lightRenderer.renderAutoPosition(gc, lightToRender, lcx, lcy, angles[i], roadHalfW, stopLineDist, config.getLightType());
+            }
+        } else {
+            // Ngã 3 & 4: Dựa theo các hướng có sẵn trong layout
+            if (layout.hasDirection(Direction.NORTH)) 
+                lightRenderer.renderAutoPosition(gc, verticalLight, lcx, lcy, 270, roadHalfW, stopLineDist, config.getLightType());
+            if (layout.hasDirection(Direction.SOUTH)) 
+                lightRenderer.renderAutoPosition(gc, verticalLight, lcx, lcy, 90, roadHalfW, stopLineDist, config.getLightType());
+            if (layout.hasDirection(Direction.EAST)) 
+                lightRenderer.renderAutoPosition(gc, horizontalLight, lcx, lcy, 0, roadHalfW, stopLineDist, config.getLightType());
+            if (layout.hasDirection(Direction.WEST)) 
+                lightRenderer.renderAutoPosition(gc, horizontalLight, lcx, lcy, 180, roadHalfW, stopLineDist, config.getLightType());
         }
 
         camera.restoreTransform(gc);
@@ -381,12 +393,15 @@ public class SimulationScene {
     }
 
     private void handleManualLightClick(double wx, double wy) {
-        int lcx = layout.getCx(), lcy = layout.getCy(), lw = Constants.LANE_WIDTH;
-        boolean nearV = wx >= lcx + lw + 10 && wx <= lcx + lw + 80
-                     && wy >= lcy - lw - 140 && wy <= lcy - lw - 10;
-        boolean nearH = wx >= lcx - lw - 80 && wx <= lcx - lw - 10
-                     && wy >= lcy + lw + 10  && wy <= lcy + lw + 80;
-        if (nearV || nearH) toggleLightMode();
+        // Vì đèn tự động sinh ở nhiều lề đường khác nhau, mở rộng vùng click là một hình tròn bao quanh giao lộ
+        double lcx = layout.getCx();
+        double lcy = layout.getCy();
+        double dist = Math.hypot(wx - lcx, wy - lcy);
+        
+        // Nhấn chuột trong bán kính 250px quanh ngã tư -> đổi màu đèn
+        if (dist <= 250) {
+            toggleLightMode();
+        }
     }
 
     // ==========================================================
