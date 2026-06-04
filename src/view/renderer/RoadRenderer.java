@@ -2,181 +2,146 @@ package view.renderer;
 
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
-import javafx.scene.shape.StrokeLineCap;
-import javafx.scene.shape.StrokeLineJoin;
+import model.network.NetworkLayout;
 
-/**
- * Renderer đường giao thông (JavaFX).
- *
- * <p>Ba loại ngã rẽ:
- * <ul>
- *   <li>{@link #renderThreeWay} — ngã ba (NORTH, EAST, WEST, không có đèn ngang)</li>
- *   <li>{@link #renderFourWay} — ngã tư đầy đủ</li>
- *   <li>{@link #renderFiveWay} — ngã tư + đường chéo 45° + bùng binh</li>
- * </ul>
- * </p>
- */
+/** Renderer mạng lưới đường — tọa độ từ NetworkLayout, khớp logic xe. */
 public class RoadRenderer {
 
-    private static final Color ASPHALT     = Color.rgb(55, 55, 55);
-    private static final Color ROAD_EDGE   = Color.rgb(40, 40, 40);
-    private static final Color MARKING     = Color.WHITE;
-    private static final Color ISLAND_GRAY = Color.rgb(90, 90, 90);
-    private static final Color ISLAND_LITE = Color.rgb(160, 160, 160);
-    private static final Color ISLAND_GRN  = Color.rgb(35, 130, 55);
-    private static final Color RB_EDGE     = Color.rgb(45, 45, 45);
+    private static final Color ASPHALT = Color.rgb(60, 60, 60);
+    private static final Color MARKING = Color.WHITE;
+    private static final Color ZEBRA   = Color.rgb(230, 230, 230);
+    private static final Color ISLAND_G= Color.rgb(40, 120, 50);
+    private static final Color ISLAND_L= Color.rgb(140, 140, 140);
+    private static final Color RB_EDGE = Color.rgb(90, 90, 90);
 
-    // ==========================================================
-    // Ngã ba
-    // ==========================================================
+    private static final int RH = NetworkLayout.ROAD_HALF;
+    private static final int EX = NetworkLayout.ARM_EXT;
 
-    public void renderThreeWay(GraphicsContext gc) {
+    // ── Vẽ toàn mạng lưới ──────────────────────────────────────
+    public void drawNetwork(GraphicsContext gc) {
+        // 1. Đường E-W
         gc.setFill(ASPHALT);
-        gc.fillRect(300, 0, 200, 800);   // trục dọc
-        gc.fillRect(0, 300, 500, 200);   // nhánh trái (EAST + WEST)
-    }
+        gc.fillRect(NetworkLayout.TW_X - RH, -RH,
+                    (NetworkLayout.VW_X - NetworkLayout.TW_X + RH*2), RH*2);
 
-    // ==========================================================
-    // Ngã tư
-    // ==========================================================
-
-    public void renderFourWay(GraphicsContext gc) {
-        // Mặt đường
-        gc.setFill(ASPHALT);
-        gc.fillRect(300, 0, 200, 800);
-        gc.fillRect(0, 300, 1200, 200);
-
-        // Mép vỉa hè
-        gc.setFill(ROAD_EDGE);
-        gc.fillRect(295, 0, 5, 800);
-        gc.fillRect(500, 0, 5, 800);
-        gc.fillRect(0, 295, 1200, 5);
-        gc.fillRect(0, 500, 1200, 5);
-
-        // Vạch đứt chia làn — dọc
-        gc.setFill(MARKING);
-        for (int i = 0; i < 800; i += 40) {
-            if (i < 280 || i > 500)
-                gc.fillRoundRect(395, i, 10, 20, 4, 4);
-        }
-        // Vạch đứt chia làn — ngang
-        for (int i = 0; i < 1200; i += 40) {
-            if (i < 280 || i > 500)
-                gc.fillRoundRect(i, 395, 20, 10, 4, 4);
+        // 2. Nhánh N-S tại mỗi giao lộ
+        for (int ix : new int[]{NetworkLayout.TW_X, NetworkLayout.FW_X, NetworkLayout.VW_X}) {
+            gc.setFill(ASPHALT);
+            gc.fillRect(ix - RH, -(RH + EX), RH*2, EX);
+            gc.fillRect(ix - RH,  RH,         RH*2, EX);
         }
 
-        // Vạch dừng đèn đỏ
-        gc.fillRect(300, 270, 200, 6);
-        gc.fillRect(300, 524, 200, 6);
-        gc.fillRect(270, 300, 6, 200);
-        gc.fillRect(524, 300, 6, 200);
+        // 3. Vạch trung tâm (đứt)
+        drawCenterLines(gc);
 
-        // Vạch đi bộ
-        drawHorizontalZebra(gc, 300, 280);
-        drawHorizontalZebra(gc, 300, 490);
-        drawVerticalZebra(gc, 280, 300);
-        drawVerticalZebra(gc, 490, 300);
-
-        // Đảo giao thông nhỏ
-        gc.setFill(ISLAND_GRAY);
-        gc.fillOval(360, 360, 80, 80);
+        // 4. Hộp giao lộ + chi tiết
+        drawThreeWayDetail(gc);
+        drawFourWayDetail(gc);
+        drawFiveWayDetail(gc);
     }
 
-    // ==========================================================
-    // Ngã năm
-    // ==========================================================
+    private void drawCenterLines(GraphicsContext gc) {
+        gc.setFill(MARKING);
+        // Đường ngang
+        for (int x = NetworkLayout.TW_X - RH; x < NetworkLayout.VW_X + RH; x += 38) {
+            if (!nearAny(x, 'x')) gc.fillRect(x+2, -2, 18, 4);
+        }
+        // Đường dọc tại mỗi giao lộ
+        for (int ix : new int[]{NetworkLayout.TW_X, NetworkLayout.FW_X, NetworkLayout.VW_X}) {
+            for (int y = -(RH+EX); y < -RH; y += 38) gc.fillRect(ix-2, y+2, 4, 18);
+            for (int y = RH; y < RH+EX; y += 38)     gc.fillRect(ix-2, y+2, 4, 18);
+        }
+    }
 
-    public void renderFiveWay(GraphicsContext gc) {
-        int cx = 400, cy = 400;
-
-        // Bốn trục vuông góc
+    // ── THREE_WAY (T-junction N+S+E, không có W) ───────────────
+    public void drawThreeWayDetail(GraphicsContext gc) {
+        int ix = NetworkLayout.TW_X, iy = 0;
         gc.setFill(ASPHALT);
-        gc.fillRect(300, 0, 200, 800);
-        gc.fillRect(0, 300, 1200, 200);
-
-        gc.setFill(ROAD_EDGE);
-        gc.fillRect(295, 0, 5, 800);
-        gc.fillRect(500, 0, 5, 800);
-        gc.fillRect(0, 295, 1200, 5);
-        gc.fillRect(0, 500, 1200, 5);
-
-        // Đường chéo 45° phủ trước bùng binh
-        drawDiagonalRoad(gc, cx, cy, 200);
-
-        // Bùng binh (phủ lên để che điểm giao)
-        drawRoundabout(gc, cx, cy, 340, 160);
-
-        // Vạch đi bộ ngoài bùng binh
-        drawHorizontalZebra(gc, 300, 210);
-        drawHorizontalZebra(gc, 300, 570);
-        drawVerticalZebra(gc, 210, 300);
-        drawVerticalZebra(gc, 570, 300);
+        gc.fillRect(ix-RH, iy-RH, RH*2, RH*2);
+        stopLine(gc, ix, iy, 'N');
+        stopLine(gc, ix, iy, 'S');
+        stopLine(gc, ix, iy, 'E');
+        zebra(gc, ix, iy, 'N'); zebra(gc, ix, iy, 'S'); zebra(gc, ix, iy, 'E');
+        // Bít tường phía Tây (không có đường)
+        gc.setFill(Color.rgb(35, 70, 35));
+        gc.fillRect(ix-RH-22, iy-RH, 22, RH*2);
     }
 
-    // ==========================================================
-    // Thành phần con
-    // ==========================================================
-
-    private void drawHorizontalZebra(GraphicsContext gc, int startX, int y) {
-        gc.setFill(MARKING);
-        for (int i = 0; i < 200; i += 20) gc.fillRect(startX + i, y, 10, 20);
+    // ── FOUR_WAY ────────────────────────────────────────────────
+    public void drawFourWayDetail(GraphicsContext gc) {
+        int ix = NetworkLayout.FW_X, iy = 0;
+        gc.setFill(ASPHALT);
+        gc.fillRect(ix-RH, iy-RH, RH*2, RH*2);
+        stopLine(gc, ix, iy, 'N'); stopLine(gc, ix, iy, 'S');
+        stopLine(gc, ix, iy, 'E'); stopLine(gc, ix, iy, 'W');
+        zebra(gc, ix, iy, 'N'); zebra(gc, ix, iy, 'S');
+        zebra(gc, ix, iy, 'E'); zebra(gc, ix, iy, 'W');
     }
 
-    private void drawVerticalZebra(GraphicsContext gc, int x, int startY) {
-        gc.setFill(MARKING);
-        for (int i = 0; i < 200; i += 20) gc.fillRect(x, startY + i, 20, 10);
+    // ── FIVE_WAY ────────────────────────────────────────────────
+    public void drawFiveWayDetail(GraphicsContext gc) {
+        int ix = NetworkLayout.VW_X, iy = 0;
+        drawDiagonalArm(gc, ix, iy);     // vẽ trước, bị phủ bởi box
+        gc.setFill(ASPHALT);
+        gc.fillRect(ix-RH, iy-RH, RH*2, RH*2);
+        stopLine(gc, ix, iy, 'N'); stopLine(gc, ix, iy, 'S');
+        stopLine(gc, ix, iy, 'E'); stopLine(gc, ix, iy, 'W');
+        zebra(gc, ix, iy, 'N'); zebra(gc, ix, iy, 'S');
+        zebra(gc, ix, iy, 'E'); zebra(gc, ix, iy, 'W');
+        drawRoundabout(gc, ix, iy);
     }
 
-    public void drawDiagonalRoad(GraphicsContext gc, int cx, int cy, int roadWidth) {
+    private void drawDiagonalArm(GraphicsContext gc, int ix, int iy) {
         gc.save();
-        gc.translate(cx, cy);
+        gc.translate(ix, iy);
         gc.rotate(-45);
-
-        gc.setFill(ROAD_EDGE);
-        gc.fillRect(-(roadWidth / 2 + 5), -900, roadWidth + 10, 900);
-
         gc.setFill(ASPHALT);
-        gc.fillRect(-roadWidth / 2, -900, roadWidth, 900);
-
-        // Vạch đứt phân làn chéo
+        gc.fillRect(-RH, -(RH + EX), RH*2, EX);
+        // Vạch trung tâm chéo
         gc.setFill(MARKING);
-        for (int i = -900; i < -180; i += 40)
-            gc.fillRoundRect(-5, i, 10, 20, 4, 4);
-
-        // Vạch đi bộ chéo
-        for (int i = -roadWidth / 2; i < roadWidth / 2; i += 20)
-            gc.fillRect(i, -230, 10, 20);
-
+        for (int y = -(RH+EX); y < -RH-6; y += 38) gc.fillRect(-2, y+2, 4, 18);
         gc.restore();
     }
 
-    public void drawRoundabout(GraphicsContext gc, int cx, int cy, int outerDia, int islandDia) {
-        // Mặt đường bùng binh
+    private void drawRoundabout(GraphicsContext gc, int ix, int iy) {
+        int OR = 28, IR = 16;
         gc.setFill(ASPHALT);
-        gc.fillOval(cx - outerDia / 2.0, cy - outerDia / 2.0, outerDia, outerDia);
-
-        // Viền bùng binh
-        gc.setStroke(RB_EDGE);
-        gc.setLineWidth(3);
-        gc.strokeOval(cx - outerDia / 2.0, cy - outerDia / 2.0, outerDia, outerDia);
-
-        // Vạch vòng tròn phân làn (dashed)
-        gc.setStroke(MARKING);
-        gc.setLineWidth(2.5);
-        gc.setLineDashes(14, 12);
-        int laneR = outerDia - 60;
-        gc.strokeOval(cx - laneR / 2.0, cy - laneR / 2.0, laneR, laneR);
-        gc.setLineDashes(); // reset dashes
-
-        // Đảo đá lề
-        gc.setFill(ISLAND_LITE);
-        gc.fillOval(cx - islandDia / 2.0, cy - islandDia / 2.0, islandDia, islandDia);
-
-        // Lõi cỏ
-        gc.setFill(ISLAND_GRN);
-        int green = islandDia - 14;
-        gc.fillOval(cx - green / 2.0, cy - green / 2.0, green, green);
-
+        gc.fillOval(ix-OR, iy-OR, OR*2, OR*2);
+        gc.setStroke(RB_EDGE); gc.setLineWidth(2);
+        gc.setLineDashes(5,4);
+        gc.strokeOval(ix-OR+3, iy-OR+3, (OR-3)*2, (OR-3)*2);
+        gc.setLineDashes();
+        gc.setFill(ISLAND_L); gc.fillOval(ix-IR, iy-IR, IR*2, IR*2);
+        gc.setFill(ISLAND_G); gc.fillOval(ix-IR+4, iy-IR+4, (IR-4)*2, (IR-4)*2);
         gc.setLineWidth(1);
+    }
+
+    private void stopLine(GraphicsContext gc, int ix, int iy, char side) {
+        gc.setFill(MARKING);
+        int o = RH - 3;
+        switch (side) {
+            case 'N': gc.fillRect(ix-RH, iy+o, RH*2, 3); break;
+            case 'S': gc.fillRect(ix-RH, iy-o-3, RH*2, 3); break;
+            case 'E': gc.fillRect(ix-o-3, iy-RH, 3, RH*2); break;
+            case 'W': gc.fillRect(ix+o, iy-RH, 3, RH*2); break;
+        }
+    }
+
+    private void zebra(GraphicsContext gc, int ix, int iy, char side) {
+        gc.setFill(ZEBRA);
+        int ZW=5, ZS=9, ZL=14;
+        switch (side) {
+            case 'N': for (int i=0;i<RH*2;i+=ZS+ZW) gc.fillRect(ix-RH+i, iy+RH+3, ZW, ZL); break;
+            case 'S': for (int i=0;i<RH*2;i+=ZS+ZW) gc.fillRect(ix-RH+i, iy-RH-ZL-3, ZW, ZL); break;
+            case 'E': for (int i=0;i<RH*2;i+=ZS+ZW) gc.fillRect(ix-RH-ZL-3, iy-RH+i, ZL, ZW); break;
+            case 'W': for (int i=0;i<RH*2;i+=ZS+ZW) gc.fillRect(ix+RH+3, iy-RH+i, ZL, ZW); break;
+        }
+    }
+
+    private boolean nearAny(int x, char axis) {
+        for (int ix : new int[]{NetworkLayout.TW_X, NetworkLayout.FW_X, NetworkLayout.VW_X}) {
+            if (Math.abs(x - ix) < RH+4) return true;
+        }
+        return false;
     }
 }

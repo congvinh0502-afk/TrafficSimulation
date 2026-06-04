@@ -1,151 +1,120 @@
 package system.movement;
 
 import config.Constants;
-import model.intersection.IntersectionType;
+import model.network.IntersectionNode;
+import model.network.NetworkLayout;
 import model.vehicle.Vehicle;
 import util.Direction;
 import util.DirectionHelper;
 
+import java.util.List;
+
 /**
- * Hệ thống xử lý rẽ tại giao lộ.
- *
- * <p><b>Fix teleport:</b> Trước đây {@code recoverLane()} snap xe về
- * trung tâm làn ngay lập tức → gây teleport nhìn thấy được.
- * Giờ thay bằng cờ {@code postTurnAligning = true} để
- * {@link LaneAlignmentSystem} xử lý alignment dần dần.</p>
- *
- * <p>Luồng mỗi frame:
- * <ol>
- *   <li>{@link #handleTurning} — phát hiện vào vùng rẽ, kích hoạt.</li>
- *   <li>{@link #smoothTurning} — di chuyển theo góc hiện tại khi đang rẽ.</li>
- *   <li>{@link #updateVehicleAngle} — xoay góc dần về targetAngle.</li>
- *   <li>{@link #finishTurning} — xác nhận hoàn thành, set postTurnAligning.</li>
- * </ol>
- * </p>
+ * Hệ thống rẽ — phát hiện giao lộ gần nhất và xử lý rẽ.
+ * FIX TELEPORT: dùng postTurnAligning thay vì snap ngay.
  */
 public class TurningSystem {
 
-    public void updateTurning(Vehicle vehicle, IntersectionType type) {
-        handleTurning(vehicle, type);
-        if (vehicle.isTurning()) {
-            smoothTurning(vehicle);
+    private static final double TURN_ZONE = NetworkLayout.ROAD_HALF + 20.0; // 56 px
+
+    public void updateTurning(Vehicle v, List<IntersectionNode> intersections) {
+        if (!v.isTurning()) {
+            IntersectionNode node = findApproachingNode(v, intersections);
+            if (node != null) initTurn(v, node);
+        }
+        if (v.isTurning()) {
+            smoothTurning(v);
         }
     }
 
-    // ==========================================================
-    // Phát hiện và kích hoạt rẽ
-    // ==========================================================
+    // =========================================================
+    // Phát hiện vào vùng rẽ
+    // =========================================================
 
-    public void handleTurning(Vehicle vehicle, IntersectionType type) {
-        if (vehicle.hasTurned()) return;
+    private IntersectionNode findApproachingNode(Vehicle v, List<IntersectionNode> nodes) {
+        if (v.hasTurned()) return null;
+        if (v.getTurnType() == util.TurnType.STRAIGHT) return null;
 
-        double hw = vehicle.getWidth()  / 2;
-        double hh = vehicle.getHeight() / 2;
+        for (IntersectionNode n : nodes) {
+            if (inTurnZone(v, n.cx, n.cy)) return n;
+        }
+        return null;
+    }
 
-        boolean inZone = vehicle.getX() + hw > Constants.TURN_TRIGGER_LEFT
-                      && vehicle.getX() - hw < Constants.TURN_TRIGGER_RIGHT
-                      && vehicle.getY() + hh > Constants.TURN_TRIGGER_TOP
-                      && vehicle.getY() - hh < Constants.TURN_TRIGGER_BOTTOM;
+    private boolean inTurnZone(Vehicle v, int ix, int iy) {
+        double hx = v.getWidth()  / 2, hy = v.getHeight() / 2;
+        return v.getX() + hx > ix - TURN_ZONE && v.getX() - hx < ix + TURN_ZONE
+            && v.getY() + hy > iy - TURN_ZONE && v.getY() - hy < iy + TURN_ZONE;
+    }
 
-        if (!inZone) return;
+    // =========================================================
+    // Khởi tạo rẽ
+    // =========================================================
 
-        switch (vehicle.getTurnType()) {
-            case LEFT: {
-                Direction target = DirectionHelper.getLeftDirection(vehicle.getDirection());
-                if (!type.getDirections().contains(target)) return;
-                initiateTurnLeft(vehicle);
+    private void initTurn(Vehicle v, IntersectionNode node) {
+        Direction current = v.getDirection();
+        Direction target;
+        double    targetAngle;
+
+        switch (v.getTurnType()) {
+            case LEFT:
+                target = DirectionHelper.getLeftDirection(current);
                 break;
-            }
-            case RIGHT: {
-                Direction target = DirectionHelper.getRightDirection(vehicle.getDirection());
-                if (!type.getDirections().contains(target)) return;
-                initiateTurnRight(vehicle);
+            case RIGHT:
+                target = DirectionHelper.getRightDirection(current);
                 break;
-            }
             default:
                 return;
         }
-        vehicle.setTurned(true);
+
+        if (target == null) return;
+        if (!node.type.getDirections().contains(target)) return;
+
+        targetAngle = target.toAngleDeg();
+        v.setTargetDirection(target);
+        v.setTargetAngle(targetAngle);
+        v.setTurning(true);
+        v.setTurned(true);
     }
 
-    private void initiateTurnLeft(Vehicle vehicle) {
-        switch (vehicle.getDirection()) {
-            case NORTH: vehicle.setTargetDirection(Direction.WEST);  vehicle.setTargetAngle(180);  break;
-            case SOUTH: vehicle.setTargetDirection(Direction.EAST);  vehicle.setTargetAngle(0);    break;
-            case EAST:  vehicle.setTargetDirection(Direction.NORTH); vehicle.setTargetAngle(-90);  break;
-            case WEST:  vehicle.setTargetDirection(Direction.SOUTH); vehicle.setTargetAngle(90);   break;
-            default: return;
-        }
-        vehicle.setTurning(true);
-    }
-
-    private void initiateTurnRight(Vehicle vehicle) {
-        switch (vehicle.getDirection()) {
-            case NORTH: vehicle.setTargetDirection(Direction.EAST);  vehicle.setTargetAngle(0);    break;
-            case SOUTH: vehicle.setTargetDirection(Direction.WEST);  vehicle.setTargetAngle(180);  break;
-            case EAST:  vehicle.setTargetDirection(Direction.SOUTH); vehicle.setTargetAngle(90);   break;
-            case WEST:  vehicle.setTargetDirection(Direction.NORTH); vehicle.setTargetAngle(-90);  break;
-            default: return;
-        }
-        vehicle.setTurning(true);
-    }
-
-    // ==========================================================
+    // =========================================================
     // Di chuyển mượt khi đang rẽ
-    // ==========================================================
+    // =========================================================
 
-    public void smoothTurning(Vehicle vehicle) {
-        if (!vehicle.isTurning()) return;
-
-        double speed = vehicle.getSpeed() * Constants.TURNING_SPEED_FACTOR;
-        // Di chuyển theo góc hiện tại (không theo direction vector)
-        double rad = Math.toRadians(vehicle.getAngle());
-        vehicle.setX(vehicle.getX() + Math.cos(rad) * speed);
-        vehicle.setY(vehicle.getY() + Math.sin(rad) * speed);
-
-        updateVehicleAngle(vehicle);
-        finishTurning(vehicle);
+    public void smoothTurning(Vehicle v) {
+        double speed = v.getSpeed() * Constants.TURNING_SPEED_FACTOR;
+        double rad   = Math.toRadians(v.getAngle());
+        v.setX(v.getX() + Math.cos(rad) * speed);
+        v.setY(v.getY() + Math.sin(rad) * speed);
+        updateAngle(v);
+        tryFinish(v);
     }
 
-    /**
-     * Xoay góc hiển thị dần về targetAngle.
-     */
-    public void updateVehicleAngle(Vehicle vehicle) {
-        double current = vehicle.getAngle();
-        double target  = vehicle.getTargetAngle();
-        double diff    = target - current;
-
+    private void updateAngle(Vehicle v) {
+        double diff = v.getTargetAngle() - v.getAngle();
         while (diff >  180) diff -= 360;
         while (diff < -180) diff += 360;
-
         if (Math.abs(diff) < Constants.ROTATE_SPEED) {
-            vehicle.setAngle(target);
+            v.setAngle(v.getTargetAngle());
             return;
         }
-        vehicle.setAngle(current + (diff > 0 ? Constants.ROTATE_SPEED : -Constants.ROTATE_SPEED));
+        v.setAngle(v.getAngle() + (diff > 0 ? Constants.ROTATE_SPEED : -Constants.ROTATE_SPEED));
     }
 
-    /**
-     * Xác nhận rẽ xong khi góc đủ gần targetAngle.
-     *
-     * <p><b>Fix teleport:</b> Không còn gọi {@code recoverLane()} ngay lập tức.
-     * Thay vào đó bật {@code postTurnAligning} để {@link LaneAlignmentSystem}
-     * alignment từ từ → không có jump đột ngột.</p>
-     */
-    private void finishTurning(Vehicle vehicle) {
-        if (Math.abs(vehicle.getAngle() - vehicle.getTargetAngle()) >= Constants.TURN_FINISH_TOLERANCE) {
-            return;
+    private void tryFinish(Vehicle v) {
+        if (Math.abs(v.getAngle() - v.getTargetAngle()) >= Constants.TURN_FINISH_TOLERANCE) return;
+
+        v.setDirection(v.getTargetDirection());
+        v.setLane(util.Lane.RIGHT);
+        v.setTurning(false);
+        v.setAcceleration(Constants.DEFAULT_ACCELERATION);
+
+        // Cập nhật homeIntersectionX sau rẽ
+        if (v.getDirection() == Direction.NORTH || v.getDirection() == Direction.SOUTH) {
+            v.setHomeIntersectionX(NetworkLayout.nearestIntersectionX(v.getX()));
         }
 
-        // Hoàn thành rẽ
-        vehicle.setDirection(vehicle.getTargetDirection());
-        vehicle.setLane(util.Lane.RIGHT);
-        vehicle.setTurning(false);
-
-        // Khôi phục gia tốc bình thường
-        vehicle.setAcceleration(Constants.DEFAULT_ACCELERATION);
-
-        // FIX TELEPORT: không snap ngay — alignment dần bởi LaneAlignmentSystem
-        vehicle.setPostTurnAligning(true);
+        // FIX TELEPORT: alignment dần thay vì snap
+        v.setPostTurnAligning(true);
     }
 }

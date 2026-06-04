@@ -7,124 +7,45 @@ import util.Lane;
 
 import java.util.List;
 
-/**
- * Hệ thống đổi làn.
- *
- * <p>
- * Hai chức năng:
- * <ul>
- * <li>{@link #updateLaneChanging} — di chuyển xe từng pixel về làn đích mỗi
- * frame.</li>
- * <li>{@link #tryChangeLane} — kiểm tra điều kiện và kích hoạt đổi làn nếu an
- * toàn.</li>
- * </ul>
- * </p>
- */
+/** Đổi làn — tương thích với NetworkLayout. */
 public class LaneChangeSystem {
 
-    // ==========================================================
-    // Cập nhật vị trí khi đang đổi làn
-    // ==========================================================
+    public void updateLaneChanging(Vehicle v) {
+        if (!v.isChangingLane()) return;
 
-    /**
-     * Dịch chuyển xe dần về trung tâm làn đích.
-     * Khi đến nơi, snap chính xác và xác nhận hoàn thành.
-     *
-     * @param vehicle xe đang đổi làn
-     */
-    public void updateLaneChanging(Vehicle vehicle) {
-        if (!vehicle.isChangingLane())
-            return;
-
-        double smooth = Constants.LANE_CHANGE_SMOOTH;
-
-        switch (vehicle.getDirection()) {
-            case NORTH:
-            case SOUTH: {
-                int targetX = LaneManager.getLaneCenterX(vehicle.getDirection(), vehicle.getTargetLane());
-                if (Math.abs(vehicle.getX() - targetX) < Constants.LANE_CHANGE_SNAP_THRESHOLD) {
-                    vehicle.setX(targetX);
-                    vehicle.setLane(vehicle.getTargetLane());
-                    vehicle.setChangingLane(false);
-                    return;
+        switch (v.getDirection()) {
+            case NORTH: case SOUTH: {
+                int tx = LaneManager.getLaneCenterX(v.getDirection(), v.getHomeIntersectionX());
+                double diff = tx - v.getX();
+                if (Math.abs(diff) < Constants.LANE_CHANGE_SNAP_THRESH) {
+                    v.setX(tx); v.setChangingLane(false); v.setLaneChangeCooldown(Constants.LANE_CHANGE_COOLDOWN);
+                } else {
+                    v.setX(v.getX() + Math.signum(diff) * Math.min(Constants.LANE_CHANGE_SMOOTH, Math.abs(diff)));
                 }
-                vehicle.setX(vehicle.getX() + (vehicle.getX() < targetX ? smooth : -smooth));
                 break;
             }
-            case EAST:
-            case WEST: {
-                int targetY = LaneManager.getLaneCenterY(vehicle.getDirection(), vehicle.getTargetLane());
-                if (Math.abs(vehicle.getY() - targetY) < Constants.LANE_CHANGE_SNAP_THRESHOLD) {
-                    vehicle.setY(targetY);
-                    vehicle.setLane(vehicle.getTargetLane());
-                    vehicle.setChangingLane(false);
-                    return;
+            case EAST: case WEST: {
+                int ty = LaneManager.getLaneCenterY(v.getDirection());
+                double diff = ty - v.getY();
+                if (Math.abs(diff) < Constants.LANE_CHANGE_SNAP_THRESH) {
+                    v.setY(ty); v.setChangingLane(false); v.setLaneChangeCooldown(Constants.LANE_CHANGE_COOLDOWN);
+                } else {
+                    v.setY(v.getY() + Math.signum(diff) * Math.min(Constants.LANE_CHANGE_SMOOTH, Math.abs(diff)));
                 }
-                vehicle.setY(vehicle.getY() + (vehicle.getY() < targetY ? smooth : -smooth));
                 break;
             }
-            default:
-                break;
+            default: v.setChangingLane(false); break;
         }
     }
 
-    // ==========================================================
-    // Thử đổi làn
-    // ==========================================================
-
-    /**
-     * Kiểm tra điều kiện an toàn và kích hoạt đổi làn nếu hợp lệ.
-     *
-     * <p>
-     * Không đổi làn nếu:
-     * <ul>
-     * <li>Đang trong quá trình đổi làn khác.</li>
-     * <li>Đang rẽ.</li>
-     * <li>Đang trong thời gian cooldown.</li>
-     * <li>Có xe trong làn đích cách dưới
-     * {@link Constants#LANE_CHANGE_SAFE_DIST}.</li>
-     * </ul>
-     * </p>
-     *
-     * @param current  xe muốn đổi làn
-     * @param vehicles toàn bộ xe trên bản đồ
-     * @return {@code true} nếu đã kích hoạt đổi làn thành công
-     */
-    public boolean tryChangeLane(Vehicle current, List<Vehicle> vehicles) {
-        if (current.isChangingLane())
-            return false;
-        if (current.isTurning())
-            return false;
-        if (current.getLaneChangeCooldown() > 0)
-            return false;
-
-        Lane targetLane = (current.getLane() == Lane.LEFT) ? Lane.RIGHT : Lane.LEFT;
-
-        for (Vehicle other : vehicles) {
-            if (other == current)
-                continue;
-            if (other.getDirection() != current.getDirection())
-                continue;
-            if (other.getLane() == targetLane
-                    && distance(current, other) < Constants.LANE_CHANGE_SAFE_DIST) {
-                return false;
-            }
-        }
-
-        current.setTargetLane(targetLane);
-        current.setChangingLane(true);
-        current.setLaneChangeCooldown(Constants.LANE_CHANGE_COOLDOWN);
-        return true;
+    public boolean tryChangeLane(Vehicle cur, List<Vehicle> all) {
+        if (cur.getLaneChangeCooldown() > 0 || cur.isChangingLane()) return false;
+        // Trong right-hand traffic, chỉ có 1 làn mỗi chiều → không đổi làn
+        return false;
     }
 
-    // ----------------------------------------------------------
-    // Tiện ích
-    // ----------------------------------------------------------
-
-    /** Khoảng cách Euclidean giữa hai xe. */
     public double distance(Vehicle a, Vehicle b) {
-        double dx = a.getX() - b.getX();
-        double dy = a.getY() - b.getY();
-        return Math.sqrt(dx * dx + dy * dy);
+        double dx = a.getX()-b.getX(), dy = a.getY()-b.getY();
+        return Math.sqrt(dx*dx + dy*dy);
     }
 }

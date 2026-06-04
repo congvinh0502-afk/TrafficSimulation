@@ -18,11 +18,11 @@ import javafx.scene.text.FontWeight;
 import javafx.stage.Stage;
 import manager.VehicleSpawnManager;
 import model.SimulationConfig;
-import model.intersection.IntersectionType;
+import model.network.IntersectionNode;
+import model.network.NetworkLayout;
 import model.trafficlight.LightColor;
 import model.trafficlight.TrafficLight;
 import model.vehicle.Vehicle;
-import system.emergency.EmergencyVehicleSystem;
 import util.Direction;
 import util.TrafficDensity;
 import view.renderer.EnvironmentRenderer;
@@ -30,473 +30,294 @@ import view.renderer.TrafficLightRenderer;
 import view.renderer.VehicleRenderer;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
-/**
- * Màn hình mô phỏng (JavaFX).
- *
- * <p>Tính năng:
- * <ul>
- *   <li>AnimationTimer 60fps thay cho Swing Timer.</li>
- *   <li>Canvas + Camera (scroll = zoom, drag = pan, R = reset).</li>
- *   <li>HUD thống kê góc trên-trái.</li>
- *   <li>Nút "⚙ Settings" mở dropdown chỉnh sửa khi đang chạy.</li>
- *   <li>Nút "← Menu" quay về menu bất cứ lúc nào.</li>
- * </ul>
- * </p>
- */
 public class SimulationScene {
 
-    // --------------------------------------------------------
-    // Scene + Camera
-    // --------------------------------------------------------
     private final Scene  scene;
     private final Canvas canvas;
     private final Camera camera = new Camera();
+    private final Stage  primaryStage;
 
-    // --------------------------------------------------------
-    // Dữ liệu mô phỏng
-    // --------------------------------------------------------
-    private SimulationConfig config;
-    private final List<Vehicle> vehicles = new ArrayList<>();
+    private final SimulationConfig      config;
+    private final List<Vehicle>         vehicles      = new ArrayList<>();
+    private final List<IntersectionNode> intersections = new ArrayList<>();
 
-    private TrafficLight verticalLight;
-    private TrafficLight horizontalLight;
+    private final TrafficController   ctrl;
+    private final VehicleSpawnManager spawner;
+    private final EnvironmentRenderer envR    = new EnvironmentRenderer();
+    private final TrafficLightRenderer lightR  = new TrafficLightRenderer();
+    private final VehicleRenderer      vehicleR = new VehicleRenderer();
 
-    private final TrafficController      trafficController;
-    private final VehicleSpawnManager    spawnManager;
-    private final EmergencyVehicleSystem emergencySystem;
-
-    // --------------------------------------------------------
-    // Renderer
-    // --------------------------------------------------------
-    private final EnvironmentRenderer  envRenderer   = new EnvironmentRenderer();
-    private final TrafficLightRenderer lightRenderer = new TrafficLightRenderer();
-    private final VehicleRenderer      vehicleRenderer = new VehicleRenderer();
-
-    // --------------------------------------------------------
-    // Trạng thái HUD / thống kê
-    // --------------------------------------------------------
-    private int    spawnCounter = 0;
-    private int    fps          = 0;
-    private int    frameCount   = 0;
-    private long   lastFpsTime  = System.nanoTime();
-    private String jamLevel     = "LOW";
-    private boolean flash       = false;
-    private int    flashCounter = 0;
-
-    // --------------------------------------------------------
-    // Runtime settings (dropdown)
-    // --------------------------------------------------------
-    private int    runtimeVehicleCount;
+    private Label   hudLabel;
+    private int     fps=60, frames=0;
+    private long    lastFps = System.nanoTime();
+    private boolean flash=false;
+    private int     flashTick=0, spawnTick=0;
+    private String  jamLevel="LOW";
+    private int     runtimeMax;
     private TrafficDensity runtimeDensity;
+    private String  lightMode;
+    private AnimationTimer timer;
 
-    // --------------------------------------------------------
-    // UI overlay elements
-    // --------------------------------------------------------
-    private Label hudLabel;
+    public SimulationScene(Stage stage, SimulationConfig cfg) {
+        this.primaryStage   = stage;
+        this.config         = cfg;
+        this.runtimeMax     = cfg.getVehicleCount();
+        this.runtimeDensity = cfg.getTrafficDensity();
+        this.lightMode      = cfg.getLightType();
 
-    private final Stage primaryStage;
-    private AnimationTimer gameTimer;
+        buildNodes();
+        ctrl    = new TrafficController();
+        spawner = new VehicleSpawnManager(vehicles);
 
-    // ==========================================================
-    // Constructor
-    // ==========================================================
-
-    public SimulationScene(Stage primaryStage, SimulationConfig config) {
-        this.primaryStage         = primaryStage;
-        this.config               = config;
-        this.runtimeVehicleCount  = config.getVehicleCount();
-        this.runtimeDensity       = config.getTrafficDensity();
-
-        // Khởi đèn
-        verticalLight   = new TrafficLight(LightColor.GREEN, Constants.LIGHT_GREEN_DURATION);
-        horizontalLight = new TrafficLight(LightColor.RED,   Constants.LIGHT_RED_DURATION);
-
-        trafficController = new TrafficController();
-        spawnManager      = new VehicleSpawnManager(vehicles);
-        emergencySystem   = new EmergencyVehicleSystem();
-
-        // Xây UI
         canvas = new Canvas(Constants.WINDOW_WIDTH, Constants.WINDOW_HEIGHT);
-        StackPane root = buildUI();
+        scene  = new Scene(buildUI(), Constants.WINDOW_WIDTH, Constants.WINDOW_HEIGHT);
+        scene.setFill(Color.DIMGRAY);
 
-        scene = new Scene(root, Constants.WINDOW_WIDTH, Constants.WINDOW_HEIGHT);
-        scene.setFill(Color.GRAY);
-
-        bindCameraEvents();
-        bindKeyboard();
-
-        spawnInitialVehicles();
-        startGameLoop();
+        camera.centerOn(0, 0, Constants.WINDOW_WIDTH, Constants.WINDOW_HEIGHT);
+        bindEvents();
+        spawnInitial();
+        startLoop();
     }
 
-    // ==========================================================
-    // Xây giao diện
-    // ==========================================================
+    // ── Giao lộ ────────────────────────────────────────────────
+    private void buildNodes() {
+        intersections.add(new IntersectionNode(
+            NetworkLayout.TW_X, NetworkLayout.TW_Y,
+            model.intersection.IntersectionType.THREE_WAY, null, null));
 
+        TrafficLight fv = new TrafficLight(LightColor.GREEN, Constants.LIGHT_GREEN_DURATION);
+        TrafficLight fh = new TrafficLight(LightColor.RED,   Constants.LIGHT_RED_DURATION);
+        intersections.add(new IntersectionNode(
+            NetworkLayout.FW_X, NetworkLayout.FW_Y,
+            model.intersection.IntersectionType.FOUR_WAY, fv, fh));
+
+        TrafficLight vv = new TrafficLight(LightColor.GREEN, Constants.LIGHT_GREEN_DURATION);
+        TrafficLight vh = new TrafficLight(LightColor.RED,   Constants.LIGHT_RED_DURATION);
+        intersections.add(new IntersectionNode(
+            NetworkLayout.VW_X, NetworkLayout.VW_Y,
+            model.intersection.IntersectionType.FIVE_WAY, vv, vh));
+    }
+
+    // ── UI ─────────────────────────────────────────────────────
     private StackPane buildUI() {
         StackPane root = new StackPane();
-
-        // --- Tầng 1: Canvas mô phỏng ---
         canvas.widthProperty().bind(root.widthProperty());
         canvas.heightProperty().bind(root.heightProperty());
         root.getChildren().add(canvas);
 
-        // --- Tầng 2: Overlay (HUD + controls) ---
-        BorderPane overlay = new BorderPane();
-        overlay.setPickOnBounds(false);
-
-        // HUD góc trên-trái
+        BorderPane ov = new BorderPane();
+        ov.setPickOnBounds(false);
         hudLabel = new Label();
-        hudLabel.setFont(Font.font("Monospaced", FontWeight.BOLD, 13));
+        hudLabel.setFont(Font.font("Monospaced", FontWeight.BOLD, 12));
         hudLabel.setTextFill(Color.WHITE);
-        hudLabel.setStyle("-fx-background-color: rgba(0,0,0,0.65); " +
-                "-fx-background-radius: 10; -fx-padding: 12;");
+        hudLabel.setStyle("-fx-background-color:rgba(0,0,0,.7);-fx-background-radius:9;-fx-padding:10;");
         hudLabel.setMouseTransparent(true);
-        BorderPane.setMargin(hudLabel, new Insets(16));
-        overlay.setLeft(hudLabel);
-
-        // Thanh nút góc trên-phải
-        HBox topRight = buildTopRightBar();
-        BorderPane.setMargin(topRight, new Insets(16));
-        overlay.setRight(topRight);
-
-        overlay.setPickOnBounds(false);
-        root.getChildren().add(overlay);
-
+        BorderPane.setMargin(hudLabel, new Insets(14));
+        ov.setLeft(hudLabel);
+        ov.setRight(buildBar());
+        BorderPane.setMargin(ov.getRight(), new Insets(14));
+        ov.setPickOnBounds(false);
+        root.getChildren().add(ov);
         return root;
     }
 
-    private HBox buildTopRightBar() {
-        HBox bar = new HBox(10);
+    private HBox buildBar() {
+        HBox bar = new HBox(8);
         bar.setAlignment(Pos.TOP_RIGHT);
-
-        // --- Nút quay về menu ---
-        Button menuBtn = new Button("← Menu");
-        styleControlBtn(menuBtn, "#C62828");
-        menuBtn.setOnAction(e -> returnToMenu());
-
-        // --- Nút tạm dừng ---
-        Button pauseBtn = new Button("⏸ Pause");
-        styleControlBtn(pauseBtn, "#37474F");
-        pauseBtn.setOnAction(e -> {
-            if (gameTimer != null) {
-                // Toggle pause
-                if (pauseBtn.getText().startsWith("⏸")) {
-                    gameTimer.stop();
-                    pauseBtn.setText("▶ Resume");
-                } else {
-                    gameTimer.start();
-                    pauseBtn.setText("⏸ Pause");
-                }
-            }
+        Button back  = btn("← Menu",  "#C62828");
+        Button pause = btn("⏸ Pause", "#37474F");
+        back.setOnAction(e  -> goMenu());
+        pause.setOnAction(e -> {
+            if (pause.getText().startsWith("⏸")) { timer.stop();  pause.setText("▶ Resume"); }
+            else                                  { timer.start(); pause.setText("⏸ Pause"); }
         });
-
-        // --- Nút Settings (dropdown) ---
-        MenuButton settingsBtn = buildSettingsMenu();
-
-        bar.getChildren().addAll(menuBtn, pauseBtn, settingsBtn);
+        bar.getChildren().addAll(back, pause, buildSettingsMenu());
         return bar;
     }
 
-    private MenuButton buildSettingsMenu() {
-        MenuButton btn = new MenuButton("⚙ Settings");
-        btn.setStyle("-fx-background-color: #455A64; -fx-text-fill: white; " +
-                "-fx-font-size: 13px; -fx-background-radius: 8; -fx-cursor: hand;");
+    private Button btn(String t, String bg) {
+        Button b = new Button(t);
+        b.setStyle("-fx-background-color:"+bg+";-fx-text-fill:white;-fx-font-size:12px;" +
+                   "-fx-font-weight:bold;-fx-background-radius:8;-fx-cursor:hand;-fx-padding:6 12;");
+        return b;
+    }
 
-        // -- Mật độ xe --
-        Menu densityMenu = new Menu("Traffic Density");
+    private MenuButton buildSettingsMenu() {
+        MenuButton mb = new MenuButton("⚙ Settings");
+        mb.setStyle("-fx-background-color:#455A64;-fx-text-fill:white;-fx-font-size:12px;" +
+                    "-fx-background-radius:8;-fx-cursor:hand;");
+
+        Menu cm = new Menu("Max Vehicles");
+        for (int v : new int[]{10,20,30,50,80,100}) {
+            MenuItem mi = new MenuItem(String.valueOf(v));
+            mi.setOnAction(e -> runtimeMax = v);
+            cm.getItems().add(mi);
+        }
+        Menu dm = new Menu("Density");
         ToggleGroup dg = new ToggleGroup();
         for (TrafficDensity d : TrafficDensity.values()) {
-            RadioMenuItem item = new RadioMenuItem(d.name());
-            item.setToggleGroup(dg);
-            if (d == runtimeDensity) item.setSelected(true);
-            item.setOnAction(e -> runtimeDensity = d);
-            densityMenu.getItems().add(item);
+            RadioMenuItem ri = new RadioMenuItem(d.name());
+            ri.setToggleGroup(dg);
+            if (d==runtimeDensity) ri.setSelected(true);
+            ri.setOnAction(e -> runtimeDensity = d);
+            dm.getItems().add(ri);
         }
-        btn.getItems().add(densityMenu);
-
-        // -- Số lượng xe --
-        Menu countMenu = new Menu("Max Vehicles");
-        for (int v : new int[]{10, 20, 30, 50, 80, 100}) {
-            MenuItem item = new MenuItem(String.valueOf(v));
-            item.setOnAction(e -> runtimeVehicleCount = v);
-            countMenu.getItems().add(item);
+        Menu lm = new Menu("Light Timer");
+        for (String s : new String[]{"NO COUNTDOWN","ALWAYS COUNTDOWN","COUNT <= 10"}) {
+            MenuItem li = new MenuItem(s); li.setOnAction(e -> lightMode = s); lm.getItems().add(li);
         }
-        btn.getItems().add(countMenu);
-
-        // -- Chế độ đèn (toggle manual/auto) --
-        btn.getItems().add(new SeparatorMenuItem());
-        MenuItem lightToggle = new MenuItem("Toggle Manual/Auto Light");
-        lightToggle.setOnAction(e -> toggleLightMode());
-        btn.getItems().add(lightToggle);
-
-        // -- Reset camera --
-        MenuItem resetCam = new MenuItem("Reset Camera");
-        resetCam.setOnAction(e -> camera.reset());
-        btn.getItems().add(resetCam);
-
-        return btn;
+        MenuItem rc = new MenuItem("Reset Camera  [R]");   rc.setOnAction(e -> resetCam());
+        MenuItem tl = new MenuItem("Toggle N-S Lights");   tl.setOnAction(e -> toggleLights());
+        mb.getItems().addAll(cm, dm, lm, new SeparatorMenuItem(), rc, tl);
+        return mb;
     }
 
-    private void styleControlBtn(Button btn, String bg) {
-        btn.setStyle("-fx-background-color: " + bg + "; -fx-text-fill: white; " +
-                "-fx-font-size: 13px; -fx-font-weight: bold; " +
-                "-fx-background-radius: 8; -fx-cursor: hand;");
-    }
-
-    // ==========================================================
-    // Sự kiện camera
-    // ==========================================================
-
-    private void bindCameraEvents() {
-        // Scroll → zoom
+    // ── Events ─────────────────────────────────────────────────
+    private void bindEvents() {
         canvas.setOnScroll(camera::handleScroll);
-
-        // Drag → pan
-        canvas.setOnMousePressed(e -> camera.startDrag(e.getX(), e.getY()));
-        canvas.setOnMouseDragged(e -> camera.drag(e.getX(), e.getY()));
+        canvas.setOnMousePressed(e  -> camera.startDrag(e.getX(), e.getY()));
+        canvas.setOnMouseDragged(e  -> camera.drag(e.getX(), e.getY()));
         canvas.setOnMouseReleased(e -> camera.stopDrag());
-
-        // Click trái thủ công (MANUAL mode)
-        canvas.setOnMouseClicked(e -> {
-            if (config.getTrafficMode().equals("MANUAL")) {
-                handleManualLightClick(camera.toWorldX(e.getX()), camera.toWorldY(e.getY()));
-            }
-        });
+        scene.setOnKeyPressed(e -> { if (e.getCode()==KeyCode.R) resetCam(); });
     }
 
-    private void bindKeyboard() {
-        scene.setOnKeyPressed(e -> {
-            if (e.getCode() == KeyCode.R) camera.reset();
-        });
+    private void resetCam() {
+        camera.reset();
+        camera.centerOn(0, 0, canvas.getWidth(), canvas.getHeight());
     }
 
-    // ==========================================================
-    // Vòng lặp game
-    // ==========================================================
-
-    private void startGameLoop() {
-        gameTimer = new AnimationTimer() {
-            @Override
-            public void handle(long now) {
-                updateSimulation();
-                render();
-                updateFPS(now);
-            }
+    // ── Game loop ──────────────────────────────────────────────
+    private void startLoop() {
+        timer = new AnimationTimer() {
+            @Override public void handle(long now) { update(); render(); tick(now); }
         };
-        gameTimer.start();
+        timer.start();
     }
 
-    // ==========================================================
-    // Cập nhật logic
-    // ==========================================================
-
-    private void updateSimulation() {
-        vehicles.removeIf(v -> !config.getIntersectionType().getDirections().contains(v.getDirection()));
-
-        trafficController.updateVehicles(vehicles, verticalLight, horizontalLight,
-                config.getIntersectionType());
-
-        if (!config.getTrafficMode().equals("MANUAL")) {
-            verticalLight.update();
-            syncHorizontalLight();
-            applySmartLight();
+    private void update() {
+        if (!"MANUAL".equals(config.getTrafficMode())) {
+            for (IntersectionNode n : intersections) n.updateLights();
+            smartLights();
         }
-
-        spawnManager.removeOutsideVehicles();
-        emergencySystem.updateEmergencyVehicles(vehicles);
-        handleAutoSpawn();
-        updateTrafficJam();
-        updateFlash();
+        ctrl.updateVehicles(vehicles, intersections);
+        spawner.removeOutsideVehicles();
+        doSpawn();
+        jam();
+        if (++flashTick >= Constants.FLASH_INTERVAL_FRAMES) { flash=!flash; flashTick=0; }
     }
 
-    // ==========================================================
-    // Render
-    // ==========================================================
-
+    // ── Render ─────────────────────────────────────────────────
     private void render() {
         GraphicsContext gc = canvas.getGraphicsContext2D();
-        double w = canvas.getWidth(), h = canvas.getHeight();
+        gc.setFill(Color.rgb(50,50,50));
+        gc.fillRect(0, 0, canvas.getWidth(), canvas.getHeight());
 
-        // Nền
-        gc.setFill(Color.GRAY);
-        gc.fillRect(0, 0, w, h);
-
-        // World (camera transform)
         camera.applyTransform(gc);
 
-        switch (config.getIntersectionType()) {
-            case THREE_WAY: envRenderer.renderThreeWay(gc); break;
-            case FIVE_WAY:  envRenderer.renderFiveWay(gc);  break;
-            default:        envRenderer.renderFourWay(gc);  break;
+        envR.renderNetworkWorld(gc);
+
+        for (IntersectionNode n : intersections) {
+            if (!n.hasTrafficLights()) continue;
+            lightR.renderVertical(gc,   n.verticalLight,   n.cx, n.cy, lightMode);
+            lightR.renderHorizontal(gc, n.horizontalLight, n.cx, n.cy, lightMode);
         }
 
-        for (Vehicle v : vehicles) vehicleRenderer.render(gc, v, flash);
-
-        // Đèn giao thông (không hiện đèn ngang cho ngã ba)
-        lightRenderer.render(gc, verticalLight,   520, 250, config.getLightType());
-        if (config.getIntersectionType() != IntersectionType.THREE_WAY) {
-            lightRenderer.render(gc, horizontalLight, 250, 520, config.getLightType());
-        }
+        for (Vehicle v : vehicles) vehicleR.render(gc, v, flash);
 
         camera.restoreTransform(gc);
-
-        // HUD (screen space — không qua camera)
-        updateHUD();
+        hud();
     }
 
-    private void updateHUD() {
-        int stopped = trafficController.countStoppedVehicles(vehicles);
+    private void hud() {
+        IntersectionNode fw = intersections.get(1);
+        IntersectionNode vw = intersections.get(2);
         hudLabel.setText(String.format(
-                "  Vehicles : %d / %d%n" +
-                "  Stopped  : %d%n" +
-                "  FPS      : %d%n" +
-                "  Jam      : %s%n" +
-                "  V-Light  : %s%n" +
-                "  H-Light  : %s%n" +
-                "  Zoom     : %.0f%%%n" +
-                "  [Scroll] Zoom  [Drag] Pan  [R] Reset",
-                vehicles.size(), runtimeVehicleCount,
-                stopped, fps, jamLevel,
-                verticalLight.getColor(), horizontalLight.getColor(),
-                camera.getZoom() * 100
-        ));
+            "  Vehicles : %d / %d%n" +
+            "  Stopped  : %d%n" +
+            "  FPS      : %d%n" +
+            "  Jam      : %s%n" +
+            "  4W N/S   : %s%n" +
+            "  4W E/W   : %s%n" +
+            "  5W N/S   : %s%n" +
+            "  Zoom     : %.0f%%%n" +
+            "  [Scroll] Zoom · [Drag] Pan · [R] Reset",
+            vehicles.size(), runtimeMax,
+            ctrl.countStopped(vehicles),
+            fps, jamLevel,
+            fw.verticalLight.getColor(), fw.horizontalLight.getColor(),
+            vw.verticalLight.getColor(),
+            camera.getZoom()*100));
     }
 
-    // ==========================================================
-    // Đèn giao thông
-    // ==========================================================
-
-    private void syncHorizontalLight() {
-        switch (verticalLight.getColor()) {
-            case GREEN: case YELLOW:
-                horizontalLight.setColor(LightColor.RED);
-                break;
-            case RED:
-                if (horizontalLight.getColor() != LightColor.GREEN) {
-                    horizontalLight.setColor(LightColor.GREEN);
-                    horizontalLight.setTimer(Constants.LIGHT_GREEN_DURATION);
-                }
-                break;
+    // ── Smart lights ───────────────────────────────────────────
+    private void smartLights() {
+        for (IntersectionNode n : intersections) {
+            if (!n.hasTrafficLights()) continue;
+            int vc = ctrl.countByDirection(vehicles, Direction.NORTH, Direction.SOUTH);
+            int hc = ctrl.countByDirection(vehicles, Direction.EAST, Direction.WEST);
+            int TH = Constants.SMART_LIGHT_THRESHOLD, MX = Constants.SMART_LIGHT_MAX_TIMER;
+            if (vc > hc+TH && n.verticalLight.getColor()==LightColor.GREEN)
+                n.verticalLight.setTimer(Math.max(n.verticalLight.getTimer(), MX));
+            if (hc > vc+TH && n.horizontalLight.getColor()==LightColor.GREEN)
+                n.horizontalLight.setTimer(Math.max(n.horizontalLight.getTimer(), MX));
         }
     }
 
-    private void applySmartLight() {
-        int vc = trafficController.countVehiclesByDirection(vehicles, Direction.NORTH, Direction.SOUTH);
-        int hc = trafficController.countVehiclesByDirection(vehicles, Direction.EAST,  Direction.WEST);
-        int th = Constants.SMART_LIGHT_THRESHOLD, mx = Constants.SMART_LIGHT_MAX_TIMER;
-
-        if (vc > hc + th && verticalLight.getColor()   == LightColor.GREEN)
-            verticalLight.setTimer(Math.max(verticalLight.getTimer(), mx));
-        if (hc > vc + th && horizontalLight.getColor() == LightColor.GREEN)
-            horizontalLight.setTimer(Math.max(horizontalLight.getTimer(), mx));
-
-        for (Vehicle v : vehicles) {
-            boolean em = v instanceof model.vehicle.Ambulance || v instanceof model.vehicle.FireTruck;
-            if (!em) continue;
-            switch (v.getDirection()) {
-                case NORTH: case SOUTH:
-                    if (verticalLight.getColor()   == LightColor.RED) forceGreen(verticalLight, horizontalLight); break;
-                case EAST:  case WEST:
-                    if (horizontalLight.getColor() == LightColor.RED) forceGreen(horizontalLight, verticalLight); break;
-                default: break;
-            }
+    private void toggleLights() {
+        for (IntersectionNode n : intersections) {
+            if (!n.hasTrafficLights()) continue;
+            boolean vGreen = n.verticalLight.getColor()==LightColor.GREEN;
+            n.verticalLight.setColor(  vGreen ? LightColor.RED   : LightColor.GREEN);
+            n.horizontalLight.setColor(vGreen ? LightColor.GREEN : LightColor.RED);
+            n.verticalLight.setTimer(Constants.LIGHT_GREEN_DURATION);
+            n.horizontalLight.setTimer(Constants.LIGHT_GREEN_DURATION);
         }
     }
 
-    private void forceGreen(TrafficLight target, TrafficLight other) {
-        target.setColor(LightColor.GREEN); target.setTimer(Constants.LIGHT_EMERGENCY_DURATION);
-        other.setColor(LightColor.RED);
+    // ── Spawn ──────────────────────────────────────────────────
+    private void spawnInitial() {
+        List<Direction> dirs = dirs();
+        for (int i = 0; i < runtimeMax; i++) spawner.spawnRandomVehicle(dirs);
     }
 
-    private void toggleLightMode() {
-        // Toggle vertical: xanh↔đỏ
-        if (verticalLight.getColor() == LightColor.GREEN) {
-            verticalLight.setColor(LightColor.RED);
-            horizontalLight.setColor(LightColor.GREEN);
-        } else {
-            verticalLight.setColor(LightColor.GREEN);
-            horizontalLight.setColor(LightColor.RED);
-        }
-        verticalLight.setTimer(Constants.LIGHT_GREEN_DURATION);
-        horizontalLight.setTimer(Constants.LIGHT_GREEN_DURATION);
-    }
-
-    private void handleManualLightClick(double wx, double wy) {
-        boolean nearV = wx >= 510 && wx <= 560 && wy >= 240 && wy <= 360;
-        boolean nearH = wx >= 240 && wx <= 360 && wy >= 510 && wy <= 560;
-        if (nearV || nearH) toggleLightMode();
-    }
-
-    // ==========================================================
-    // Spawn
-    // ==========================================================
-
-    private void spawnInitialVehicles() {
-        List<Direction> dirs = config.getIntersectionType().getDirections();
-        for (int i = 0; i < runtimeVehicleCount; i++) spawnManager.spawnRandomVehicle(dirs);
-    }
-
-    private void handleAutoSpawn() {
-        spawnCounter++;
-        if (spawnCounter >= spawnInterval()) {
-            spawnCounter = 0;
-            if (vehicles.size() < runtimeVehicleCount)
-                spawnManager.spawnRandomVehicle(config.getIntersectionType().getDirections());
+    private void doSpawn() {
+        if (++spawnTick >= interval()) {
+            spawnTick = 0;
+            if (vehicles.size() < runtimeMax) spawner.spawnRandomVehicle(dirs());
         }
     }
 
-    private int spawnInterval() {
+    private List<Direction> dirs() {
+        return Arrays.asList(Direction.NORTH, Direction.SOUTH, Direction.EAST, Direction.WEST);
+    }
+
+    private int interval() {
         switch (runtimeDensity) {
-            case LOW:  return 180;
-            case HIGH: return 60;
-            default:   return 120;
+            case LOW:  return 200;
+            case HIGH: return 55;
+            default:   return 110;
         }
     }
 
-    // ==========================================================
-    // Thống kê
-    // ==========================================================
-
-    private void updateTrafficJam() {
-        int total = vehicles.size();
-        if (total == 0) { jamLevel = "LOW"; return; }
-        double ratio = (double) trafficController.countStoppedVehicles(vehicles) / total;
-        jamLevel = ratio > Constants.JAM_HIGH_THRESHOLD ? "HIGH"
-                 : ratio > Constants.JAM_MEDIUM_THRESHOLD ? "MEDIUM" : "LOW";
+    // ── Stats ──────────────────────────────────────────────────
+    private void jam() {
+        int tot = vehicles.size(); if (tot==0){jamLevel="LOW";return;}
+        double r = (double)ctrl.countStopped(vehicles)/tot;
+        jamLevel = r>Constants.JAM_HIGH_THRESHOLD?"HIGH":r>Constants.JAM_MEDIUM_THRESHOLD?"MEDIUM":"LOW";
     }
 
-    private void updateFPS(long now) {
-        frameCount++;
-        if (now - lastFpsTime >= 1_000_000_000L) {
-            fps = frameCount;
-            frameCount = 0;
-            lastFpsTime = now;
-        }
+    private void tick(long now) {
+        frames++;
+        if (now-lastFps >= 1_000_000_000L) { fps=frames; frames=0; lastFps=now; }
     }
 
-    private void updateFlash() {
-        if (++flashCounter >= Constants.FLASH_INTERVAL_FRAMES) {
-            flash = !flash;
-            flashCounter = 0;
-        }
+    private void goMenu() {
+        if (timer!=null) timer.stop();
+        primaryStage.setScene(new MenuScene(primaryStage).getScene());
     }
-
-    // ==========================================================
-    // Quay về menu
-    // ==========================================================
-
-    private void returnToMenu() {
-        if (gameTimer != null) gameTimer.stop();
-        MenuScene menu = new MenuScene(primaryStage);
-        primaryStage.setScene(menu.getScene());
-    }
-
-    // ==========================================================
-    // Getter
-    // ==========================================================
 
     public Scene getScene() { return scene; }
 }

@@ -1,9 +1,9 @@
 package strategy.driver;
 
-import java.util.List;
-
 import model.trafficlight.TrafficLight;
 import model.vehicle.Vehicle;
+
+import java.util.List;
 
 /**
  * Lái xe ưu tiên (cứu thương / cứu hỏa) — không bao giờ dừng đèn đỏ.
@@ -16,7 +16,7 @@ import model.vehicle.Vehicle;
  */
 public class EmergencyDriver implements DriverBehavior {
 
-    private static final int SPEED = 3;
+    private static final int SPEED = 9;
 
     @Override
     public boolean shouldStop(Vehicle self, List<Vehicle> vehicles, TrafficLight relevantLight) {
